@@ -3,6 +3,7 @@ package cwnuchrome.aac_cwnu_it_2015_1;
 import android.app.AlertDialog;
 import android.content.ContentValues;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.database.sqlite.SQLiteDatabase;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -124,6 +125,13 @@ public class MainActivity extends AppCompatActivity {
                         }
                     })
                     .show();
+
+            return true;
+        }
+
+        if (id == R.id.action_add_word_macro) {
+            Intent i = new Intent(getApplicationContext(), AddWordMacroActivity.class);
+            startActivity(i);
 
             return true;
         }
