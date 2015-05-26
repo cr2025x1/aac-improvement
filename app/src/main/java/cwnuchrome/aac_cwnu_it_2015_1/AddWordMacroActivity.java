@@ -5,6 +5,8 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.support.v7.app.AppCompatActivity;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -12,6 +14,7 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.ListView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import org.w3c.dom.Document;
@@ -29,11 +32,14 @@ import javax.xml.parsers.DocumentBuilderFactory;
 
 
 public class AddWordMacroActivity extends AppCompatActivity {
+    // TODO: Optimization of the code is required.
+
     ListView listView;
     EditText textInput;
 //    Document doc;
     Context context = this;
     ArrayAdapter<String> adapter;
+    updateList updater = new updateList();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,7 +51,23 @@ public class AddWordMacroActivity extends AppCompatActivity {
         // Get ListView object from xml
         listView = (ListView) findViewById(R.id.list_add_word_macro);
 
-        new updateList().execute();
+        updater.execute();
+
+        textInput.addTextChangedListener(new TextWatcher() {
+
+            public void afterTextChanged(Editable s) {
+            }
+
+            public void beforeTextChanged(CharSequence s, int start,
+                                          int count, int after) {
+            }
+
+            public void onTextChanged(CharSequence s, int start,
+                                      int before, int count) {
+                updater.onResume();
+            }
+        });
+
 
         // Defined Array values to show in ListView
 //        String[] values = new String[] { "Android List View",
@@ -101,6 +123,10 @@ public class AddWordMacroActivity extends AppCompatActivity {
         Document doc;
         NodeList descNodes;
 
+        private Object mPauseLock;
+        private boolean mPaused;
+        private boolean mFinished;
+
         @Override
         protected void onCancelled() {
             super.onCancelled();
@@ -115,6 +141,10 @@ public class AddWordMacroActivity extends AppCompatActivity {
         @Override
         protected void onPreExecute() {
 //            btn.setText("Thread START!!!!");
+            mPauseLock = new Object();
+            mPaused = false;
+            mFinished = false;
+
             super.onPreExecute();
         }
 
@@ -128,57 +158,91 @@ public class AddWordMacroActivity extends AppCompatActivity {
         protected Long doInBackground(String... params) {
             long result = 0;
 
-            try {
-                this.start();
-                int suggestion_count = descNodes.getLength();
-                if (suggestion_count > 0) {
-                    String[] suggestion_list = new String[suggestion_count];
-//                    ArrayList<String> suggestion_list = new ArrayList<String>();
-                    for (int i = 0; i < suggestion_count; i++) {
-                        suggestion_list[i] = descNodes.item(i).getAttributes().getNamedItem("data").getNodeValue();
-//                        suggestion_list.add(descNodes.item(i).getAttributes().getNamedItem("data").getNodeValue());
+            while (!mFinished) {
+                try {
+                    System.out.println("Fetching data...");
+                    if (this.start()) {
+
+                        int suggestion_count = descNodes.getLength();
+                        if (suggestion_count > 0) {
+                            String[] suggestion_list = new String[suggestion_count];
+                            //                    ArrayList<String> suggestion_list = new ArrayList<String>();
+                            for (int i = 0; i < suggestion_count; i++) {
+                                suggestion_list[i] = descNodes.item(i).getAttributes().getNamedItem("data").getNodeValue();
+                                //                        suggestion_list.add(descNodes.item(i).getAttributes().getNamedItem("data").getNodeValue());
+                            }
+
+                            adapter = new ArrayAdapter<String>(context,
+                                    android.R.layout.simple_list_item_1, android.R.id.text1, suggestion_list);
+                            //                    ArrayAdapter<String> adapter = new ArrayAdapter<String>(getParent(),
+                            //                            android.R.layout.simple_list_item_1, android.R.id.text1, suggestion_list);
+
+                            runOnUiThread(new updateItem());
+
+                            //                    // Assign adapter to ListView
+                            //                    listView.setAdapter(adapter);
+                            //
+                            //                    // ListView Item Click Listener
+                            //                    listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                            //
+                            //                        @Override
+                            //                        public void onItemClick(AdapterView<?> parent, View view,
+                            //                                                int position, long id) {
+                            //
+                            //                            // ListView Clicked item index
+                            //                            int itemPosition = position;
+                            //
+                            //                            // ListView Clicked item value
+                            //                            String itemValue = (String) listView.getItemAtPosition(position);
+                            //
+                            //                            // Show Alert
+                            //                            Toast.makeText(getApplicationContext(),
+                            //                                    "Position :" + itemPosition + "  ListItem : " + itemValue, Toast.LENGTH_LONG)
+                            //                                    .show();
+                            //
+                            //                            textInput.setText(itemValue);
+                            //                        }
+                            //
+                            //                    });
+                        }
                     }
 
-                    adapter = new ArrayAdapter<String>(context,
-                            android.R.layout.simple_list_item_1, android.R.id.text1, suggestion_list);
-//                    ArrayAdapter<String> adapter = new ArrayAdapter<String>(getParent(),
-//                            android.R.layout.simple_list_item_1, android.R.id.text1, suggestion_list);
-
-                    runOnUiThread(new updateItem());
-
-//                    // Assign adapter to ListView
-//                    listView.setAdapter(adapter);
-//
-//                    // ListView Item Click Listener
-//                    listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-//
-//                        @Override
-//                        public void onItemClick(AdapterView<?> parent, View view,
-//                                                int position, long id) {
-//
-//                            // ListView Clicked item index
-//                            int itemPosition = position;
-//
-//                            // ListView Clicked item value
-//                            String itemValue = (String) listView.getItemAtPosition(position);
-//
-//                            // Show Alert
-//                            Toast.makeText(getApplicationContext(),
-//                                    "Position :" + itemPosition + "  ListItem : " + itemValue, Toast.LENGTH_LONG)
-//                                    .show();
-//
-//                            textInput.setText(itemValue);
-//                        }
-//
-//                    });
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
 
+                onPause();
 
-            } catch (Exception e) {
-                e.printStackTrace();
+                synchronized (mPauseLock) {
+                    while (mPaused) {
+                        try {
+                            mPauseLock.wait();
+                        } catch (InterruptedException e) {
+                        }
+                    }
+                }
+
             }
-
             return result;
+        }
+
+        /**
+         * Call this on pause.
+         */
+        public void onPause() {
+            synchronized (mPauseLock) {
+                mPaused = true;
+            }
+        }
+
+        /**
+         * Call this on resume.
+         */
+        public void onResume() {
+            synchronized (mPauseLock) {
+                mPaused = false;
+                mPauseLock.notifyAll();
+            }
         }
 
         class updateItem implements Runnable {
@@ -211,9 +275,12 @@ public class AddWordMacroActivity extends AppCompatActivity {
             }
         }
 
-        protected void start() throws Exception
+        protected boolean start() throws Exception
         {
-            URL url = new URL("http://google.com/complete/search?output=toolbar&q=theoric");
+            String queryWord = textInput.getText().toString().trim();
+            if (queryWord.length() == 0) return false;
+
+            URL url = new URL("http://google.com/complete/search?output=toolbar&q=" + queryWord);
             URLConnection connection = url.openConnection();
 
             // http://stackoverflow.com/questions/15596312/xml-saxparserexception-in-android : 참고한 사이트
@@ -225,6 +292,8 @@ public class AddWordMacroActivity extends AppCompatActivity {
 //            System.out.println(descNodes.item(i).getTextContent());
                 System.out.println(descNodes.item(i).getAttributes().getNamedItem("data").getNodeValue());
             }
+
+            return true;
         }
 
         protected Document parseXML(InputStream stream)
