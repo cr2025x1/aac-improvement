@@ -40,6 +40,7 @@ public class AddWordMacroActivity extends AppCompatActivity {
     Context context = this;
     ArrayAdapter<String> adapter;
     updateList updater = new updateList();
+    ArrayList<String> suggestionList = new ArrayList<String>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -119,6 +120,15 @@ public class AddWordMacroActivity extends AppCompatActivity {
 //        });
     }
 
+    @Override
+    protected void onDestroy() {
+        System.out.println("I LIVE, I DIE, AND I LIVE AGAIN!!");
+
+        updater.onComplete();
+
+        super.onDestroy();
+    }
+
     class updateList extends AsyncTask<String, Integer, Long> {
         Document doc;
         NodeList descNodes;
@@ -158,6 +168,7 @@ public class AddWordMacroActivity extends AppCompatActivity {
         protected Long doInBackground(String... params) {
             long result = 0;
 
+            System.out.println("Updater thread starts.");
             while (!mFinished) {
                 try {
                     System.out.println("Fetching data...");
@@ -165,47 +176,52 @@ public class AddWordMacroActivity extends AppCompatActivity {
 
                         int suggestion_count = descNodes.getLength();
                         if (suggestion_count > 0) {
-                            String[] suggestion_list = new String[suggestion_count];
+                            suggestionList.clear();
                             //                    ArrayList<String> suggestion_list = new ArrayList<String>();
                             for (int i = 0; i < suggestion_count; i++) {
-                                suggestion_list[i] = descNodes.item(i).getAttributes().getNamedItem("data").getNodeValue();
+                                suggestionList.add(descNodes.item(i).getAttributes().getNamedItem("data").getNodeValue());
                                 //                        suggestion_list.add(descNodes.item(i).getAttributes().getNamedItem("data").getNodeValue());
                             }
 
-                            adapter = new ArrayAdapter<String>(context,
-                                    android.R.layout.simple_list_item_1, android.R.id.text1, suggestion_list);
-                            //                    ArrayAdapter<String> adapter = new ArrayAdapter<String>(getParent(),
-                            //                            android.R.layout.simple_list_item_1, android.R.id.text1, suggestion_list);
 
-                            runOnUiThread(new updateItem());
-
-                            //                    // Assign adapter to ListView
-                            //                    listView.setAdapter(adapter);
-                            //
-                            //                    // ListView Item Click Listener
-                            //                    listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-                            //
-                            //                        @Override
-                            //                        public void onItemClick(AdapterView<?> parent, View view,
-                            //                                                int position, long id) {
-                            //
-                            //                            // ListView Clicked item index
-                            //                            int itemPosition = position;
-                            //
-                            //                            // ListView Clicked item value
-                            //                            String itemValue = (String) listView.getItemAtPosition(position);
-                            //
-                            //                            // Show Alert
-                            //                            Toast.makeText(getApplicationContext(),
-                            //                                    "Position :" + itemPosition + "  ListItem : " + itemValue, Toast.LENGTH_LONG)
-                            //                                    .show();
-                            //
-                            //                            textInput.setText(itemValue);
-                            //                        }
-                            //
-                            //                    });
                         }
                     }
+                    else {
+                        suggestionList.clear();
+                    }
+
+                    adapter = new ArrayAdapter<String>(context,
+                            android.R.layout.simple_list_item_1, android.R.id.text1, suggestionList);
+                    //                    ArrayAdapter<String> adapter = new ArrayAdapter<String>(getParent(),
+                    //                            android.R.layout.simple_list_item_1, android.R.id.text1, suggestion_list);
+
+                    runOnUiThread(new updateItem());
+
+                    //                    // Assign adapter to ListView
+                    //                    listView.setAdapter(adapter);
+                    //
+                    //                    // ListView Item Click Listener
+                    //                    listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                    //
+                    //                        @Override
+                    //                        public void onItemClick(AdapterView<?> parent, View view,
+                    //                                                int position, long id) {
+                    //
+                    //                            // ListView Clicked item index
+                    //                            int itemPosition = position;
+                    //
+                    //                            // ListView Clicked item value
+                    //                            String itemValue = (String) listView.getItemAtPosition(position);
+                    //
+                    //                            // Show Alert
+                    //                            Toast.makeText(getApplicationContext(),
+                    //                                    "Position :" + itemPosition + "  ListItem : " + itemValue, Toast.LENGTH_LONG)
+                    //                                    .show();
+                    //
+                    //                            textInput.setText(itemValue);
+                    //                        }
+                    //
+                    //                    });
 
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -223,6 +239,8 @@ public class AddWordMacroActivity extends AppCompatActivity {
                 }
 
             }
+
+            System.out.println("End of the Updater thread!");
             return result;
         }
 
@@ -243,6 +261,11 @@ public class AddWordMacroActivity extends AppCompatActivity {
                 mPaused = false;
                 mPauseLock.notifyAll();
             }
+        }
+
+        public void onComplete() {
+            mFinished = true;
+            this.onResume();
         }
 
         class updateItem implements Runnable {
