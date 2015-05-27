@@ -3,7 +3,6 @@ package cwnuchrome.aac_cwnu_it_2015_1;
 import android.content.Context;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.SystemClock;
 import android.support.v7.app.AppCompatActivity;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -14,7 +13,6 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.ListView;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import org.w3c.dom.Document;
@@ -22,7 +20,6 @@ import org.w3c.dom.NodeList;
 
 import java.io.BufferedInputStream;
 import java.io.InputStream;
-import java.lang.reflect.Array;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
@@ -32,15 +29,12 @@ import javax.xml.parsers.DocumentBuilderFactory;
 
 
 public class AddWordMacroActivity extends AppCompatActivity {
-    // TODO: Optimization of the code is required.
-
     ListView listView;
     EditText textInput;
-//    Document doc;
     Context context = this;
-    ArrayAdapter<String> adapter;
     updateList updater = new updateList();
     ArrayList<String> suggestionList = new ArrayList<String>();
+    ArrayAdapter<String> adapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,13 +43,36 @@ public class AddWordMacroActivity extends AppCompatActivity {
 
         textInput = (EditText)findViewById(R.id.edittext_add_word_macro);
 
-        // Get ListView object from xml
+        /* ListView Initialization */
         listView = (ListView) findViewById(R.id.list_add_word_macro);
+        // Define a new Adapter
+        // First parameter - Context
+        // Second parameter - Layout for the row
+        // Third parameter - ID of the TextView to which the data is written
+        // Forth - the Array of data
+        adapter = new ArrayAdapter<String>(context,
+                android.R.layout.simple_list_item_1, android.R.id.text1, suggestionList);
+        listView.setAdapter(adapter);
+        // ListView Item Click Listener
+        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view,
+                                    int position, long id) {
+                // ListView Clicked item value
+                String itemValue = (String) listView.getItemAtPosition(position);
 
-        updater.execute();
+                // Show Alert
+                Toast.makeText(getApplicationContext(),
+                        "Position :" + position + "  ListItem : " + itemValue, Toast.LENGTH_LONG)
+                        .show();
 
+                textInput.setText(itemValue);
+            }
+        });
+        /* End of ListView initialization */
+
+        /* Method for text-changing event */
         textInput.addTextChangedListener(new TextWatcher() {
-
             public void afterTextChanged(Editable s) {
             }
 
@@ -68,64 +85,14 @@ public class AddWordMacroActivity extends AppCompatActivity {
                 updater.onResume();
             }
         });
+        /* End of Method for text-changing event */
 
-
-        // Defined Array values to show in ListView
-//        String[] values = new String[] { "Android List View",
-//                "Adapter implementation",
-//                "Simple List View In Android",
-//                "Create List View Android",
-//                "Android Example",
-//                "List View Source Code",
-//                "List View Array Adapter",
-//                "Android Example List View"
-//        };
-
-
-
-        // Define a new Adapter
-        // First parameter - Context
-        // Second parameter - Layout for the row
-        // Third parameter - ID of the TextView to which the data is written
-        // Forth - the Array of data
-
-//        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this,
-//                android.R.layout.simple_list_item_1, android.R.id.text1, values);
-//
-//
-//        // Assign adapter to ListView
-//        listView.setAdapter(adapter);
-
-//        // ListView Item Click Listener
-//        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-//
-//            @Override
-//            public void onItemClick(AdapterView<?> parent, View view,
-//                                    int position, long id) {
-//
-//                // ListView Clicked item index
-//                int itemPosition     = position;
-//
-//                // ListView Clicked item value
-//                String  itemValue    = (String) listView.getItemAtPosition(position);
-//
-//                // Show Alert
-//                Toast.makeText(getApplicationContext(),
-//                        "Position :" + itemPosition + "  ListItem : " + itemValue, Toast.LENGTH_LONG)
-//                        .show();
-//
-//                textInput.setText(itemValue);
-//            }
-//
-//        });
+        updater.execute(); // Initializing Updater thread
     }
 
     @Override
     protected void onDestroy() {
-        System.out.println("I LIVE, I DIE, AND I LIVE AGAIN!!");
-
-        updater.onComplete();
-
+        updater.onComplete(); // Setting Updater thread to end
         super.onDestroy();
     }
 
@@ -133,7 +100,7 @@ public class AddWordMacroActivity extends AppCompatActivity {
         Document doc;
         NodeList descNodes;
 
-        private Object mPauseLock;
+        private final Object mPauseLock = new Object();
         private boolean mPaused;
         private boolean mFinished;
 
@@ -144,23 +111,20 @@ public class AddWordMacroActivity extends AppCompatActivity {
 
         @Override
         protected void onPostExecute(Long result) {
-//            btn.setText("Thread END");
             super.onPostExecute(result);
         }
 
         @Override
         protected void onPreExecute() {
-//            btn.setText("Thread START!!!!");
-            mPauseLock = new Object();
+            super.onPreExecute();
             mPaused = false;
             mFinished = false;
 
-            super.onPreExecute();
+            System.out.println("ListView updater thread starts.");
         }
 
         @Override
         protected void onProgressUpdate(Integer... values) {
-//            pb.setProgress(values[0]);
             super.onProgressUpdate(values);
         }
 
@@ -168,61 +132,24 @@ public class AddWordMacroActivity extends AppCompatActivity {
         protected Long doInBackground(String... params) {
             long result = 0;
 
-            System.out.println("Updater thread starts.");
             while (!mFinished) {
                 try {
                     System.out.println("Fetching data...");
-                    if (this.start()) {
+                    if (this.fetchSuggestion()) {
 
                         int suggestion_count = descNodes.getLength();
                         if (suggestion_count > 0) {
                             suggestionList.clear();
-                            //                    ArrayList<String> suggestion_list = new ArrayList<String>();
                             for (int i = 0; i < suggestion_count; i++) {
                                 suggestionList.add(descNodes.item(i).getAttributes().getNamedItem("data").getNodeValue());
-                                //                        suggestion_list.add(descNodes.item(i).getAttributes().getNamedItem("data").getNodeValue());
                             }
-
-
                         }
                     }
                     else {
                         suggestionList.clear();
                     }
 
-                    adapter = new ArrayAdapter<String>(context,
-                            android.R.layout.simple_list_item_1, android.R.id.text1, suggestionList);
-                    //                    ArrayAdapter<String> adapter = new ArrayAdapter<String>(getParent(),
-                    //                            android.R.layout.simple_list_item_1, android.R.id.text1, suggestion_list);
-
                     runOnUiThread(new updateItem());
-
-                    //                    // Assign adapter to ListView
-                    //                    listView.setAdapter(adapter);
-                    //
-                    //                    // ListView Item Click Listener
-                    //                    listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-                    //
-                    //                        @Override
-                    //                        public void onItemClick(AdapterView<?> parent, View view,
-                    //                                                int position, long id) {
-                    //
-                    //                            // ListView Clicked item index
-                    //                            int itemPosition = position;
-                    //
-                    //                            // ListView Clicked item value
-                    //                            String itemValue = (String) listView.getItemAtPosition(position);
-                    //
-                    //                            // Show Alert
-                    //                            Toast.makeText(getApplicationContext(),
-                    //                                    "Position :" + itemPosition + "  ListItem : " + itemValue, Toast.LENGTH_LONG)
-                    //                                    .show();
-                    //
-                    //                            textInput.setText(itemValue);
-                    //                        }
-                    //
-                    //                    });
-
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -233,14 +160,15 @@ public class AddWordMacroActivity extends AppCompatActivity {
                     while (mPaused) {
                         try {
                             mPauseLock.wait();
-                        } catch (InterruptedException e) {
+                        }
+                        catch (InterruptedException e) {
                         }
                     }
                 }
 
             }
 
-            System.out.println("End of the Updater thread!");
+            System.out.println("ListView updater thread ends.");
             return result;
         }
 
@@ -263,42 +191,20 @@ public class AddWordMacroActivity extends AppCompatActivity {
             }
         }
 
+        // The thread is set to end. Making it escape the loop.
         public void onComplete() {
             mFinished = true;
             this.onResume();
         }
 
+        // Notifying the UI thread to update the GUI.
         class updateItem implements Runnable {
             public void run() {
-                // Assign adapter to ListView
-                listView.setAdapter(adapter);
-
-                // ListView Item Click Listener
-                listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-
-                    @Override
-                    public void onItemClick(AdapterView<?> parent, View view,
-                                            int position, long id) {
-
-                        // ListView Clicked item index
-                        int itemPosition = position;
-
-                        // ListView Clicked item value
-                        String itemValue = (String) listView.getItemAtPosition(position);
-
-                        // Show Alert
-                        Toast.makeText(getApplicationContext(),
-                                "Position :" + itemPosition + "  ListItem : " + itemValue, Toast.LENGTH_LONG)
-                                .show();
-
-                        textInput.setText(itemValue);
-                    }
-
-                });
+                adapter.notifyDataSetChanged();
             }
         }
 
-        protected boolean start() throws Exception
+        protected boolean fetchSuggestion() throws Exception
         {
             String queryWord = textInput.getText().toString().trim();
             if (queryWord.length() == 0) return false;
@@ -310,9 +216,7 @@ public class AddWordMacroActivity extends AppCompatActivity {
             doc = parseXML(new BufferedInputStream(connection.getInputStream()));
             descNodes = doc.getElementsByTagName("suggestion");
 
-            for(int i=0; i<descNodes.getLength();i++)
-            {
-//            System.out.println(descNodes.item(i).getTextContent());
+            for(int i = 0; i < descNodes.getLength(); i++) {
                 System.out.println(descNodes.item(i).getAttributes().getNamedItem("data").getNodeValue());
             }
 
