@@ -138,8 +138,8 @@ public class AddWordMacroActivity extends AppCompatActivity {
                     if (this.fetchSuggestion()) {
 
                         int suggestion_count = descNodes.getLength();
+                        suggestionList.clear();
                         if (suggestion_count > 0) {
-                            suggestionList.clear();
                             for (int i = 0; i < suggestion_count; i++) {
                                 suggestionList.add(descNodes.item(i).getAttributes().getNamedItem("data").getNodeValue());
                             }
