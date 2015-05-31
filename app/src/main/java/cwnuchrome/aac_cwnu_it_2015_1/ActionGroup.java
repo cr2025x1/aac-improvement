@@ -69,10 +69,9 @@ public class ActionGroup extends ActionItem {
      */
     public static class ActionGroupButton extends Button {
         long groupID;
-        AACGroupContainer container;
 
-        public ActionGroupButton(Context context, onClickClass onClickObj) {
-            super(context, onClickObj);
+        public ActionGroupButton(Context context, onClickClass onClickObj, AACGroupContainer container) {
+            super(context, onClickObj, container);
         }
 
         public static class onClickClass extends Button.onClickClass {
@@ -103,10 +102,6 @@ public class ActionGroup extends ActionItem {
             this.onClickObj.setContainer(container);
             this.onClickObj.setButton(this);
             this.onClickObj.init(values);
-        }
-
-        public void setContainer(AACGroupContainer container) {
-            this.container = container;
         }
 
     }

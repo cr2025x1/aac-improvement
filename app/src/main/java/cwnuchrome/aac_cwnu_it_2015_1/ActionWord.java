@@ -4,6 +4,7 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
 import android.provider.BaseColumns;
+import android.speech.tts.TextToSpeech;
 import android.view.View;
 import android.widget.Toast;
 
@@ -87,19 +88,22 @@ public class ActionWord extends ActionItem {
      */
     public static class Button extends ActionItem.Button {
 
-        public Button(Context context, onClickClass onClickObj) {
-            super(context, onClickObj);
+        public Button(Context context, onClickClass onClickObj, AACGroupContainer container) {
+            super(context, onClickObj, container);
         }
 
         public static class onClickClass extends ActionItem.Button.onClickClass {
             String message;
+            String phonetic;
             public onClickClass(Context context) {super(context); }
 
             public void onClick(View v) {
                 Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
+                container.getTTS().speak(phonetic, TextToSpeech.QUEUE_FLUSH, null, null);
             }
             public void init(ContentValues values) {
                 message = values.get(SQL.COLUMN_NAME_WORD) + "," + values.get(SQL.COLUMN_NAME_PRIORITY);
+                phonetic = values.get(SQL.COLUMN_NAME_WORD).toString();
             }
         }
 

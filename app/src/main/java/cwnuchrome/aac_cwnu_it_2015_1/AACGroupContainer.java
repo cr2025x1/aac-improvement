@@ -4,6 +4,7 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.speech.tts.TextToSpeech;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -27,6 +28,7 @@ public class AACGroupContainer {
     protected ArrayList<ActionWord.Button.onClickClass> wordOCCList;
     protected ActionMain actionMain;
     protected long currentGroupID;
+    protected TextToSpeech TTS;
 
     public AACGroupContainer(LinearLayout mainLayout) {
         this.context = mainLayout.getContext();
@@ -34,6 +36,7 @@ public class AACGroupContainer {
         this.mainLayout = mainLayout;
         contentList = new ArrayList<ActionItem.Button>();
         actionMain = ActionMain.getInstance();
+        TTS = new TextToSpeech(context, new TTSListener()); // TODO: Make a option to turn off/on TTS?
 
         // 그룹 제목 TextView 생성
         titleView = new TextView(context);
@@ -117,11 +120,12 @@ public class AACGroupContainer {
                     c.getColumnIndexOrThrow(ActionWord.SQL._ID)
             );
 
-            ActionWord.Button rowText = new ActionWord.Button(context, new ActionWord.Button.onClickClass(context));
+            ActionWord.Button rowText = new ActionWord.Button(context, new ActionWord.Button.onClickClass(context), this);
 
             values.put(ActionWord.SQL.COLUMN_NAME_WORD, c.getString(c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_WORD)));
             values.put(ActionWord.SQL.COLUMN_NAME_PRIORITY, c.getLong(c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_PRIORITY)));
             rowText.init(values);
+            rowText.setContainer(this);
 
             values.clear();
             contentList.add(rowText);
@@ -161,7 +165,7 @@ public class AACGroupContainer {
                             c.getString(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_WORD))
             );
 
-            ActionMacro.Button rowText = new ActionMacro.Button(context, new ActionMacro.Button.onClickClass(context));
+            ActionMacro.Button rowText = new ActionMacro.Button(context, new ActionMacro.Button.onClickClass(context), this);
 
             values.put(ActionMacro.SQL.COLUMN_NAME_WORD, c.getString(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_WORD)));
             values.put(ActionMacro.SQL.COLUMN_NAME_WORDCHAIN, c.getString(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_WORDCHAIN)));
@@ -204,7 +208,7 @@ public class AACGroupContainer {
                             c.getString(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_WORD))
             );
 
-            ActionGroup.ActionGroupButton rowText = new ActionGroup.ActionGroupButton(context, new ActionGroup.ActionGroupButton.onClickClass(context));
+            ActionGroup.ActionGroupButton rowText = new ActionGroup.ActionGroupButton(context, new ActionGroup.ActionGroupButton.onClickClass(context), this);
 
             values.put(ActionGroup.SQL.COLUMN_NAME_WORD, c.getString(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_WORD)));
             values.put(ActionGroup.SQL.COLUMN_NAME_PRIORITY, c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_PRIORITY));
@@ -231,7 +235,7 @@ public class AACGroupContainer {
             );
             c.moveToFirst();
 
-            ActionGroup.ActionGroupButton parentGroupButton = new ActionGroup.ActionGroupButton(context, new ActionGroup.ActionGroupButton.onClickClass(context));
+            ActionGroup.ActionGroupButton parentGroupButton = new ActionGroup.ActionGroupButton(context, new ActionGroup.ActionGroupButton.onClickClass(context), this);
 
             values.put(ActionGroup.SQL.COLUMN_NAME_WORD, c.getString(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_WORD)));
             values.put(ActionGroup.SQL.COLUMN_NAME_PRIORITY, c.getLong(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_PRIORITY)));
@@ -265,4 +269,17 @@ public class AACGroupContainer {
     public long getCurrentGroupID() {
         return currentGroupID;
     }
+
+    class TTSListener implements TextToSpeech.OnInitListener {
+        public void onInit(int status) {
+//            String myText1 = "Hello, World!";
+//            String myText2 = "This is Text-to-Speech speaking.";
+//            TTS.speak(myText1, TextToSpeech.QUEUE_FLUSH, null, null);
+//            TTS.speak(myText2, TextToSpeech.QUEUE_ADD, null, null);
+        }
+    }
+
+    public TextToSpeech getTTS() { return TTS; }
+
+
 }

@@ -58,10 +58,9 @@ public class ActionMacro extends ActionItem {
      * Created by Chrome on 5/8/15.
      */
     public static class Button extends ActionItem.Button {
-        AACGroupContainer container;
 
-        public Button(Context context, onClickClass onClickObj) {
-            super(context, onClickObj);
+        public Button(Context context, onClickClass onClickObj, AACGroupContainer container) {
+            super(context, onClickObj, container);
         }
 
         public static class onClickClass extends ActionItem.Button.onClickClass {
@@ -145,10 +144,6 @@ public class ActionMacro extends ActionItem {
             this.onClickObj.setContainer(container);
             this.onClickObj.setButton(this);
             this.onClickObj.init(values);
-        }
-
-        public void setContainer(AACGroupContainer container) {
-            this.container = container;
         }
 
     }

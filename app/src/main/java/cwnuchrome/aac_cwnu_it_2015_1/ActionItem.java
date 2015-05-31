@@ -58,7 +58,7 @@ public abstract class ActionItem implements Serializable {
         Cursor c = db.query(
                 TABLE_NAME, // The table to query
                 new String[] {SQL._ID}, // The columns to return
-                SQL.COLUMN_NAME_WORD + " = " + word, // The columns for the WHERE clause
+                SQL.COLUMN_NAME_WORD + " = '" + word + "'", // The columns for the WHERE clause
                 null, // The values for the WHERE clause
                 null, // don't group the rows
                 null, // don't filter by row groups
@@ -93,10 +93,13 @@ public abstract class ActionItem implements Serializable {
     public abstract static class Button extends android.widget.Button {
         protected onClickClass onClickObj;
         protected long priority;
+        AACGroupContainer container;
 
-        public Button(Context context, onClickClass onClickObj) {
+        public Button(Context context, onClickClass onClickObj, AACGroupContainer container) {
             super(context);
+            this.container = container;
             this.onClickObj = onClickObj;
+            this.onClickObj.setContainer(this.container);
             this.setOnClickListener(this.onClickObj);
             this.setId(View.generateViewId());
         }
@@ -140,6 +143,10 @@ public abstract class ActionItem implements Serializable {
             LP.gravity = Gravity.CENTER_HORIZONTAL;
 
             return LP;
+        }
+
+        public void setContainer(AACGroupContainer container) {
+            this.container = container;
         }
     }
 }
