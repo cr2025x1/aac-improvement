@@ -21,9 +21,11 @@ import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
 
 import java.io.BufferedInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.net.URLConnection;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 
 import javax.xml.parsers.DocumentBuilder;
@@ -244,12 +246,16 @@ public class AddWordMacroActivity extends AppCompatActivity {
         {
             String queryWord = textInput.getText().toString().trim();
             if (queryWord.length() == 0) return false;
-
             URL url = new URL("http://google.com/complete/search?output=toolbar&q=" + queryWord);
             URLConnection connection = url.openConnection();
 
             // http://stackoverflow.com/questions/15596312/xml-saxparserexception-in-android : 참고한 사이트
-            doc = parseXML(new BufferedInputStream(connection.getInputStream()));
+            try {
+                doc = parseXML(new BufferedInputStream(connection.getInputStream()));
+            } catch (UnknownHostException e) {
+                System.out.println("Unable to fetch data: Cannot resolve hostname");
+                return false;
+            }
             descNodes = doc.getElementsByTagName("suggestion");
 
             for(int i = 0; i < descNodes.getLength(); i++) {
@@ -280,6 +286,7 @@ public class AddWordMacroActivity extends AppCompatActivity {
 
             return doc;
         }
+
     }
 
     @Override
@@ -305,4 +312,5 @@ public class AddWordMacroActivity extends AppCompatActivity {
 
         return super.onOptionsItemSelected(item);
     }
+
 }
