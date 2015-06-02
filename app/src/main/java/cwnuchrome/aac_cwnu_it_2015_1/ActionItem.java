@@ -47,13 +47,15 @@ public abstract class ActionItem implements Serializable {
         static final String COLUMN_NAME_PRIORITY = "priority";
         static final String COLUMN_NAME_WORD = "word";
         static final String COLUMN_NAME_STEM = "stem";
+
+        String VARIABLE_CONTAINER = "AACGroupContainer";
     }
 
     String TABLE_NAME;
     String SQL_CREATE_ENTRIES;
     String SQL_DELETE_ENTRIES;
 
-    protected boolean exists(SQLiteDatabase db, String word) {
+    protected long exists(SQLiteDatabase db, String word) {
         // 워드 쿼리
         Cursor c = db.query(
                 TABLE_NAME, // The table to query
@@ -67,17 +69,18 @@ public abstract class ActionItem implements Serializable {
         c.moveToFirst();
         long cursorCount = c.getCount();
 
-        if (cursorCount > 0) return true;
-        return false;
+        if (cursorCount > 0) {
+            return c.getLong(c.getColumnIndexOrThrow(SQL._ID));
+        }
+        return -1;
     }
 
-    public boolean add(SQLiteDatabase db, ContentValues values) {
-        db.insert(TABLE_NAME, null, values);
-        return true;
+    public long add(SQLiteDatabase db, ContentValues values) {
+        return db.insert(TABLE_NAME, null, values);
     }
 
     public boolean remove(SQLiteDatabase db, String word) {
-        if (!exists(db, word)) return false;
+        if (exists(db, word) == -1) return false;
 
         db.delete(
                 TABLE_NAME,

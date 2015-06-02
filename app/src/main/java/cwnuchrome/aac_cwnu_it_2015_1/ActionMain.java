@@ -27,6 +27,7 @@ public class ActionMain {
     ActionItem itemChain[];
     ActionDBHelper actDBHelper;
     SQLiteDatabase db;
+    AACGroupContainer containerRef;
 
     public interface item {
         int ITEM_COUNT = 3;

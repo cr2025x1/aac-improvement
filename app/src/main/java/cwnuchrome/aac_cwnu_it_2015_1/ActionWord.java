@@ -38,9 +38,10 @@ public class ActionWord extends ActionItem {
         // 필요한 고정 스트링 추가
     }
 
-    public boolean add(SQLiteDatabase db, ContentValues values) {
+    public long add(SQLiteDatabase db, ContentValues values) {
         String word = values.getAsString(ActionWord.SQL.COLUMN_NAME_WORD);
-        if (exists(db, word)) return false;
+        long result = exists(db, word);
+        if (result != -1) return result;
 
         ContentValues record = new ContentValues();
 //        record.put(SQL.COLUMN_NAME_ENTRY_ID, 999); // 임시! 아마도 삭제될 것 같음.
@@ -48,10 +49,10 @@ public class ActionWord extends ActionItem {
         record.put(SQL.COLUMN_NAME_PRIORITY, ActionMain.getInstance().rand.nextInt(100)); // 이것도 임시
         record.put(SQL.COLUMN_NAME_WORD, word);
         record.put(SQL.COLUMN_NAME_STEM, word);
-        db.insert(TABLE_NAME, null, record);
+        result = db.insert(TABLE_NAME, null, record);
         record.clear();
 
-        return true;
+        return result;
     }
 
 //    public boolean remove(SQLiteDatabase db, String word) {

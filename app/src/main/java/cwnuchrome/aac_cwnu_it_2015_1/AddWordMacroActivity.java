@@ -27,6 +27,7 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.StringTokenizer;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -91,16 +92,56 @@ public class AddWordMacroActivity extends AppCompatActivity {
                 long currentGroupID = getIntent().getLongExtra("currentGroupID", 0);
                 ContentValues values = new ContentValues();
 
-                values.put(ActionWord.SQL.COLUMN_NAME_PARENT_ID, currentGroupID);
-                values.put(ActionWord.SQL.COLUMN_NAME_WORD, itemValue);
+                itemValue = itemValue.trim();
+                String[] textTokens = itemValue.split("\\s");
+                boolean isMacro;
 
-                if (((ActionWord) actionMain.itemChain[ActionMain.item.ID_Word]).add(db, values)) {
-                    Toast.makeText(getBaseContext(), "Word Added", Toast.LENGTH_SHORT)
-                            .show();
+                if (textTokens.length > 1) isMacro = true;
+                else isMacro = false;
+                long wordIDs[] = new long[textTokens.length];
+
+                // TODO: Consider handling adding operation fails.
+                boolean madeChange = false;
+                for (int i = 0; i < textTokens.length; i++) {
+                    System.out.println("Adding " + textTokens[i]);
+
+                    if (actionMain.itemChain[ActionMain.item.ID_Word].exists(db, textTokens[i]) == -1) madeChange = true;
+
+                    ContentValues record = new ContentValues();
+                    record.put(ActionWord.SQL.COLUMN_NAME_PARENT_ID, currentGroupID);
+                    record.put(ActionWord.SQL.COLUMN_NAME_WORD, textTokens[i]);
+
+                    wordIDs[i] = ((ActionWord)actionMain.itemChain[ActionMain.item.ID_Word]).add(db, record);
+                    record.clear();
+                }
+
+                if (isMacro && actionMain.itemChain[ActionMain.item.ID_Macro].exists(db, itemValue) == -1) {
+                    StringBuilder wordchain = new StringBuilder("|");
+                    for (int i = 0; i < textTokens.length; i++) {
+                        wordchain.append(":" + wordIDs[i] + ":");
+                    }
+                    wordchain.append("|");
+                    String wordChainString = wordchain.toString();
+
+                    ContentValues record = new ContentValues();
+//        record.put(SQL.COLUMN_NAME_ENTRY_ID, 999); // 임시! 아마도 삭제될 것 같음.
+                    record.put(ActionMacro.SQL.COLUMN_NAME_PARENT_ID, currentGroupID);
+                    record.put(ActionMacro.SQL.COLUMN_NAME_PRIORITY, ActionMain.getInstance().rand.nextInt(100)); // 이것도 임시
+                    record.put(ActionMacro.SQL.COLUMN_NAME_WORD, itemValue);
+                    record.put(ActionMacro.SQL.COLUMN_NAME_STEM, itemValue);
+                    record.put(ActionMacro.SQL.COLUMN_NAME_WORDCHAIN, wordChainString);
+                    actionMain.itemChain[ActionMain.item.ID_Macro].add(db, record);
+
+                    record.clear();
+
+                    madeChange = true;
+                }
+
+                if (madeChange) {
                     setResult(RESULT_OK);
                     finish();
                 } else {
-                    Toast.makeText(getBaseContext(), "Word Already Exists", Toast.LENGTH_SHORT)
+                    Toast.makeText(getBaseContext(), "Already Exists", Toast.LENGTH_SHORT)
                             .show();
                 }
 
@@ -134,6 +175,7 @@ public class AddWordMacroActivity extends AppCompatActivity {
     }
 
     class updateList extends AsyncTask<String, Integer, Long> {
+        // TODO: Change this into the multi-threaded version.
         Document doc;
         NodeList descNodes;
 
@@ -244,7 +286,7 @@ public class AddWordMacroActivity extends AppCompatActivity {
 
         protected boolean fetchSuggestion() throws Exception
         {
-            String queryWord = textInput.getText().toString().trim();
+            String queryWord = textInput.getText().toString().trim().replace(" ", "%20");
             if (queryWord.length() == 0) return false;
             URL url = new URL("http://google.com/complete/search?output=toolbar&q=" + queryWord);
             URLConnection connection = url.openConnection();

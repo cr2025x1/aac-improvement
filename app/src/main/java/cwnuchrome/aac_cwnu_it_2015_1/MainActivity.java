@@ -67,7 +67,7 @@ public class MainActivity extends AppCompatActivity {
                                     values.put(ActionWord.SQL.COLUMN_NAME_PARENT_ID, container.getCurrentGroupID());
                                     values.put(ActionWord.SQL.COLUMN_NAME_WORD, ETWord.getText().toString());
 
-                                    if (container.addWord(db, values)) {
+                                    if (container.addWord(db, values) != -1) {
                                         container.exploreGroup(container.getCurrentGroupID());
                                         Toast.makeText(getBaseContext(), "Word Added", Toast.LENGTH_SHORT)
                                                 .show();
@@ -143,9 +143,15 @@ public class MainActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == 0) { // Please, use a final int instead of hardcoded
             // int value
-            if (resultCode == RESULT_OK) {
-                container.refresh();
+            switch (resultCode)
+            {
+                case RESULT_OK:
+                    container.refresh();
+                    Toast.makeText(this, "Added", Toast.LENGTH_SHORT)
+                            .show();
+                    break;
             }
+
         }
     }
 

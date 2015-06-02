@@ -37,6 +37,7 @@ public class AACGroupContainer {
         contentList = new ArrayList<ActionItem.Button>();
         actionMain = ActionMain.getInstance();
         TTS = new TextToSpeech(context, new TTSListener()); // TODO: Make a option to turn off/on TTS?
+        actionMain.containerRef = this;
 
         // 그룹 제목 TextView 생성
         titleView = new TextView(context);
@@ -258,7 +259,7 @@ public class AACGroupContainer {
         }
     }
 
-    public boolean addWord(SQLiteDatabase db, ContentValues values) {
+    public long addWord(SQLiteDatabase db, ContentValues values) {
         return ((ActionWord) actionMain.itemChain[ActionMain.item.ID_Word]).add(db, values);
     }
 

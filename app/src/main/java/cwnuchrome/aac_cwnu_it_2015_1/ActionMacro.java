@@ -54,6 +54,24 @@ public class ActionMacro extends ActionItem {
 //        db.execSQL("DROP TABLE IF EXISTS " + TABLE_NAME + ";");
 //    }
 
+    public long add(SQLiteDatabase db, ContentValues values) {
+        String word = values.getAsString(ActionWord.SQL.COLUMN_NAME_WORD);
+        long result = exists(db, word);
+        if (result != -1) return result;
+
+        ContentValues record = new ContentValues();
+//        record.put(SQL.COLUMN_NAME_ENTRY_ID, 999); // 임시! 아마도 삭제될 것 같음.
+        record.put(SQL.COLUMN_NAME_PARENT_ID, values.getAsString(SQL.COLUMN_NAME_PARENT_ID));
+        record.put(SQL.COLUMN_NAME_PRIORITY, ActionMain.getInstance().rand.nextInt(100)); // 이것도 임시
+        record.put(SQL.COLUMN_NAME_WORD, word);
+        record.put(SQL.COLUMN_NAME_STEM, word);
+        record.put(ActionMacro.SQL.COLUMN_NAME_WORDCHAIN, values.getAsString(SQL.COLUMN_NAME_WORDCHAIN));
+        result = db.insert(TABLE_NAME, null, record);
+        record.clear();
+
+        return result;
+    }
+
     /**
      * Created by Chrome on 5/8/15.
      */
@@ -67,10 +85,13 @@ public class ActionMacro extends ActionItem {
             String message;
             ArrayList<ActionWord.Button.onClickClass> wordChain;
             ArrayList<String> wordMsgChain;
+            ActionMain actionMain;
+
             public onClickClass(Context context) {
                 super(context);
                 wordChain = new ArrayList<ActionWord.Button.onClickClass>();
                 wordMsgChain = new ArrayList<String>();
+                actionMain = ActionMain.getInstance();
             }
 
             public void onClick(View v) {
@@ -79,6 +100,7 @@ public class ActionMacro extends ActionItem {
             }
 
             public void init(ContentValues values) {
+                // TODO: Must be renewed to exactly support TTS.
                 message = values.get(SQL.COLUMN_NAME_WORD) + "," + values.get(SQL.COLUMN_NAME_PRIORITY);
 
                 // wordchain 문자열 파싱
@@ -124,6 +146,7 @@ public class ActionMacro extends ActionItem {
                             long priority = c.getLong(c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_PRIORITY));
                             values.put(ActionWord.SQL.COLUMN_NAME_PRIORITY, priority);
                             wordOCC.init(values);
+                            wordOCC.setContainer(actionMain.containerRef);
 
                             values.clear();
                             wordChain.add(wordOCC);
