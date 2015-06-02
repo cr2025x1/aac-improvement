@@ -1,6 +1,8 @@
 package cwnuchrome.aac_cwnu_it_2015_1;
 
+import android.content.ContentValues;
 import android.content.Context;
+import android.database.sqlite.SQLiteDatabase;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
@@ -36,6 +38,11 @@ public class AddWordMacroActivity extends AppCompatActivity {
     ArrayList<String> suggestionList;
     ArrayAdapter<String> adapter;
 
+    ActionDBHelper mDbHelper;
+    SQLiteDatabase db;
+
+    protected ActionMain actionMain;
+
     public AddWordMacroActivity() {
         super();
         context = this;
@@ -47,6 +54,10 @@ public class AddWordMacroActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_add_word_macro);
+
+        mDbHelper = new ActionDBHelper(this);
+        db = mDbHelper.getWritableDatabase();
+        actionMain = ActionMain.getInstance();
 
         textInput = (EditText)findViewById(R.id.edittext_add_word_macro);
 
@@ -74,6 +85,23 @@ public class AddWordMacroActivity extends AppCompatActivity {
                         .show();
 
                 textInput.setText(itemValue);
+
+                long currentGroupID = getIntent().getLongExtra("currentGroupID", 0);
+                ContentValues values = new ContentValues();
+
+                values.put(ActionWord.SQL.COLUMN_NAME_PARENT_ID, currentGroupID);
+                values.put(ActionWord.SQL.COLUMN_NAME_WORD, itemValue);
+
+                if (((ActionWord) actionMain.itemChain[ActionMain.item.ID_Word]).add(db, values)) {
+                    Toast.makeText(getBaseContext(), "Word Added", Toast.LENGTH_SHORT)
+                            .show();
+                    setResult(RESULT_OK);
+                    finish();
+                } else {
+                    Toast.makeText(getBaseContext(), "Word Already Exists", Toast.LENGTH_SHORT)
+                            .show();
+                }
+
             }
         });
         /* End of ListView initialization */

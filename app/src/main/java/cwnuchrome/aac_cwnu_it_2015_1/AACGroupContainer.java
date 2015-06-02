@@ -281,5 +281,10 @@ public class AACGroupContainer {
 
     public TextToSpeech getTTS() { return TTS; }
 
+    public void onDestroy() {
+        TTS.shutdown();
+    }
+
+    public void refresh() { exploreGroup(currentGroupID); }
 
 }

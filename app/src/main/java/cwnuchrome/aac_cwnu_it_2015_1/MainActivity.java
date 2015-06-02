@@ -25,18 +25,11 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        mDbHelper = new ActionDBHelper(this);
-
-        // Gets the data repository in write mode
-        db = mDbHelper.getWritableDatabase();
-
-        mDbHelper.onCreate(db);
-        mDbHelper.initTable(db);
-
         ActionMain holder = ActionMain.getInstance();
-        STHolderDebug holderDebug = STHolderDebug.getInstance();
+        holder.initDBHelper(getApplicationContext());
 
-        holderDebug.insertTestRecords(db);
+        mDbHelper = holder.actDBHelper;
+        db = holder.db;
 
         LinearLayout baseLayout = (LinearLayout)findViewById(R.id.groupLayout);
         container = new AACGroupContainer(baseLayout);
@@ -131,11 +124,29 @@ public class MainActivity extends AppCompatActivity {
 
         if (id == R.id.action_add_word_macro) {
             Intent i = new Intent(getApplicationContext(), AddWordMacroActivity.class);
-            startActivity(i);
+            i.putExtra("currentGroupID", container.getCurrentGroupID());
+            startActivityForResult(i, 0);
 
             return true;
         }
 
         return super.onOptionsItemSelected(item);
     }
+
+    @Override
+    protected void onDestroy() {
+        container.onDestroy();
+        super.onDestroy();
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == 0) { // Please, use a final int instead of hardcoded
+            // int value
+            if (resultCode == RESULT_OK) {
+                container.refresh();
+            }
+        }
+    }
+
 }
