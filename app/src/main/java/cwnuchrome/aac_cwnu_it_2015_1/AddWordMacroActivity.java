@@ -162,6 +162,7 @@ public class AddWordMacroActivity extends AppCompatActivity {
                             mPauseLock.wait();
                         }
                         catch (InterruptedException e) {
+                            System.out.println("InterruptedException error occurred.");
                         }
                     }
                 }
@@ -238,6 +239,7 @@ public class AddWordMacroActivity extends AppCompatActivity {
             }
             catch(Exception ex)
             {
+                System.out.println("Error occurred while parsing fetched XML data.");
                 throw ex;
             }
 
