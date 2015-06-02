@@ -31,10 +31,17 @@ import javax.xml.parsers.DocumentBuilderFactory;
 public class AddWordMacroActivity extends AppCompatActivity {
     ListView listView;
     EditText textInput;
-    Context context = this;
-    updateList updater = new updateList();
-    ArrayList<String> suggestionList = new ArrayList<String>();
+    Context context;
+    updateList updater;
+    ArrayList<String> suggestionList;
     ArrayAdapter<String> adapter;
+
+    public AddWordMacroActivity() {
+        super();
+        context = this;
+        updater = new updateList();
+        suggestionList = new ArrayList<String>();
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

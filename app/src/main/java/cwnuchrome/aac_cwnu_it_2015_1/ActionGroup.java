@@ -18,7 +18,7 @@ public class ActionGroup extends ActionItem {
         SQL_CREATE_ENTRIES =
                 "CREATE TABLE IF NOT EXISTS " + TABLE_NAME + " (" +
                         BaseColumns._ID + " INTEGER PRIMARY KEY," +
-                        SQL.COLUMN_NAME_ENTRY_ID + SQL.TEXT_TYPE + SQL.COMMA_SEP +
+//                        SQL.COLUMN_NAME_ENTRY_ID + SQL.TEXT_TYPE + SQL.COMMA_SEP +
                         SQL.COLUMN_NAME_PARENT_ID + SQL.TEXT_TYPE + SQL.COMMA_SEP +
                         SQL.COLUMN_NAME_PRIORITY + SQL.TEXT_TYPE + SQL.COMMA_SEP +
                         SQL.COLUMN_NAME_WORD + SQL.TEXT_TYPE + SQL.COMMA_SEP +
@@ -41,7 +41,7 @@ public class ActionGroup extends ActionItem {
         db.execSQL("INSERT INTO " +
                         TABLE_NAME + " (" +
                         SQL._ID + SQL.COMMA_SEP +
-                        SQL.COLUMN_NAME_ENTRY_ID + SQL.COMMA_SEP +
+//                        SQL.COLUMN_NAME_ENTRY_ID + SQL.COMMA_SEP +
                         SQL.COLUMN_NAME_PARENT_ID + SQL.COMMA_SEP +
                         SQL.COLUMN_NAME_PRIORITY + SQL.COMMA_SEP +
                         SQL.COLUMN_NAME_WORD + SQL.COMMA_SEP +
@@ -49,7 +49,7 @@ public class ActionGroup extends ActionItem {
                         ") " +
                         "SELECT " +
                         "1" + SQL.COMMA_SEP +
-                        "1" + SQL.COMMA_SEP +
+//                        "1" + SQL.COMMA_SEP +
                         "1" + SQL.COMMA_SEP +
                         "0" + SQL.COMMA_SEP +
                         "'" + SQL.ROOT_DEFAULT_NAME + "'" + SQL.COMMA_SEP +
@@ -57,7 +57,7 @@ public class ActionGroup extends ActionItem {
                         " WHERE NOT EXISTS (SELECT 1 FROM " +
                         TABLE_NAME + " WHERE " +
                         SQL._ID + " = 1 AND " +
-                        SQL.COLUMN_NAME_ENTRY_ID + " = 1 AND " +
+//                        SQL.COLUMN_NAME_ENTRY_ID + " = 1 AND " +
                         SQL.COLUMN_NAME_PARENT_ID + " = 1" +
                         ");"
         );

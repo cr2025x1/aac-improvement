@@ -57,7 +57,7 @@ public class STHolderDebug {
         ActionMain actionMain = ActionMain.getInstance();
 
         // root 그룹에 A 그룹 삽입
-        record.put(ActionGroup.SQL.COLUMN_NAME_ENTRY_ID, 2);
+//        record.put(ActionGroup.SQL.COLUMN_NAME_ENTRY_ID, 2);
         record.put(ActionGroup.SQL.COLUMN_NAME_PARENT_ID, 1); // parent is root
         record.put(ActionWord.SQL.COLUMN_NAME_PRIORITY, random());
         record.put(ActionGroup.SQL.COLUMN_NAME_WORD, "A");
@@ -66,7 +66,7 @@ public class STHolderDebug {
         record.clear();
 
         // root 그룹에 B 그룹 삽입
-        record.put(ActionGroup.SQL.COLUMN_NAME_ENTRY_ID, 3);
+//        record.put(ActionGroup.SQL.COLUMN_NAME_ENTRY_ID, 3);
         record.put(ActionGroup.SQL.COLUMN_NAME_PARENT_ID, 1); // parent is root
         record.put(ActionWord.SQL.COLUMN_NAME_PRIORITY, random());
         record.put(ActionGroup.SQL.COLUMN_NAME_WORD, "B");
@@ -75,7 +75,7 @@ public class STHolderDebug {
         record.clear();
 
         // root 그룹에 a 워드 삽입
-        record.put(ActionWord.SQL.COLUMN_NAME_ENTRY_ID, 1);
+//        record.put(ActionWord.SQL.COLUMN_NAME_ENTRY_ID, 1);
         record.put(ActionWord.SQL.COLUMN_NAME_PARENT_ID, 1); // parent is root
         record.put(ActionWord.SQL.COLUMN_NAME_PRIORITY, random());
         record.put(ActionWord.SQL.COLUMN_NAME_WORD, "a");
@@ -84,7 +84,7 @@ public class STHolderDebug {
         record.clear();
 
         // root 그룹에 b 워드 삽입
-        record.put(ActionWord.SQL.COLUMN_NAME_ENTRY_ID, 2);
+//        record.put(ActionWord.SQL.COLUMN_NAME_ENTRY_ID, 2);
         record.put(ActionWord.SQL.COLUMN_NAME_PARENT_ID, 1); // parent is root
         record.put(ActionWord.SQL.COLUMN_NAME_PRIORITY, random());
         record.put(ActionWord.SQL.COLUMN_NAME_WORD, "b");
@@ -108,7 +108,7 @@ public class STHolderDebug {
         c.close();
 
         // A 그룹에 Aa 워드 삽입
-        record.put(ActionWord.SQL.COLUMN_NAME_ENTRY_ID, 3);
+//        record.put(ActionWord.SQL.COLUMN_NAME_ENTRY_ID, 3);
         record.put(ActionWord.SQL.COLUMN_NAME_PARENT_ID, groupID);
         record.put(ActionWord.SQL.COLUMN_NAME_PRIORITY, random());
         record.put(ActionWord.SQL.COLUMN_NAME_WORD, "Aa");
@@ -117,7 +117,7 @@ public class STHolderDebug {
         record.clear();
 
         // A 그룹에 Ab 워드 삽입
-        record.put(ActionWord.SQL.COLUMN_NAME_ENTRY_ID, 4);
+//        record.put(ActionWord.SQL.COLUMN_NAME_ENTRY_ID, 4);
         record.put(ActionWord.SQL.COLUMN_NAME_PARENT_ID, groupID);
         record.put(ActionWord.SQL.COLUMN_NAME_PRIORITY, random());
         record.put(ActionWord.SQL.COLUMN_NAME_WORD, "Ab");
@@ -141,7 +141,7 @@ public class STHolderDebug {
         long groupID_B = groupID;
 
         // B 그룹에 Ba 워드 삽입
-        record.put(ActionWord.SQL.COLUMN_NAME_ENTRY_ID, 5);
+//        record.put(ActionWord.SQL.COLUMN_NAME_ENTRY_ID, 5);
         record.put(ActionWord.SQL.COLUMN_NAME_PARENT_ID, groupID);
         record.put(ActionWord.SQL.COLUMN_NAME_PRIORITY, random());
         record.put(ActionWord.SQL.COLUMN_NAME_WORD, "Ba");
@@ -150,7 +150,7 @@ public class STHolderDebug {
         record.clear();
 
         // B 그룹에 Bb 워드 삽입
-        record.put(ActionWord.SQL.COLUMN_NAME_ENTRY_ID, 6);
+//        record.put(ActionWord.SQL.COLUMN_NAME_ENTRY_ID, 6);
         record.put(ActionWord.SQL.COLUMN_NAME_PARENT_ID, groupID);
         record.put(ActionWord.SQL.COLUMN_NAME_PRIORITY, random());
         record.put(ActionWord.SQL.COLUMN_NAME_WORD, "Bb");
@@ -159,7 +159,7 @@ public class STHolderDebug {
         record.clear();
 
         // B 그룹에 B_A 그룹 삽입
-        record.put(ActionGroup.SQL.COLUMN_NAME_ENTRY_ID, 4);
+//        record.put(ActionGroup.SQL.COLUMN_NAME_ENTRY_ID, 4);
         record.put(ActionGroup.SQL.COLUMN_NAME_PARENT_ID, groupID); // parent is root
         record.put(ActionGroup.SQL.COLUMN_NAME_PRIORITY, random());
         record.put(ActionGroup.SQL.COLUMN_NAME_WORD, "B_A");
@@ -168,7 +168,7 @@ public class STHolderDebug {
         record.clear();
 
         // B_A 그룹에 BAa 워드 삽입
-        record.put(ActionWord.SQL.COLUMN_NAME_ENTRY_ID, 7);
+//        record.put(ActionWord.SQL.COLUMN_NAME_ENTRY_ID, 7);
         record.put(ActionWord.SQL.COLUMN_NAME_PARENT_ID, groupID);
         record.put(ActionWord.SQL.COLUMN_NAME_PRIORITY, random());
         record.put(ActionWord.SQL.COLUMN_NAME_WORD, "BAa");
@@ -177,7 +177,7 @@ public class STHolderDebug {
         record.clear();
 
         // B_A 그룹에 BAb 워드 삽입
-        record.put(ActionWord.SQL.COLUMN_NAME_ENTRY_ID, 8);
+//        record.put(ActionWord.SQL.COLUMN_NAME_ENTRY_ID, 8);
         record.put(ActionWord.SQL.COLUMN_NAME_PARENT_ID, groupID);
         record.put(ActionWord.SQL.COLUMN_NAME_PRIORITY, random());
         record.put(ActionWord.SQL.COLUMN_NAME_WORD, "BAb");
@@ -186,7 +186,7 @@ public class STHolderDebug {
         record.clear();
 
         // B 그룹에 Ba + a + BAa
-        record.put(ActionMacro.SQL.COLUMN_NAME_ENTRY_ID, 1);
+//        record.put(ActionMacro.SQL.COLUMN_NAME_ENTRY_ID, 1);
         record.put(ActionMacro.SQL.COLUMN_NAME_PARENT_ID, groupID_B);
         record.put(ActionMacro.SQL.COLUMN_NAME_PRIORITY, random());
         record.put(ActionMacro.SQL.COLUMN_NAME_WORD, "Ba a BAa");

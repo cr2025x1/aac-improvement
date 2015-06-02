@@ -42,7 +42,7 @@ public abstract class ActionItem implements Serializable {
         static final String TEXT_TYPE = " TEXT";
         static final String COMMA_SEP = ",";
 
-        static final String COLUMN_NAME_ENTRY_ID = "entryid";
+//        static final String COLUMN_NAME_ENTRY_ID = "entryid";
         static final String COLUMN_NAME_PARENT_ID = "parent_id";
         static final String COLUMN_NAME_PRIORITY = "priority";
         static final String COLUMN_NAME_WORD = "word";
