@@ -5,6 +5,7 @@
     <string name="groupName">그룹 이름</string>
     <string name="groupContext">그룹 내용</string>
     <string name="title_activity_add_word_macro">Add Word/Macro</string>
+    <string name="add_word_macro_button">추가</string>
 
     <string name="hello_world">Hello world!</string>
 

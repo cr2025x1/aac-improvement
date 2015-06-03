@@ -15,6 +15,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.Toast;
@@ -66,6 +67,12 @@ public class AddWordMacroActivity extends AppCompatActivity {
 
         textInput = (EditText)findViewById(R.id.edittext_add_word_macro);
         textInput.setOnKeyListener(new enterKeyListener());
+        ((Button)findViewById(R.id.button_add_word_macro)).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                add(textInput.getText().toString());
+            }
+        });
 
         /* ListView Initialization */
         listView = (ListView) findViewById(R.id.list_add_word_macro);
@@ -366,18 +373,27 @@ public class AddWordMacroActivity extends AppCompatActivity {
     }
 
     class enterKeyListener implements EditText.OnKeyListener {
-        boolean ENTER_KEY_PRESSED;
-
-        public enterKeyListener() {
-            ENTER_KEY_PRESSED = false;
-        }
 
         public boolean onKey(View v, int keyCode, KeyEvent keyEvent) {
-            if (keyCode == KeyEvent.KEYCODE_ENTER) {
-                ENTER_KEY_PRESSED = !ENTER_KEY_PRESSED;
-                if (ENTER_KEY_PRESSED) add(textInput.getText().toString());
+            if (keyEvent.getAction() == KeyEvent.ACTION_UP) {
+                if (keyCode == KeyEvent.KEYCODE_ENTER) {
+                    add(textInput.getText().toString());
+                    return true;
+                }
+                else if (keyCode == KeyEvent.KEYCODE_BACK) {
+                    setResult(RESULT_CANCELED);
+                    finish();
+                }
+
             }
-            return true;
+
+            return false;
         }
+    }
+
+    @Override
+    public void onBackPressed() {
+        setResult(RESULT_CANCELED);
+        finish();
     }
 }

@@ -13,12 +13,19 @@
     <EditText
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:id="@+id/edittext_add_word_macro" />
+        android:id="@+id/edittext_add_word_macro"/>
 
     <ListView
         android:id="@+id/list_add_word_macro"
         android:layout_height="wrap_content"
         android:layout_width="match_parent">
     </ListView>
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/button_add_word_macro"
+        android:text="@string/add_word_macro_button"/>
+
 
 </LinearLayout>
