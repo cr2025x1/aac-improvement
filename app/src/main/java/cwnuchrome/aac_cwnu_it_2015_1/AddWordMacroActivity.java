@@ -118,7 +118,9 @@ public class AddWordMacroActivity extends AppCompatActivity {
                 if (isMacro && actionMain.itemChain[ActionMain.item.ID_Macro].exists(db, itemValue) == -1) {
                     StringBuilder wordchain = new StringBuilder("|");
                     for (int i = 0; i < textTokens.length; i++) {
-                        wordchain.append(":" + wordIDs[i] + ":");
+                        wordchain.append(":");
+                        wordchain.append(wordIDs[i]);
+                        wordchain.append(":");
                     }
                     wordchain.append("|");
                     String wordChainString = wordchain.toString();

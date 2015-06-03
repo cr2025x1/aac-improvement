@@ -111,6 +111,7 @@ public abstract class ActionItem implements Serializable {
             Context context;
             AACGroupContainer container;
             Button button;
+            String phonetic;
             public abstract void onClick(View v);
             public onClickClass(Context context) {
                 this.context = context;

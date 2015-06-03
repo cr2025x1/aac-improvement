@@ -5,6 +5,7 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.provider.BaseColumns;
+import android.speech.tts.TextToSpeech;
 import android.view.View;
 import android.widget.Toast;
 
@@ -83,25 +84,27 @@ public class ActionMacro extends ActionItem {
 
         public static class onClickClass extends ActionItem.Button.onClickClass {
             String message;
-            ArrayList<ActionWord.Button.onClickClass> wordChain;
+            // ArrayList<ActionWord.Button.onClickClass> wordChain;
             ArrayList<String> wordMsgChain;
             ActionMain actionMain;
 
             public onClickClass(Context context) {
                 super(context);
-                wordChain = new ArrayList<ActionWord.Button.onClickClass>();
+                // wordChain = new ArrayList<ActionWord.Button.onClickClass>();
                 wordMsgChain = new ArrayList<String>();
                 actionMain = ActionMain.getInstance();
             }
 
             public void onClick(View v) {
                 Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
-                for (ActionWord.Button.onClickClass wordOCC : wordChain) wordOCC.onClick(v);
+                // for (ActionWord.Button.onClickClass wordOCC : wordChain) wordOCC.onClick(v);
+                container.getTTS().speak(phonetic, TextToSpeech.QUEUE_FLUSH, null, null);
             }
 
             public void init(ContentValues values) {
                 // TODO: Must be renewed to exactly support TTS.
                 message = values.get(SQL.COLUMN_NAME_WORD) + "," + values.get(SQL.COLUMN_NAME_PRIORITY);
+                phonetic = values.getAsString(SQL.COLUMN_NAME_WORD);
 
                 // wordchain 문자열 파싱
                 String itemChain = values.getAsString(SQL.COLUMN_NAME_WORDCHAIN);
@@ -141,6 +144,7 @@ public class ActionMacro extends ActionItem {
                             );
                             c.moveToFirst();
 
+                            /*
                             ActionWord.Button.onClickClass wordOCC = new ActionWord.Button.onClickClass(context);
                             values.put(ActionWord.SQL.COLUMN_NAME_WORD, c.getString(c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_WORD)));
                             long priority = c.getLong(c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_PRIORITY));
@@ -150,6 +154,7 @@ public class ActionMacro extends ActionItem {
 
                             values.clear();
                             wordChain.add(wordOCC);
+                            */
                             c.close();
                             buffer.setLength(0);
                         }
