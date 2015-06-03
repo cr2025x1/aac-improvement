@@ -15,7 +15,6 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.Toast;
@@ -24,13 +23,11 @@ import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
 
 import java.io.BufferedInputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
-import java.util.StringTokenizer;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -62,17 +59,10 @@ public class AddWordMacroActivity extends AppCompatActivity {
         setContentView(R.layout.activity_add_word_macro);
 
         mDbHelper = new ActionDBHelper(this);
-//        db = mDbHelper.getWritableDatabase();
         actionMain = ActionMain.getInstance();
 
         textInput = (EditText)findViewById(R.id.edittext_add_word_macro);
         textInput.setOnKeyListener(new enterKeyListener());
-        ((Button)findViewById(R.id.button_add_word_macro)).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                add(textInput.getText().toString());
-            }
-        });
 
         /* ListView Initialization */
         listView = (ListView) findViewById(R.id.list_add_word_macro);
@@ -363,11 +353,15 @@ public class AddWordMacroActivity extends AppCompatActivity {
         int id = item.getItemId();
 
         //noinspection SimplifiableIfStatement
-        /*
-        if (id == R.id.action_settings) {
+        if (id == R.id.action_add_word_macro) {
+            add(textInput.getText().toString());
             return true;
         }
-        */
+        else if (id == R.id.action_cancel_add_word_macro) {
+            setResult(RESULT_CANCELED);
+            finish();
+            return true;
+        }
 
         return super.onOptionsItemSelected(item);
     }
