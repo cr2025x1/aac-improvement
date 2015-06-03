@@ -2,14 +2,12 @@ package cwnuchrome.aac_cwnu_it_2015_1;
 
 import android.content.ContentValues;
 import android.content.Context;
-import android.content.Intent;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.text.Editable;
 import android.text.TextWatcher;
-import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -23,19 +21,17 @@ import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
 
 import java.io.BufferedInputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
-import java.util.StringTokenizer;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
 
-public class AddWordMacroActivity extends AppCompatActivity {
+public class RemoveWordMacroActivity extends AppCompatActivity {
     ListView listView;
     EditText textInput;
     Context context;
@@ -44,11 +40,11 @@ public class AddWordMacroActivity extends AppCompatActivity {
     ArrayAdapter<String> adapter;
 
     ActionDBHelper mDbHelper;
-//    SQLiteDatabase db;
+    SQLiteDatabase db;
 
     protected ActionMain actionMain;
 
-    public AddWordMacroActivity() {
+    public RemoveWordMacroActivity() {
         super();
         context = this;
         updater = new updateList();
@@ -61,11 +57,10 @@ public class AddWordMacroActivity extends AppCompatActivity {
         setContentView(R.layout.activity_add_word_macro);
 
         mDbHelper = new ActionDBHelper(this);
-//        db = mDbHelper.getWritableDatabase();
+        db = mDbHelper.getWritableDatabase();
         actionMain = ActionMain.getInstance();
 
         textInput = (EditText)findViewById(R.id.edittext_add_word_macro);
-        textInput.setOnKeyListener(new enterKeyListener());
 
         /* ListView Initialization */
         listView = (ListView) findViewById(R.id.list_add_word_macro);
@@ -82,12 +77,74 @@ public class AddWordMacroActivity extends AppCompatActivity {
             @Override
             public void onItemClick(AdapterView<?> parent, View view,
                                     int position, long id) {
-
+                // ListView Clicked item value
                 String itemValue = (String) listView.getItemAtPosition(position);
+
+                // Show Alert
+                Toast.makeText(getApplicationContext(),
+                        "Position :" + position + "  ListItem : " + itemValue, Toast.LENGTH_LONG)
+                        .show();
 
                 textInput.setText(itemValue);
 
-                add(itemValue);
+                long currentGroupID = getIntent().getLongExtra("currentGroupID", 0);
+                ContentValues values = new ContentValues();
+
+                itemValue = itemValue.trim();
+                String[] textTokens = itemValue.split("\\s");
+                boolean isMacro;
+
+                if (textTokens.length > 1) isMacro = true;
+                else isMacro = false;
+                long wordIDs[] = new long[textTokens.length];
+
+                // TODO: Consider handling adding operation fails.
+                boolean madeChange = false;
+                for (int i = 0; i < textTokens.length; i++) {
+                    System.out.println("Adding " + textTokens[i]);
+
+                    if (actionMain.itemChain[ActionMain.item.ID_Word].exists(db, textTokens[i]) == -1) madeChange = true;
+
+                    ContentValues record = new ContentValues();
+                    record.put(ActionWord.SQL.COLUMN_NAME_PARENT_ID, currentGroupID);
+                    record.put(ActionWord.SQL.COLUMN_NAME_WORD, textTokens[i]);
+
+                    wordIDs[i] = ((ActionWord)actionMain.itemChain[ActionMain.item.ID_Word]).add(db, record);
+                    record.clear();
+                }
+
+                if (isMacro && actionMain.itemChain[ActionMain.item.ID_Macro].exists(db, itemValue) == -1) {
+                    StringBuilder wordchain = new StringBuilder("|");
+                    for (int i = 0; i < textTokens.length; i++) {
+                        wordchain.append(":");
+                        wordchain.append(wordIDs[i]);
+                        wordchain.append(":");
+                    }
+                    wordchain.append("|");
+                    String wordChainString = wordchain.toString();
+
+                    ContentValues record = new ContentValues();
+//        record.put(SQL.COLUMN_NAME_ENTRY_ID, 999); // 임시! 아마도 삭제될 것 같음.
+                    record.put(ActionMacro.SQL.COLUMN_NAME_PARENT_ID, currentGroupID);
+                    record.put(ActionMacro.SQL.COLUMN_NAME_PRIORITY, ActionMain.getInstance().rand.nextInt(100)); // 이것도 임시
+                    record.put(ActionMacro.SQL.COLUMN_NAME_WORD, itemValue);
+                    record.put(ActionMacro.SQL.COLUMN_NAME_STEM, itemValue);
+                    record.put(ActionMacro.SQL.COLUMN_NAME_WORDCHAIN, wordChainString);
+                    actionMain.itemChain[ActionMain.item.ID_Macro].add(db, record);
+
+                    record.clear();
+
+                    madeChange = true;
+                }
+
+                if (madeChange) {
+                    setResult(RESULT_OK);
+                    finish();
+                } else {
+                    Toast.makeText(getBaseContext(), "Already Exists", Toast.LENGTH_SHORT)
+                            .show();
+                }
+
             }
         });
         /* End of ListView initialization */
@@ -109,73 +166,6 @@ public class AddWordMacroActivity extends AppCompatActivity {
         /* End of Method for text-changing event */
 
         updater.execute(); // Initializing Updater thread
-    }
-
-    protected void add(String itemValue) {
-        long currentGroupID = getIntent().getLongExtra("currentGroupID", 0);
-        ContentValues values = new ContentValues();
-
-        itemValue = itemValue.trim();
-        String[] textTokens = itemValue.split("\\s");
-        boolean isMacro = textTokens.length > 1;
-
-        long wordIDs[] = new long[textTokens.length];
-
-        // TODO: Consider handling adding operation fails.
-        boolean madeChange = false;
-        SQLiteDatabase db = mDbHelper.getWritableDatabase();
-        for (int i = 0; i < textTokens.length; i++) {
-            System.out.println("Adding " + textTokens[i]);
-
-            if (actionMain.itemChain[ActionMain.item.ID_Word].exists(db, textTokens[i]) == -1) madeChange = true;
-
-            ContentValues record = new ContentValues();
-            record.put(ActionWord.SQL.COLUMN_NAME_PARENT_ID, currentGroupID);
-            record.put(ActionWord.SQL.COLUMN_NAME_WORD, textTokens[i]);
-
-            wordIDs[i] = ((ActionWord)actionMain.itemChain[ActionMain.item.ID_Word]).add(db, record);
-            record.clear();
-        }
-
-        if (isMacro && actionMain.itemChain[ActionMain.item.ID_Macro].exists(db, itemValue) == -1) {
-            StringBuilder wordchain = new StringBuilder("|");
-            for (int i = 0; i < textTokens.length; i++) {
-                wordchain.append(":");
-                wordchain.append(wordIDs[i]);
-                wordchain.append(":");
-            }
-            wordchain.append("|");
-            String wordChainString = wordchain.toString();
-
-            ContentValues record = new ContentValues();
-//        record.put(SQL.COLUMN_NAME_ENTRY_ID, 999); // 임시! 아마도 삭제될 것 같음.
-            record.put(ActionMacro.SQL.COLUMN_NAME_PARENT_ID, currentGroupID);
-            record.put(ActionMacro.SQL.COLUMN_NAME_PRIORITY, ActionMain.getInstance().rand.nextInt(100)); // 이것도 임시
-            record.put(ActionMacro.SQL.COLUMN_NAME_WORD, itemValue);
-            record.put(ActionMacro.SQL.COLUMN_NAME_STEM, itemValue);
-            record.put(ActionMacro.SQL.COLUMN_NAME_WORDCHAIN, wordChainString);
-            actionMain.itemChain[ActionMain.item.ID_Macro].add(db, record);
-
-            record.clear();
-
-            madeChange = true;
-        }
-
-        db.close();
-
-        if (madeChange) {
-            Intent i = new Intent();
-            Bundle extra = new Bundle();
-            extra.putString("ItemName", itemValue);
-            i.putExtras(extra);
-
-            setResult(RESULT_OK, i);
-            finish();
-        } else {
-            Toast.makeText(this, "Already Exists", Toast.LENGTH_SHORT)
-                    .show();
-        }
-
     }
 
     @Override
@@ -365,19 +355,4 @@ public class AddWordMacroActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    class enterKeyListener implements EditText.OnKeyListener {
-        boolean ENTER_KEY_PRESSED;
-
-        public enterKeyListener() {
-            ENTER_KEY_PRESSED = false;
-        }
-
-        public boolean onKey(View v, int keyCode, KeyEvent keyEvent) {
-            if (keyCode == KeyEvent.KEYCODE_ENTER) {
-                ENTER_KEY_PRESSED = !ENTER_KEY_PRESSED;
-                if (ENTER_KEY_PRESSED) add(textInput.getText().toString());
-            }
-            return true;
-        }
-    }
 }

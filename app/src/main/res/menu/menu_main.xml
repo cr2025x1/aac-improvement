@@ -1,10 +1,12 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools" tools:context=".MainActivity">
-    <item android:id="@+id/action_add_word" android:title="Add Word"
-        android:orderInCategory="100" app:showAsAction="never" />
+    <!--<item android:id="@+id/action_add_word" android:title="Add Word"-->
+        <!--android:orderInCategory="100" app:showAsAction="never" />-->
     <item android:id="@+id/action_remove_word" android:title="Remove Word"
         android:orderInCategory="100" app:showAsAction="never" />
     <item android:id="@+id/action_add_word_macro" android:title="Add Word/Macro"
+        android:orderInCategory="100" app:showAsAction="never" />
+    <item android:id="@+id/action_remove_word_macro" android:title="Remove Word/Macro"
         android:orderInCategory="100" app:showAsAction="never" />
 </menu>

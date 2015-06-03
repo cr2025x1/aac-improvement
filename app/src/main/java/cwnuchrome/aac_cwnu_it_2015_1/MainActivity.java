@@ -52,7 +52,8 @@ public class MainActivity extends AppCompatActivity {
         int id = item.getItemId();
 
         //noinspection SimplifiableIfStatement
-        if (id == R.id.action_add_word) {
+        /*
+        if (id == R.id.action_add_word) { // TODO: Going to be deleted
             final LinearLayout linear = (LinearLayout)View.inflate(this, R.layout.add_word, null);
 
             new AlertDialog.Builder(this)
@@ -87,6 +88,7 @@ public class MainActivity extends AppCompatActivity {
 
             return true;
         }
+        */
 
         if (id == R.id.action_remove_word) { // 아직 작업 필요
             final LinearLayout linear = (LinearLayout)View.inflate(this, R.layout.remove_word, null);
@@ -123,7 +125,15 @@ public class MainActivity extends AppCompatActivity {
         }
 
         if (id == R.id.action_add_word_macro) {
-            Intent i = new Intent(getApplicationContext(), AddWordMacroActivity.class);
+            Intent i = new Intent(this, AddWordMacroActivity.class);
+            i.putExtra("currentGroupID", container.getCurrentGroupID());
+            startActivityForResult(i, 0);
+
+            return true;
+        }
+
+        if (id == R.id.action_remove_word_macro) {
+            Intent i = new Intent(this, AddWordMacroActivity.class);
             i.putExtra("currentGroupID", container.getCurrentGroupID());
             startActivityForResult(i, 0);
 
@@ -147,7 +157,7 @@ public class MainActivity extends AppCompatActivity {
             {
                 case RESULT_OK:
                     container.refresh();
-                    Toast.makeText(this, "Added", Toast.LENGTH_SHORT)
+                    Toast.makeText(this, "Added \"" + data.getExtras().getString("ItemName")+ "\"", Toast.LENGTH_SHORT)
                             .show();
                     break;
             }
