@@ -4,6 +4,8 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.database.sqlite.SQLiteDatabase;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
@@ -220,22 +222,31 @@ public class AddWordMacroActivity extends AppCompatActivity {
 
             while (!mFinished) {
                 try {
-                    System.out.println("Fetching data...");
-                    if (this.fetchSuggestion()) {
+                    ConnectivityManager connMgr = (ConnectivityManager)
+                            getSystemService(Context.CONNECTIVITY_SERVICE);
+                    NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
+                    if (networkInfo != null && networkInfo.isConnected()) {
+                        System.out.println("Fetching data...");
+                        if (this.fetchSuggestion()) {
 
-                        int suggestion_count = descNodes.getLength();
-                        suggestionList.clear();
-                        if (suggestion_count > 0) {
-                            for (int i = 0; i < suggestion_count; i++) {
-                                suggestionList.add(descNodes.item(i).getAttributes().getNamedItem("data").getNodeValue());
+                            int suggestion_count = descNodes.getLength();
+                            suggestionList.clear();
+                            if (suggestion_count > 0) {
+                                for (int i = 0; i < suggestion_count; i++) {
+                                    suggestionList.add(descNodes.item(i).getAttributes().getNamedItem("data").getNodeValue());
+                                }
                             }
                         }
-                    }
-                    else {
-                        suggestionList.clear();
+                        else {
+                            suggestionList.clear();
+                        }
+
+                        runOnUiThread(new updateItem());
+                    } else {
+                        System.out.println("No network connection available.");
                     }
 
-                    runOnUiThread(new updateItem());
+
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
