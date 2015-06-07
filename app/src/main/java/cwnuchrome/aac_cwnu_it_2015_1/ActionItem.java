@@ -2,9 +2,11 @@ package cwnuchrome.aac_cwnu_it_2015_1;
 
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.res.Resources;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.provider.BaseColumns;
+import android.support.annotation.Nullable;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -101,9 +103,11 @@ public abstract class ActionItem implements Serializable {
         protected onClickClass onClickObj;
         protected long priority;
         AACGroupContainer container;
+        Context context;
 
         public Button(Context context, onClickClass onClickObj, AACGroupContainer container) {
             super(context);
+            this.context = context;
             this.container = container;
             this.onClickObj = onClickObj;
             this.onClickObj.setContainer(this.container);
@@ -142,6 +146,8 @@ public abstract class ActionItem implements Serializable {
         public void init(ContentValues values) {
             priority = values.getAsLong(SQL.COLUMN_NAME_PRIORITY);
             this.setLayoutParams(makeLayoutParam());
+            this.setBackgroundColor(0x00000000);
+            this.setCompoundDrawablesWithIntrinsicBounds(null, context.getResources().getDrawable(values.getAsInteger(SQL.COLUMN_NAME_PICTURE), context.getTheme()) , null, null);
         }
 
         public LinearLayout.LayoutParams makeLayoutParam() {

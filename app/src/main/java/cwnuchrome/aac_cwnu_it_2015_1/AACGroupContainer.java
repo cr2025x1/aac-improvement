@@ -2,6 +2,7 @@ package cwnuchrome.aac_cwnu_it_2015_1;
 
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.res.Resources;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.speech.tts.TextToSpeech;
@@ -63,7 +64,7 @@ public class AACGroupContainer {
         // 그룹 이름 가져오기
         c = db.query(
                 actionMain.itemChain[ActionMain.item.ID_Group].TABLE_NAME,
-                new String[] {ActionGroup.SQL.COLUMN_NAME_WORD, ActionGroup.SQL.COLUMN_NAME_PARENT_ID},
+                new String[] {ActionGroup.SQL.COLUMN_NAME_WORD, ActionGroup.SQL.COLUMN_NAME_PARENT_ID, ActionGroup.SQL.COLUMN_NAME_PICTURE},
                 ActionGroup.SQL._ID + " = " + id,
                 null,
                 null,
@@ -82,7 +83,8 @@ public class AACGroupContainer {
         String[] projection = {
                 ActionWord.SQL._ID,
                 ActionWord.SQL.COLUMN_NAME_PRIORITY,
-                ActionWord.SQL.COLUMN_NAME_WORD
+                ActionWord.SQL.COLUMN_NAME_WORD,
+                ActionWord.SQL.COLUMN_NAME_PICTURE
         };
         String sortOrder =
                 ActionWord.SQL.COLUMN_NAME_PRIORITY + " DESC";
@@ -111,8 +113,11 @@ public class AACGroupContainer {
 
             values.put(ActionWord.SQL.COLUMN_NAME_WORD, c.getString(c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_WORD)));
             values.put(ActionWord.SQL.COLUMN_NAME_PRIORITY, c.getLong(c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_PRIORITY)));
+            values.put(ActionWord.SQL.COLUMN_NAME_PICTURE, c.getLong(c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_PICTURE)));
             rowText.init(values);
             rowText.setContainer(this);
+//            rowText.setBackground(Resources..getDrawable(values.getAsLong(ActionWord.SQL.COLUMN_NAME_PICTURE)));
+
 
             values.clear();
             contentList.add(rowText);
@@ -125,7 +130,8 @@ public class AACGroupContainer {
                 ActionMacro.SQL._ID,
                 ActionMacro.SQL.COLUMN_NAME_PRIORITY,
                 ActionMacro.SQL.COLUMN_NAME_WORD,
-                ActionMacro.SQL.COLUMN_NAME_WORDCHAIN
+                ActionMacro.SQL.COLUMN_NAME_WORDCHAIN,
+                ActionMacro.SQL.COLUMN_NAME_PICTURE
         };
 
         c = db.query(
@@ -157,6 +163,7 @@ public class AACGroupContainer {
             values.put(ActionMacro.SQL.COLUMN_NAME_WORD, c.getString(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_WORD)));
             values.put(ActionMacro.SQL.COLUMN_NAME_WORDCHAIN, c.getString(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_WORDCHAIN)));
             values.put(ActionMacro.SQL.COLUMN_NAME_PRIORITY, c.getLong(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_PRIORITY)));
+            values.put(ActionMacro.SQL.COLUMN_NAME_PICTURE, c.getLong(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_PICTURE)));
 
             rowText.setContainer(this);
             rowText.init(values);
@@ -200,6 +207,7 @@ public class AACGroupContainer {
             values.put(ActionGroup.SQL.COLUMN_NAME_WORD, c.getString(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_WORD)));
             values.put(ActionGroup.SQL.COLUMN_NAME_PRIORITY, c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_PRIORITY));
             values.put(ActionGroup.SQL._ID, itemId);
+            values.put(ActionGroup.SQL.COLUMN_NAME_PICTURE, c.getLong(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_PICTURE)));
 
             rowText.setContainer(this);
             rowText.init(values);
@@ -227,6 +235,7 @@ public class AACGroupContainer {
             values.put(ActionGroup.SQL.COLUMN_NAME_WORD, c.getString(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_WORD)));
             values.put(ActionGroup.SQL.COLUMN_NAME_PRIORITY, c.getLong(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_PRIORITY)));
             values.put(ActionGroup.SQL._ID, parentGroupID);
+            values.put(ActionGroup.SQL.COLUMN_NAME_PICTURE, c.getLong(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_PICTURE)));
 
             parentGroupButton.setContainer(this);
             parentGroupButton.init(values);
