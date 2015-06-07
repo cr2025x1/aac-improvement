@@ -328,9 +328,9 @@ public class AddWordMacroActivity extends AppCompatActivity {
         protected Document parseXML(InputStream stream)
                 throws Exception
         {
-            DocumentBuilderFactory objDocumentBuilderFactory = null;
-            DocumentBuilder objDocumentBuilder = null;
-            Document doc = null;
+            DocumentBuilderFactory objDocumentBuilderFactory;
+            DocumentBuilder objDocumentBuilder;
+            Document doc;
             try
             {
                 objDocumentBuilderFactory = DocumentBuilderFactory.newInstance();

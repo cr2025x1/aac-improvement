@@ -102,7 +102,6 @@ public class ActionMacro extends ActionItem {
             }
 
             public void init(ContentValues values) {
-                // TODO: Must be renewed to exactly support TTS.
                 message = values.get(SQL.COLUMN_NAME_WORD) + "," + values.get(SQL.COLUMN_NAME_PRIORITY);
                 phonetic = values.getAsString(SQL.COLUMN_NAME_WORD);
 
