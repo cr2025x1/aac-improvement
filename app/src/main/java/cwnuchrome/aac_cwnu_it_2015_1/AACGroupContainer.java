@@ -9,7 +9,9 @@ import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.GridLayout;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 
 import java.util.ArrayList;
@@ -20,7 +22,8 @@ import java.util.Collections;
  */
 public class AACGroupContainer {
     protected LinearLayout mainLayout;
-    protected LinearLayout menuLayout;
+    protected GridLayout menuLayout;
+//    protected LinearLayout menuLayout;
     protected Context context;
     protected TextView titleView;
     protected ArrayList<ActionItem.Button> contentList;
@@ -40,25 +43,33 @@ public class AACGroupContainer {
         actionMain.containerRef = this;
 
         // 그룹 제목 TextView 생성
-        titleView = new TextView(context);
-        titleView.setId(View.generateViewId());
+//        titleView = new TextView(context);
+//        titleView.setId(View.generateViewId());
+//        titleView.setText("테스트 그룹 제목");
+//        LinearLayout.LayoutParams titleViewLP = new LinearLayout.LayoutParams(
+//                ViewGroup.LayoutParams.WRAP_CONTENT,
+//                ViewGroup.LayoutParams.WRAP_CONTENT
+//        );
+//        titleViewLP.gravity = Gravity.CENTER_HORIZONTAL;
+//        mainLayout.addView(titleView, titleViewLP);
+        titleView = (TextView)(mainLayout.findViewById(R.id.groupTitle));
         titleView.setText("테스트 그룹 제목");
-        LinearLayout.LayoutParams titleViewLP = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-        );
-        titleViewLP.gravity = Gravity.CENTER_HORIZONTAL;
-        mainLayout.addView(titleView,titleViewLP);
 
         // 메뉴 레이아웃 생성
-        menuLayout = new LinearLayout(context);
-        menuLayout.setId(View.generateViewId());
-        menuLayout.setOrientation(LinearLayout.VERTICAL);
-        LinearLayout.LayoutParams LP = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
-        );
-        mainLayout.addView(menuLayout, LP);
+//        View inflatedView = View.inflate(this, R.layout.sample, null);
+//        container.addView(inflatedView);
+
+//        menuLayout = new LinearLayout(context);
+        menuLayout = (GridLayout)View.inflate(context, R.layout.aac_item_layout, null);
+//        menuLayout.setId(View.generateViewId());
+//        menuLayout.setOrientation(LinearLayout.VERTICAL);
+//        LinearLayout.LayoutParams LP = new LinearLayout.LayoutParams(
+//                ViewGroup.LayoutParams.MATCH_PARENT,
+//                ViewGroup.LayoutParams.MATCH_PARENT
+//        );
+//        mainLayout.addView(menuLayout, LP);
+//        mainLayout.addView(menuLayout);
+        ((ScrollView)mainLayout.findViewById(R.id.groupScrollView)).addView(menuLayout);
     }
 
     public void exploreGroup(long id) {
