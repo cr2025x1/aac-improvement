@@ -23,7 +23,8 @@ public class ActionWord extends ActionItem {
                         SQL.COLUMN_NAME_PARENT_ID + SQL.TEXT_TYPE + SQL.COMMA_SEP +
                         SQL.COLUMN_NAME_PRIORITY + SQL.TEXT_TYPE + SQL.COMMA_SEP +
                         SQL.COLUMN_NAME_WORD + SQL.TEXT_TYPE + SQL.COMMA_SEP +
-                        SQL.COLUMN_NAME_STEM + SQL.TEXT_TYPE +
+                        SQL.COLUMN_NAME_STEM + SQL.TEXT_TYPE + SQL.COMMA_SEP +
+                        SQL.COLUMN_NAME_PICTURE + SQL.TEXT_TYPE +
                         " )";
     }
 
@@ -49,6 +50,7 @@ public class ActionWord extends ActionItem {
         record.put(SQL.COLUMN_NAME_PRIORITY, ActionMain.getInstance().rand.nextInt(100)); // 이것도 임시
         record.put(SQL.COLUMN_NAME_WORD, word);
         record.put(SQL.COLUMN_NAME_STEM, word);
+        record.put(SQL.COLUMN_NAME_PICTURE, R.drawable.btn_default);
         result = db.insert(TABLE_NAME, null, record);
         record.clear();
 

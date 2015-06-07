@@ -27,7 +27,8 @@ public class ActionMacro extends ActionItem {
                         SQL.COLUMN_NAME_PRIORITY + SQL.TEXT_TYPE + SQL.COMMA_SEP +
                         SQL.COLUMN_NAME_WORD + SQL.TEXT_TYPE + SQL.COMMA_SEP +
                         SQL.COLUMN_NAME_STEM + SQL.TEXT_TYPE + SQL.COMMA_SEP +
-                        SQL.COLUMN_NAME_WORDCHAIN + SQL.TEXT_TYPE +
+                        SQL.COLUMN_NAME_WORDCHAIN + SQL.TEXT_TYPE + SQL.COMMA_SEP +
+                        SQL.COLUMN_NAME_PICTURE + SQL.TEXT_TYPE +
                         " )";
     }
 
@@ -67,6 +68,7 @@ public class ActionMacro extends ActionItem {
         record.put(SQL.COLUMN_NAME_WORD, word);
         record.put(SQL.COLUMN_NAME_STEM, word);
         record.put(ActionMacro.SQL.COLUMN_NAME_WORDCHAIN, values.getAsString(SQL.COLUMN_NAME_WORDCHAIN));
+        record.put(SQL.COLUMN_NAME_PICTURE, R.drawable.btn_default);
         result = db.insert(TABLE_NAME, null, record);
         record.clear();
 

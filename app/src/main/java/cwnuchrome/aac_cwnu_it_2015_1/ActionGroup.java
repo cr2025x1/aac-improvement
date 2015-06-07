@@ -22,7 +22,8 @@ public class ActionGroup extends ActionItem {
                         SQL.COLUMN_NAME_PARENT_ID + SQL.TEXT_TYPE + SQL.COMMA_SEP +
                         SQL.COLUMN_NAME_PRIORITY + SQL.TEXT_TYPE + SQL.COMMA_SEP +
                         SQL.COLUMN_NAME_WORD + SQL.TEXT_TYPE + SQL.COMMA_SEP +
-                        SQL.COLUMN_NAME_STEM + SQL.TEXT_TYPE +
+                        SQL.COLUMN_NAME_STEM + SQL.TEXT_TYPE + SQL.COMMA_SEP +
+                        SQL.COLUMN_NAME_PICTURE + SQL.TEXT_TYPE +
                         " )";
     }
 
@@ -45,7 +46,8 @@ public class ActionGroup extends ActionItem {
                         SQL.COLUMN_NAME_PARENT_ID + SQL.COMMA_SEP +
                         SQL.COLUMN_NAME_PRIORITY + SQL.COMMA_SEP +
                         SQL.COLUMN_NAME_WORD + SQL.COMMA_SEP +
-                        SQL.COLUMN_NAME_STEM +
+                        SQL.COLUMN_NAME_STEM + SQL.COMMA_SEP +
+                        SQL.COLUMN_NAME_PICTURE +
                         ") " +
                         "SELECT " +
                         "1" + SQL.COMMA_SEP +
@@ -53,7 +55,8 @@ public class ActionGroup extends ActionItem {
                         "1" + SQL.COMMA_SEP +
                         "0" + SQL.COMMA_SEP +
                         "'" + SQL.ROOT_DEFAULT_NAME + "'" + SQL.COMMA_SEP +
-                        "'" + SQL.ROOT_DEFAULT_NAME + "'" +
+                        "'" + SQL.ROOT_DEFAULT_NAME + "'" + SQL.COMMA_SEP +
+                        R.drawable.btn_default +
                         " WHERE NOT EXISTS (SELECT 1 FROM " +
                         TABLE_NAME + " WHERE " +
                         SQL._ID + " = 1 AND " +
