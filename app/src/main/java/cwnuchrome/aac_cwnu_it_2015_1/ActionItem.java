@@ -47,6 +47,7 @@ public abstract class ActionItem implements Serializable {
         static final String COLUMN_NAME_PRIORITY = "priority";
         static final String COLUMN_NAME_WORD = "word";
         static final String COLUMN_NAME_STEM = "stem";
+        String COLUMN_NAME_PICTURE = "picture";
 
         String VARIABLE_CONTAINER = "AACGroupContainer";
     }
@@ -70,8 +71,11 @@ public abstract class ActionItem implements Serializable {
         long cursorCount = c.getCount();
 
         if (cursorCount > 0) {
-            return c.getLong(c.getColumnIndexOrThrow(SQL._ID));
+            long result = c.getLong(c.getColumnIndexOrThrow(SQL._ID));
+            c.close();
+            return result;
         }
+        c.close();
         return -1;
     }
 

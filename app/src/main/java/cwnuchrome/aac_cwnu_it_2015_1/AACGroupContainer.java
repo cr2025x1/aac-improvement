@@ -5,9 +5,7 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.speech.tts.TextToSpeech;
-import android.view.Gravity;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.GridLayout;
 import android.widget.LinearLayout;
@@ -42,34 +40,11 @@ public class AACGroupContainer {
         TTS = new TextToSpeech(context, new TTSListener()); // TODO: Make a option to turn off/on TTS?
         actionMain.containerRef = this;
 
-        // 그룹 제목 TextView 생성
-//        titleView = new TextView(context);
-//        titleView.setId(View.generateViewId());
-//        titleView.setText("테스트 그룹 제목");
-//        LinearLayout.LayoutParams titleViewLP = new LinearLayout.LayoutParams(
-//                ViewGroup.LayoutParams.WRAP_CONTENT,
-//                ViewGroup.LayoutParams.WRAP_CONTENT
-//        );
-//        titleViewLP.gravity = Gravity.CENTER_HORIZONTAL;
-//        mainLayout.addView(titleView, titleViewLP);
+        // 그룹 제목 TextView 설정
         titleView = (TextView)(mainLayout.findViewById(R.id.groupTitle));
-        titleView.setText("테스트 그룹 제목");
 
-        // 메뉴 레이아웃 생성
-//        View inflatedView = View.inflate(this, R.layout.sample, null);
-//        container.addView(inflatedView);
-
-//        menuLayout = new LinearLayout(context);
-        menuLayout = (GridLayout)View.inflate(context, R.layout.aac_item_layout, null);
-//        menuLayout.setId(View.generateViewId());
-//        menuLayout.setOrientation(LinearLayout.VERTICAL);
-//        LinearLayout.LayoutParams LP = new LinearLayout.LayoutParams(
-//                ViewGroup.LayoutParams.MATCH_PARENT,
-//                ViewGroup.LayoutParams.MATCH_PARENT
-//        );
-//        mainLayout.addView(menuLayout, LP);
-//        mainLayout.addView(menuLayout);
-        ((ScrollView)mainLayout.findViewById(R.id.groupScrollView)).addView(menuLayout);
+        // 메뉴 레이아웃 설정
+        menuLayout = (GridLayout)(mainLayout.findViewById(R.id.AACMenuLayout));
     }
 
     public void exploreGroup(long id) {

@@ -10,6 +10,6 @@
     tools:context=".MainActivity"
     android:background="#fff8dc">
 
-    <include  layout="@layout/aac_group_layout" android:id="@+id/groupLayout"/>
+    <include  layout="@layout/aac_main_layout" android:id="@+id/groupLayout"/>
 
 </RelativeLayout>
