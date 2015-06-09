@@ -146,7 +146,21 @@ public class MainActivity extends AppCompatActivity {
             actionMain.actDBHelper.deleteTable(db);
             actionMain.actDBHelper.onCreate(db);
             actionMain.actDBHelper.initTable(db);
-            STHolderDebug.getInstance().insertTestRecords(db);
+            ActionDebug.getInstance().deleteFlag(db);
+            ActionDebug.getInstance().insertTestRecords(db);
+
+            container.exploreGroup(1);
+
+            return true;
+        }
+
+        if (id == R.id.action_set_default_db) {
+            ActionMain actionMain = ActionMain.getInstance();
+            actionMain.actDBHelper.deleteTable(db);
+            actionMain.actDBHelper.onCreate(db);
+            actionMain.actDBHelper.initTable(db);
+            ActionPreset.getInstance().deleteFlag(db);
+            ActionPreset.getInstance().insertDefaultRecords(db);
 
             container.exploreGroup(1);
 

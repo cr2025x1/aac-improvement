@@ -12,14 +12,14 @@ import java.util.Random;
 /**
  * Created by Chrome on 5/9/15.
  */
-public class STHolderDebug {
-    private static STHolderDebug ourInstance = new STHolderDebug();
+public class ActionDebug {
+    private static ActionDebug ourInstance = new ActionDebug();
 
-    public static STHolderDebug getInstance() {
+    public static ActionDebug getInstance() {
         return ourInstance;
     }
 
-    private STHolderDebug() {
+    private ActionDebug() {
     }
 
     private SecureRandom random = new SecureRandom();
@@ -57,14 +57,14 @@ public class STHolderDebug {
         ActionMain actionMain = ActionMain.getInstance();
 
         // 테이블 생성
-        for (int i = 0; i < ActionMain.item.ITEM_COUNT; i++) {
-            actionMain.itemChain[i].createTable(db);
-        }
+//        for (int i = 0; i < ActionMain.item.ITEM_COUNT; i++) {
+//            actionMain.itemChain[i].createTable(db);
+//        }
 
         // root 그룹에 A 그룹 삽입
 //        record.put(ActionGroup.SQL.COLUMN_NAME_ENTRY_ID, 2);
         record.put(ActionGroup.SQL.COLUMN_NAME_PARENT_ID, 1); // parent is root
-        record.put(ActionWord.SQL.COLUMN_NAME_PRIORITY, random());
+        record.put(ActionWord.SQL.COLUMN_NAME_PRIORITY, 1);
         record.put(ActionGroup.SQL.COLUMN_NAME_WORD, "A");
         record.put(ActionGroup.SQL.COLUMN_NAME_STEM, "A");
         record.put(ActionGroup.SQL.COLUMN_NAME_PICTURE, R.drawable.btn_default);
@@ -221,6 +221,10 @@ public class STHolderDebug {
                         " )";
         public static final String SQL_DELETE_ENTRIES =
                 "DROP TABLE IF EXISTS " + TABLE_NAME;
+    }
+
+    void deleteFlag (SQLiteDatabase db) {
+        db.execSQL(SQL.SQL_DELETE_ENTRIES);
     }
 
 }

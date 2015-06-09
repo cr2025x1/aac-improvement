@@ -7,6 +7,7 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.provider.BaseColumns;
 import android.support.annotation.Nullable;
+import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -148,9 +149,13 @@ public abstract class ActionItem implements Serializable {
         public void init(ContentValues values) {
             // TODO: Make this use XMLs.
             priority = values.getAsLong(SQL.COLUMN_NAME_PRIORITY);
+            this.setCompoundDrawablesWithIntrinsicBounds(null, context.getResources().getDrawable(values.getAsInteger(SQL.COLUMN_NAME_PICTURE), context.getTheme()), null, null);
+            int length = (int)TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 15, getResources().getDisplayMetrics());
+            this.setMaxWidth(context.getResources().getDrawable(values.getAsInteger(SQL.COLUMN_NAME_PICTURE), context.getTheme()).getIntrinsicWidth() + length);
             this.setLayoutParams(makeLayoutParam());
+            this.setPadding(0, 0, length, length);
+            ;
             this.setBackgroundColor(0x00000000);
-            this.setCompoundDrawablesWithIntrinsicBounds(null, context.getResources().getDrawable(values.getAsInteger(SQL.COLUMN_NAME_PICTURE), context.getTheme()) , null, null);
         }
 
         public LinearLayout.LayoutParams makeLayoutParam() {
