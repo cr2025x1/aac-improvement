@@ -58,6 +58,8 @@ public abstract class ActionItem implements Serializable {
     String SQL_CREATE_ENTRIES;
     String SQL_DELETE_ENTRIES;
 
+    public String getTableName() { return TABLE_NAME; }
+
     protected long exists(SQLiteDatabase db, String word) {
         // 워드 쿼리
         Cursor c = db.query(
@@ -164,4 +166,5 @@ public abstract class ActionItem implements Serializable {
             this.container = container;
         }
     }
+
 }

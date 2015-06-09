@@ -52,9 +52,14 @@ public class STHolderDebug {
         c.close();
         record.clear();
 
-        // 테이블 생성
+        // 테이블 청소
 
         ActionMain actionMain = ActionMain.getInstance();
+
+        // 테이블 생성
+        for (int i = 0; i < ActionMain.item.ITEM_COUNT; i++) {
+            actionMain.itemChain[i].createTable(db);
+        }
 
         // root 그룹에 A 그룹 삽입
 //        record.put(ActionGroup.SQL.COLUMN_NAME_ENTRY_ID, 2);

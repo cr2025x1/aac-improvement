@@ -9,4 +9,6 @@
         android:orderInCategory="100" app:showAsAction="never" />
     <item android:id="@+id/action_remove_word_macro" android:title="Remove Word/Macro"
         android:orderInCategory="100" app:showAsAction="never" />
+    <item android:id="@+id/action_set_debug_db" android:title="Set test DB"
+        android:orderInCategory="100" app:showAsAction="never" />
 </menu>

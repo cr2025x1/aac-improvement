@@ -27,6 +27,7 @@ public class MainActivity extends AppCompatActivity {
 
         ActionMain holder = ActionMain.getInstance();
         holder.initDBHelper(getApplicationContext());
+        holder.initTables();
 
         mDbHelper = holder.actDBHelper;
         db = holder.db;
@@ -136,6 +137,18 @@ public class MainActivity extends AppCompatActivity {
             Intent i = new Intent(this, AddWordMacroActivity.class);
             i.putExtra("currentGroupID", container.getCurrentGroupID());
             startActivityForResult(i, 0);
+
+            return true;
+        }
+
+        if (id == R.id.action_set_debug_db) {
+            ActionMain actionMain = ActionMain.getInstance();
+            actionMain.actDBHelper.deleteTable(db);
+            actionMain.actDBHelper.onCreate(db);
+            actionMain.actDBHelper.initTable(db);
+            STHolderDebug.getInstance().insertTestRecords(db);
+
+            container.exploreGroup(1);
 
             return true;
         }

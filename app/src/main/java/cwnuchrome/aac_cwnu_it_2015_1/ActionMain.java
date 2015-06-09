@@ -40,11 +40,11 @@ public class ActionMain {
     public void initDBHelper (Context context) {
         actDBHelper = new ActionDBHelper(context);
         db = actDBHelper.getWritableDatabase();
+    }
 
+    public void initTables() {
         actDBHelper.onCreate(db);
         actDBHelper.initTable(db);
-
-        STHolderDebug.getInstance().insertTestRecords(db);
     }
 
 }
