@@ -144,6 +144,7 @@ public abstract class ActionItem implements Serializable {
         }
 
         public void init(ContentValues values) {
+            // TODO: Make this use XMLs.
             priority = values.getAsLong(SQL.COLUMN_NAME_PRIORITY);
             this.setLayoutParams(makeLayoutParam());
             this.setBackgroundColor(0x00000000);
