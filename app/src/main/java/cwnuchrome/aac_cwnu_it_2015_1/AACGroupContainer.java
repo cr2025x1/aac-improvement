@@ -7,9 +7,12 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.speech.tts.TextToSpeech;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.GridLayout;
 import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
@@ -25,21 +28,27 @@ public class AACGroupContainer {
 //    protected LinearLayout menuLayout;
     protected Context context;
     protected TextView titleView;
-    protected ArrayList<ActionItem.Button> contentList;
+    protected ArrayList<View> contentList;
+//    protected ArrayList<ActionItem.Button> contentList;
     protected ActionDBHelper actDBHelper;
     protected ArrayList<ActionWord.Button.onClickClass> wordOCCList;
     protected ActionMain actionMain;
     protected long currentGroupID;
     protected TextToSpeech TTS;
 
+    protected int checkBoxMargin;
+
     public AACGroupContainer(LinearLayout mainLayout) {
         this.context = mainLayout.getContext();
         actDBHelper = new ActionDBHelper(context);
         this.mainLayout = mainLayout;
-        contentList = new ArrayList<ActionItem.Button>();
+        contentList = new ArrayList<View>();
+//        contentList = new ArrayList<ActionItem.Button>();
         actionMain = ActionMain.getInstance();
         TTS = new TextToSpeech(context, new TTSListener()); // TODO: Make a option to turn off/on TTS?
         actionMain.containerRef = this;
+
+        checkBoxMargin = 0;
 
         // 그룹 제목 TextView 설정
         titleView = (TextView)(mainLayout.findViewById(R.id.groupTitle));
@@ -51,7 +60,8 @@ public class AACGroupContainer {
     public void exploreGroup(long id) {
         currentGroupID = id;
 
-        for (ActionItem.Button item : contentList) menuLayout.removeView(item);
+        for (View item : contentList) menuLayout.removeView(item);
+//        for (ActionItem.Button item : contentList) menuLayout.removeView(item);
         contentList.clear();
 
         SQLiteDatabase db = actDBHelper.getWritableDatabase();
@@ -118,9 +128,16 @@ public class AACGroupContainer {
             rowText.setContainer(this);
 //            rowText.setBackground(Resources..getDrawable(values.getAsLong(ActionWord.SQL.COLUMN_NAME_PICTURE)));
 
+            RelativeLayout item_layout = (RelativeLayout)View.inflate(context, R.layout.aac_item_layout, null);
+            RelativeLayout.LayoutParams item_layoutParam = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            item_layoutParam.addRule(RelativeLayout.RIGHT_OF, R.id.aac_item_checkbox);
+            if  (checkBoxMargin > 0) setMargins(item_layout.findViewById(R.id.aac_item_checkbox), 0, checkBoxMargin, 0, 0);
+            item_layout.addView(rowText, item_layoutParam);
+            rowText.setId(R.id.aac_item_button_id);
 
             values.clear();
-            contentList.add(rowText);
+            contentList.add(item_layout);
+//            contentList.add(rowText);
             c.moveToNext();
         }
 
@@ -168,8 +185,16 @@ public class AACGroupContainer {
             rowText.setContainer(this);
             rowText.init(values);
 
+            RelativeLayout item_layout = (RelativeLayout)View.inflate(context, R.layout.aac_item_layout, null);
+            rowText.setId(R.id.aac_item_button_id);
+            RelativeLayout.LayoutParams item_layoutParam = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            item_layoutParam.addRule(RelativeLayout.RIGHT_OF, R.id.aac_item_checkbox);
+            if  (checkBoxMargin > 0) setMargins(item_layout.findViewById(R.id.aac_item_checkbox), 0, checkBoxMargin, 0, 0);
+            item_layout.addView(rowText, item_layoutParam);
+
             values.clear();
-            contentList.add(rowText);
+            contentList.add(item_layout);
+//            contentList.add(rowText);
             c.moveToNext();
         }
 
@@ -212,8 +237,17 @@ public class AACGroupContainer {
             rowText.setContainer(this);
             rowText.init(values);
 
+            RelativeLayout item_layout = (RelativeLayout)View.inflate(context, R.layout.aac_item_layout, null);
+            rowText.setId(R.id.aac_item_button_id);
+            RelativeLayout.LayoutParams item_layoutParam = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            item_layoutParam.addRule(RelativeLayout.RIGHT_OF, R.id.aac_item_checkbox);
+            if  (checkBoxMargin > 0) setMargins(item_layout.findViewById(R.id.aac_item_checkbox), 0, checkBoxMargin, 0, 0);
+
+            item_layout.addView(rowText, item_layoutParam);
+
             values.clear();
-            contentList.add(rowText);
+            contentList.add(item_layout);
+//            contentList.add(rowText);
             c.moveToNext();
         }
 
@@ -241,15 +275,23 @@ public class AACGroupContainer {
             parentGroupButton.init(values);
             parentGroupButton.setText("상위그룹 " + c.getString(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_WORD)));
 
+            RelativeLayout item_layout = (RelativeLayout)View.inflate(context, R.layout.aac_item_layout, null);
+            parentGroupButton.setId(R.id.aac_item_button_id);
+            RelativeLayout.LayoutParams item_layoutParam = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            item_layoutParam.addRule(RelativeLayout.RIGHT_OF, R.id.aac_item_checkbox);
+            item_layout.addView(parentGroupButton, item_layoutParam);
+            if  (checkBoxMargin > 0) setMargins(item_layout.findViewById(R.id.aac_item_checkbox), 0, checkBoxMargin, 0, 0);
+
             values.clear();
-            contentList.add(parentGroupButton);
+            contentList.add(item_layout);
+//            contentList.add(parentGroupButton);
             c.close();
         }
 
 
         Collections.sort(contentList, new ActionItem.Button.itemComparator()); // 정렬된 두 리스트의 병합 알고리즘은 내가 짜야 할지도?
 
-        for (Button btn : contentList) {
+        for (View btn : contentList) {
             menuLayout.addView(btn);
         }
     }
@@ -283,4 +325,28 @@ public class AACGroupContainer {
 
     public void refresh() { exploreGroup(currentGroupID); }
 
+    protected static void setMargins (View v, int l, int t, int r, int b) {
+        if (v.getLayoutParams() instanceof ViewGroup.MarginLayoutParams) {
+            ViewGroup.MarginLayoutParams p = (ViewGroup.MarginLayoutParams) v.getLayoutParams();
+            p.setMargins(l, t, r, b);
+            v.requestLayout();
+        }
+    }
+
+    public void updateMargin () {
+        if (contentList.size() > 0) {
+            View item = contentList.get(0);
+            View v = item.findViewById(R.id.aac_item_checkbox);
+            checkBoxMargin = ((ActionItem.Button)item.findViewById(R.id.aac_item_button_id)).image_half_height - v.getHeight() / 2;
+        }
+
+        for (View item : contentList) {
+            View v = item.findViewById(R.id.aac_item_checkbox);
+            setMargins(v, 0, checkBoxMargin, 0, 0);
+        }
+    }
+
+    public void setCheckBoxMargin (int margin) {
+        checkBoxMargin = margin;
+    }
 }

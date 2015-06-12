@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.res.Resources;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.graphics.drawable.Drawable;
 import android.provider.BaseColumns;
 import android.support.annotation.Nullable;
 import android.util.TypedValue;
@@ -105,6 +106,7 @@ public abstract class ActionItem implements Serializable {
     public abstract static class Button extends android.widget.Button {
         protected onClickClass onClickObj;
         protected long priority;
+        int image_half_height;
         AACGroupContainer container;
         Context context;
 
@@ -139,19 +141,25 @@ public abstract class ActionItem implements Serializable {
         public long getPriority() {return priority; }
         public void setPriority(long value) {priority = value; }
 
-        public static class itemComparator implements Comparator<Button> {
+        public static class itemComparator implements Comparator<View> {
             @Override
-            public int compare(Button lhs, Button rhs) {
-                return lhs.priority > rhs.priority ? -1 : lhs.priority < rhs.priority ? 1 : 0;
+            public int compare(View lhs, View rhs) {
+                Button lhs_btn = (ActionItem.Button)lhs.findViewById(R.id.aac_item_button_id);
+                Button rhs_btn = (ActionItem.Button)rhs.findViewById(R.id.aac_item_button_id);
+
+                return lhs_btn.priority > rhs_btn.priority ? -1 : lhs_btn.priority < rhs_btn.priority ? 1 : 0;
+//                return lhs.priority > rhs.priority ? -1 : lhs.priority < rhs.priority ? 1 : 0;
             }
         }
 
         public void init(ContentValues values) {
             // TODO: Make this use XMLs.
             priority = values.getAsLong(SQL.COLUMN_NAME_PRIORITY);
-            this.setCompoundDrawablesWithIntrinsicBounds(null, context.getResources().getDrawable(values.getAsInteger(SQL.COLUMN_NAME_PICTURE), context.getTheme()), null, null);
+            Drawable d = context.getResources().getDrawable(values.getAsInteger(SQL.COLUMN_NAME_PICTURE), context.getTheme());
+            this.setCompoundDrawablesWithIntrinsicBounds(null, d, null, null);
             int length = (int)TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 15, getResources().getDisplayMetrics());
-            this.setMaxWidth(context.getResources().getDrawable(values.getAsInteger(SQL.COLUMN_NAME_PICTURE), context.getTheme()).getIntrinsicWidth() + length);
+            this.setMaxWidth(d.getIntrinsicWidth() + length);
+            image_half_height = d.getIntrinsicHeight() / 2;
             this.setLayoutParams(makeLayoutParam());
             this.setPadding(0, 0, length, length);
             ;

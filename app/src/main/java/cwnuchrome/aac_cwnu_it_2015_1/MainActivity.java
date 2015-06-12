@@ -1,5 +1,7 @@
 package cwnuchrome.aac_cwnu_it_2015_1;
 
+import android.animation.Animator;
+import android.animation.AnimatorSet;
 import android.app.AlertDialog;
 import android.content.ContentValues;
 import android.content.DialogInterface;
@@ -20,6 +22,8 @@ public class MainActivity extends AppCompatActivity {
     ActionDBHelper mDbHelper;
     SQLiteDatabase db;
 
+    boolean isInited;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -35,6 +39,7 @@ public class MainActivity extends AppCompatActivity {
         LinearLayout baseLayout = (LinearLayout)findViewById(R.id.groupLayout);
         container = new AACGroupContainer(baseLayout);
 
+        isInited = false;
         container.exploreGroup(1);
     }
 
@@ -105,6 +110,7 @@ public class MainActivity extends AppCompatActivity {
                                     ContentValues values = new ContentValues();
 
                                     if (container.removeWord(db, ETWord.getText().toString())) {
+                                        isInited = false;
                                         container.exploreGroup(container.getCurrentGroupID());
                                         Toast.makeText(getBaseContext(), "Word Removed", Toast.LENGTH_SHORT)
                                                 .show();
@@ -149,6 +155,7 @@ public class MainActivity extends AppCompatActivity {
             ActionDebug.getInstance().deleteFlag(db);
             ActionDebug.getInstance().insertTestRecords(db);
 
+            isInited = false;
             container.exploreGroup(1);
 
             return true;
@@ -162,6 +169,7 @@ public class MainActivity extends AppCompatActivity {
             ActionPreset.getInstance().deleteFlag(db);
             ActionPreset.getInstance().insertDefaultRecords(db);
 
+            isInited = false;
             container.exploreGroup(1);
 
             return true;
@@ -192,4 +200,15 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+
+        if (!isInited) {
+            container.updateMargin();
+
+            isInited = true;
+        }
+
+    }
 }
