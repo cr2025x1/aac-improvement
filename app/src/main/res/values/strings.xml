@@ -11,4 +11,6 @@
 
     <string name="hello_world">Hello world!</string>
 
+    <string name="fold">Fold</string>
+
 </resources>

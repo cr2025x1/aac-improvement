@@ -1,7 +1,5 @@
 package cwnuchrome.aac_cwnu_it_2015_1;
 
-import android.animation.Animator;
-import android.animation.AnimatorSet;
 import android.app.AlertDialog;
 import android.content.ContentValues;
 import android.content.DialogInterface;
@@ -175,6 +173,11 @@ public class MainActivity extends AppCompatActivity {
             return true;
         }
 
+        if (id == R.id.action_fold) {
+            container.fold();
+            return true;
+        }
+
         return super.onOptionsItemSelected(item);
     }
 
@@ -205,7 +208,7 @@ public class MainActivity extends AppCompatActivity {
         super.onWindowFocusChanged(hasFocus);
 
         if (!isInited) {
-            container.updateMargin();
+            container.initDimInfo();
 
             isInited = true;
         }

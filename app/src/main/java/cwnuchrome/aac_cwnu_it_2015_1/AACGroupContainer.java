@@ -1,13 +1,18 @@
 package cwnuchrome.aac_cwnu_it_2015_1;
 
+import android.animation.AnimatorSet;
+import android.animation.ObjectAnimator;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.res.Resources;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.graphics.Path;
 import android.speech.tts.TextToSpeech;
+import android.util.DisplayMetrics;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.AnimationUtils;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.GridLayout;
@@ -18,6 +23,8 @@ import android.widget.TextView;
 
 import java.util.ArrayList;
 import java.util.Collections;
+
+import static java.lang.Math.ceil;
 
 /**
  * Created by Chrome on 5/9/15.
@@ -37,6 +44,13 @@ public class AACGroupContainer {
     protected TextToSpeech TTS;
 
     protected int checkBoxMargin;
+    protected int checkBoxWidth;
+    protected int imageWidth;
+
+    protected final int DURATION = 200;
+
+    boolean isFolded;
+    protected AnimatorSet foldAniSet;
 
     public AACGroupContainer(LinearLayout mainLayout) {
         this.context = mainLayout.getContext();
@@ -294,6 +308,8 @@ public class AACGroupContainer {
         for (View btn : contentList) {
             menuLayout.addView(btn);
         }
+
+        if (checkBoxWidth > 0) setFoldAnimation();
     }
 
     public long addWord(SQLiteDatabase db, ContentValues values) {
@@ -333,20 +349,187 @@ public class AACGroupContainer {
         }
     }
 
-    public void updateMargin () {
+    public void initDimInfo() {
         if (contentList.size() > 0) {
             View item = contentList.get(0);
             View v = item.findViewById(R.id.aac_item_checkbox);
             checkBoxMargin = ((ActionItem.Button)item.findViewById(R.id.aac_item_button_id)).image_half_height - v.getHeight() / 2;
+            checkBoxWidth = v.getWidth();
+            imageWidth = ((ActionItem.Button)item.findViewById(R.id.aac_item_button_id)).image_half_height * 2; // TODO: 바꿀 것
         }
 
         for (View item : contentList) {
             View v = item.findViewById(R.id.aac_item_checkbox);
             setMargins(v, 0, checkBoxMargin, 0, 0);
         }
+
+        setFoldAnimation();
     }
 
-    public void setCheckBoxMargin (int margin) {
-        checkBoxMargin = margin;
+    public void setFoldAnimation() {
+        isFolded = false;
+
+        int listSize = contentList.size();
+
+        if (listSize <= 0) return;
+
+        int column_count = menuLayout.getColumnCount();
+        int fold_column_count = column_count;
+        if (listSize < column_count) fold_column_count = listSize;
+
+        fold f[] = new fold[fold_column_count];
+        move m[] = new move[fold_column_count];
+
+        int side_pass_size = fold_column_count / 2;
+        int row_count = (int)ceil(listSize / column_count);
+        int last_row_leftover = listSize % column_count;
+        float left_mod;
+        if (fold_column_count % 2 == 1) left_mod = (-1) * checkBoxWidth;
+        else left_mod = 0;
+
+        int pos;
+        float mod;
+
+        if (fold_column_count > 1) {
+
+            // Left-pass
+            pos = side_pass_size - 1; // 음수인 경우를 고려해야 한다.
+            mod = left_mod;
+            int m_mod_seg = 0;
+
+            for (int j = 0; j < side_pass_size; j++) {
+                int mod_seg = (-1) * checkBoxWidth;
+                f[pos] = new fold(mod_seg, mod);
+                m[pos] = new move(m_mod_seg, mod);
+                mod -= checkBoxWidth;
+                m_mod_seg -= checkBoxWidth;
+                pos--;
+            }
+
+            // Right-pass
+            pos = column_count - side_pass_size; // 음수인 경우를 고려해야 한다.
+            mod = 0;
+
+            for (int j = 0; j < side_pass_size; j++) {
+                f[pos] = new fold(checkBoxWidth, mod);
+                m[pos] = new move(checkBoxWidth, mod);
+                mod += checkBoxWidth;
+                pos++;
+            }
+
+        }
+
+        // middle-pass
+        if (fold_column_count % 2 == 1) {
+            f[side_pass_size] = new fold((-1) * checkBoxWidth, 0);
+            m[side_pass_size] = new move(0, 0);
+        }
+
+        AnimatorSet list[] = new AnimatorSet[listSize * 2];
+        pos = 0;
+        int listPos = 0;
+        for (View v : contentList) {
+            ActionItem.Button btn = (ActionItem.Button)v.findViewById(R.id.aac_item_button_id);
+            CheckBox cbox = (CheckBox)v.findViewById(R.id.aac_item_checkbox);
+
+            list[listPos++] = f[pos].getAs(cbox);
+            list[listPos++] = m[pos].getAs(btn);
+
+            pos = (pos + 1) % fold_column_count;
+        }
+
+        foldAniSet = new AnimatorSet();
+        foldAniSet.playTogether(list);
+    }
+
+    public void fold() {
+        foldAniSet.start();
+    }
+
+
+    protected class move {
+        protected ObjectAnimator oa_l;
+        protected AnimatorSet as;
+        protected Path p;
+        protected float mod;
+        protected int width;
+
+        public move(int width, float mod) {
+            this.mod = mod;
+            DisplayMetrics dm = context.getResources().getDisplayMetrics();
+            this.width = width;
+
+            p = new Path();
+            p.moveTo(0f, 0f);
+            p.lineTo(-0.5f * width - mod, 0f); // TODO: 부호 이용 개조 (후진/전진 가능하게)
+        }
+
+        public AnimatorSet getAs(View v) {
+            oa_l = ObjectAnimator.ofFloat(v, View.TRANSLATION_X, View.TRANSLATION_Y, p);
+            oa_l.setDuration(DURATION);
+            oa_l.setInterpolator(AnimationUtils.loadInterpolator(context, android.R.interpolator.linear));
+
+            as = new AnimatorSet();
+            as.playTogether(oa_l);
+
+            return as;
+        }
+
+        public void toReverse() {
+            p.reset();
+            p.moveTo(-0.5f * width - mod, 0f);
+            p.lineTo(0f, 0f);
+        }
+    }
+
+    protected class fold extends move {
+        protected ObjectAnimator oa_s;
+        protected ObjectAnimator oa_a;
+        protected AnimatorSet as;
+        protected Path s;
+        protected float a[];
+        protected float mod;
+        protected int width;
+
+        public fold(int width, float mod) {
+            super(width, mod);
+
+            s = new Path();
+            s.moveTo(1f, 1f);
+            s.lineTo(0f, 1f);
+
+            a = new float[2];
+            a[0] = 1f;
+            a[1] = 0f;
+        }
+
+        public AnimatorSet getAs(View v) {
+            oa_s = ObjectAnimator.ofFloat(v, View.SCALE_X, View.SCALE_Y, s);
+            oa_a = ObjectAnimator.ofFloat(v, View.ALPHA, a[0], a[1]);
+            oa_s.setDuration(DURATION);
+            oa_a.setDuration(DURATION);
+            oa_s.setInterpolator(AnimationUtils.loadInterpolator(context, android.R.interpolator.linear));
+            oa_a.setInterpolator(AnimationUtils.loadInterpolator(context, android.R.interpolator.linear));
+
+            as = new AnimatorSet();
+            as.playTogether(oa_a, oa_s, super.getAs(v));
+
+            return as;
+        }
+
+        public void toReverse() {
+            s.reset();
+            p.reset();
+
+            s.moveTo(0f, 1f);
+            s.lineTo(1f, 1f);
+
+            a[0] = 0f;
+            a[1] = 1f;
+
+            p.moveTo(-0.5f * width - mod, 0f);
+            p.lineTo(0f, 0f);
+        }
+
     }
 }

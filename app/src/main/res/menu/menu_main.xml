@@ -13,4 +13,6 @@
         android:orderInCategory="100" app:showAsAction="never" />
     <item android:id="@+id/action_set_default_db" android:title="Return to defaults"
         android:orderInCategory="100" app:showAsAction="never" />
+    <item android:id="@+id/action_fold" android:title="@string/fold"
+        android:orderInCategory="100" app:showAsAction="never" />
 </menu>
