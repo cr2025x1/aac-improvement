@@ -1,5 +1,6 @@
 package cwnuchrome.aac_cwnu_it_2015_1;
 
+import android.animation.Animator;
 import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
 import android.content.ContentValues;
@@ -46,11 +47,13 @@ public class AACGroupContainer {
     protected int checkBoxMargin;
     protected int checkBoxWidth;
     protected int imageWidth;
+    protected ArrayList<CheckBox> checkBoxes;
 
     protected final int DURATION = 200;
 
     boolean isFolded;
     protected AnimatorSet foldAniSet;
+    protected AnimatorSet foldAniSet_reverse;
 
     public AACGroupContainer(LinearLayout mainLayout) {
         this.context = mainLayout.getContext();
@@ -63,6 +66,7 @@ public class AACGroupContainer {
         actionMain.containerRef = this;
 
         checkBoxMargin = 0;
+        checkBoxes = new ArrayList<CheckBox>();
 
         // 그룹 제목 TextView 설정
         titleView = (TextView)(mainLayout.findViewById(R.id.groupTitle));
@@ -77,6 +81,7 @@ public class AACGroupContainer {
         for (View item : contentList) menuLayout.removeView(item);
 //        for (ActionItem.Button item : contentList) menuLayout.removeView(item);
         contentList.clear();
+        checkBoxes.clear();
 
         SQLiteDatabase db = actDBHelper.getWritableDatabase();
         Cursor c;
@@ -145,11 +150,13 @@ public class AACGroupContainer {
             RelativeLayout item_layout = (RelativeLayout)View.inflate(context, R.layout.aac_item_layout, null);
             RelativeLayout.LayoutParams item_layoutParam = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
             item_layoutParam.addRule(RelativeLayout.RIGHT_OF, R.id.aac_item_checkbox);
-            if  (checkBoxMargin > 0) setMargins(item_layout.findViewById(R.id.aac_item_checkbox), 0, checkBoxMargin, 0, 0);
+            CheckBox checkBox = (CheckBox)item_layout.findViewById(R.id.aac_item_checkbox);
+            if  (checkBoxMargin > 0) setMargins(checkBox, 0, checkBoxMargin, 0, 0);
             item_layout.addView(rowText, item_layoutParam);
             rowText.setId(R.id.aac_item_button_id);
 
             values.clear();
+            checkBoxes.add(checkBox);
             contentList.add(item_layout);
 //            contentList.add(rowText);
             c.moveToNext();
@@ -203,10 +210,12 @@ public class AACGroupContainer {
             rowText.setId(R.id.aac_item_button_id);
             RelativeLayout.LayoutParams item_layoutParam = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
             item_layoutParam.addRule(RelativeLayout.RIGHT_OF, R.id.aac_item_checkbox);
-            if  (checkBoxMargin > 0) setMargins(item_layout.findViewById(R.id.aac_item_checkbox), 0, checkBoxMargin, 0, 0);
+            CheckBox checkBox = (CheckBox)item_layout.findViewById(R.id.aac_item_checkbox);
+            if  (checkBoxMargin > 0) setMargins(checkBox, 0, checkBoxMargin, 0, 0);
             item_layout.addView(rowText, item_layoutParam);
 
             values.clear();
+            checkBoxes.add(checkBox);
             contentList.add(item_layout);
 //            contentList.add(rowText);
             c.moveToNext();
@@ -255,11 +264,13 @@ public class AACGroupContainer {
             rowText.setId(R.id.aac_item_button_id);
             RelativeLayout.LayoutParams item_layoutParam = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
             item_layoutParam.addRule(RelativeLayout.RIGHT_OF, R.id.aac_item_checkbox);
-            if  (checkBoxMargin > 0) setMargins(item_layout.findViewById(R.id.aac_item_checkbox), 0, checkBoxMargin, 0, 0);
+            CheckBox checkBox = (CheckBox)item_layout.findViewById(R.id.aac_item_checkbox);
+            if  (checkBoxMargin > 0) setMargins(checkBox, 0, checkBoxMargin, 0, 0);
 
             item_layout.addView(rowText, item_layoutParam);
 
             values.clear();
+            checkBoxes.add(checkBox);
             contentList.add(item_layout);
 //            contentList.add(rowText);
             c.moveToNext();
@@ -294,9 +305,11 @@ public class AACGroupContainer {
             RelativeLayout.LayoutParams item_layoutParam = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
             item_layoutParam.addRule(RelativeLayout.RIGHT_OF, R.id.aac_item_checkbox);
             item_layout.addView(parentGroupButton, item_layoutParam);
-            if  (checkBoxMargin > 0) setMargins(item_layout.findViewById(R.id.aac_item_checkbox), 0, checkBoxMargin, 0, 0);
+            CheckBox checkBox = (CheckBox)item_layout.findViewById(R.id.aac_item_checkbox);
+            if  (checkBoxMargin > 0) setMargins(checkBox, 0, checkBoxMargin, 0, 0);
 
             values.clear();
+            checkBoxes.add(checkBox);
             contentList.add(item_layout);
 //            contentList.add(parentGroupButton);
             c.close();
@@ -393,7 +406,7 @@ public class AACGroupContainer {
         if (fold_column_count > 1) {
 
             // Left-pass
-            pos = side_pass_size - 1; // 음수인 경우를 고려해야 한다.
+            pos = side_pass_size - 1;
             mod = left_mod;
             int m_mod_seg = 0;
 
@@ -407,7 +420,7 @@ public class AACGroupContainer {
             }
 
             // Right-pass
-            pos = column_count - side_pass_size; // 음수인 경우를 고려해야 한다.
+            pos = column_count - side_pass_size;
             mod = 0;
 
             for (int j = 0; j < side_pass_size; j++) {
@@ -428,6 +441,50 @@ public class AACGroupContainer {
         AnimatorSet list[] = new AnimatorSet[listSize * 2];
         pos = 0;
         int listPos = 0;
+        float z = 0;
+        float z_mod = 1;
+        for (View v : contentList) {
+            ActionItem.Button btn = (ActionItem.Button)v.findViewById(R.id.aac_item_button_id);
+            CheckBox cbox = (CheckBox)v.findViewById(R.id.aac_item_checkbox);
+
+            list[listPos++] = f[pos].getAs(cbox);
+            list[listPos++] = m[pos].getAs(btn);
+
+            // z축 부분은 전혀 동작하지 않고 있음. 겹침 문제는 아직 해결이 안 됨.
+            v.setZ(z);
+            z += z_mod;
+            if (z == side_pass_size) z_mod *= -1;
+
+            pos = (pos + 1) % fold_column_count;
+        }
+
+        foldAniSet = new AnimatorSet();
+        foldAniSet.playTogether(list);
+        foldAniSet.addListener(new Animator.AnimatorListener() {
+            @Override
+            public void onAnimationStart(Animator animation) {
+            }
+
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                for (CheckBox cbox : checkBoxes) cbox.setVisibility(View.INVISIBLE);
+                isFolded = true;
+            }
+
+            @Override
+            public void onAnimationCancel(Animator animation) {}
+
+            @Override
+            public void onAnimationRepeat(Animator animation) {}
+        });
+
+        for (int i = 0; i < fold_column_count; i++){
+            f[i].toReverse();
+            m[i].toReverse();
+        }
+
+        pos = 0;
+        listPos = 0;
         for (View v : contentList) {
             ActionItem.Button btn = (ActionItem.Button)v.findViewById(R.id.aac_item_button_id);
             CheckBox cbox = (CheckBox)v.findViewById(R.id.aac_item_checkbox);
@@ -438,12 +495,33 @@ public class AACGroupContainer {
             pos = (pos + 1) % fold_column_count;
         }
 
-        foldAniSet = new AnimatorSet();
-        foldAniSet.playTogether(list);
+        foldAniSet_reverse = new AnimatorSet();
+        foldAniSet_reverse.playTogether(list);
+        foldAniSet_reverse.addListener(new Animator.AnimatorListener() {
+            @Override
+            public void onAnimationStart(Animator animation) {
+                for (CheckBox cbox : checkBoxes) cbox.setVisibility(View.VISIBLE);
+            }
+
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                isFolded = false;
+            }
+
+            @Override
+            public void onAnimationCancel(Animator animation) {}
+
+            @Override
+            public void onAnimationRepeat(Animator animation) {}
+        });
+
     }
 
     public void fold() {
-        foldAniSet.start();
+        if (!(foldAniSet.isRunning() || foldAniSet_reverse.isRunning())) {
+            if (isFolded) foldAniSet_reverse.start();
+            else  foldAniSet.start();
+        }
     }
 
 
@@ -518,17 +596,14 @@ public class AACGroupContainer {
         }
 
         public void toReverse() {
+            super.toReverse();
             s.reset();
-            p.reset();
 
             s.moveTo(0f, 1f);
             s.lineTo(1f, 1f);
 
             a[0] = 0f;
             a[1] = 1f;
-
-            p.moveTo(-0.5f * width - mod, 0f);
-            p.lineTo(0f, 0f);
         }
 
     }
