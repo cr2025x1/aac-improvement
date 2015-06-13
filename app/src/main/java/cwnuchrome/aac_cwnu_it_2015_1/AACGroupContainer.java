@@ -412,8 +412,8 @@ public class AACGroupContainer {
 
             for (int j = 0; j < side_pass_size; j++) {
                 int mod_seg = (-1) * checkBoxWidth;
-                f[pos] = new fold(mod_seg, mod);
-                m[pos] = new move(m_mod_seg, mod);
+                f[pos] = new fold(mod_seg, mod, DURATION);
+                m[pos] = new move(m_mod_seg, mod, DURATION);
                 mod -= checkBoxWidth;
                 m_mod_seg -= checkBoxWidth;
                 pos--;
@@ -424,8 +424,8 @@ public class AACGroupContainer {
             mod = 0;
 
             for (int j = 0; j < side_pass_size; j++) {
-                f[pos] = new fold(checkBoxWidth, mod);
-                m[pos] = new move(checkBoxWidth, mod);
+                f[pos] = new fold(checkBoxWidth, mod, DURATION);
+                m[pos] = new move(checkBoxWidth, mod, DURATION);
                 mod += checkBoxWidth;
                 pos++;
             }
@@ -434,8 +434,8 @@ public class AACGroupContainer {
 
         // middle-pass
         if (fold_column_count % 2 == 1) {
-            f[side_pass_size] = new fold((-1) * checkBoxWidth, 0);
-            m[side_pass_size] = new move(0, 0);
+            f[side_pass_size] = new fold((-1) * checkBoxWidth, 0, DURATION);
+            m[side_pass_size] = new move(0, 0, DURATION);
         }
 
         AnimatorSet list[] = new AnimatorSet[listSize * 2];
@@ -515,6 +515,22 @@ public class AACGroupContainer {
             public void onAnimationRepeat(Animator animation) {}
         });
 
+        // Setting default folded status
+        pos = 0;
+        for (View v : contentList) {
+            ActionItem.Button btn = (ActionItem.Button)v.findViewById(R.id.aac_item_button_id);
+            CheckBox cbox = (CheckBox)v.findViewById(R.id.aac_item_checkbox);
+
+            cbox.setVisibility(View.INVISIBLE);
+            cbox.setScaleX(0f);
+            cbox.setTranslationX(f[pos].getLineLength());
+
+            btn.setTranslationX(m[pos].getLineLength());
+
+            pos = (pos + 1) % fold_column_count;
+        }
+
+        isFolded = true;
     }
 
     public void fold() {
@@ -531,20 +547,24 @@ public class AACGroupContainer {
         protected Path p;
         protected float mod;
         protected int width;
+        protected int duration;
+        protected float lineLength;
 
-        public move(int width, float mod) {
+        public move(int width, float mod, int duration) {
             this.mod = mod;
+            this.duration = duration;
             DisplayMetrics dm = context.getResources().getDisplayMetrics();
             this.width = width;
+            lineLength = -0.5f * width - mod;
 
             p = new Path();
             p.moveTo(0f, 0f);
-            p.lineTo(-0.5f * width - mod, 0f); // TODO: 부호 이용 개조 (후진/전진 가능하게)
+            p.lineTo(lineLength, 0f);
         }
 
         public AnimatorSet getAs(View v) {
             oa_l = ObjectAnimator.ofFloat(v, View.TRANSLATION_X, View.TRANSLATION_Y, p);
-            oa_l.setDuration(DURATION);
+            oa_l.setDuration(duration);
             oa_l.setInterpolator(AnimationUtils.loadInterpolator(context, android.R.interpolator.linear));
 
             as = new AnimatorSet();
@@ -555,8 +575,12 @@ public class AACGroupContainer {
 
         public void toReverse() {
             p.reset();
-            p.moveTo(-0.5f * width - mod, 0f);
+            p.moveTo(lineLength, 0f);
             p.lineTo(0f, 0f);
+        }
+
+        public float getLineLength() {
+            return lineLength;
         }
     }
 
@@ -566,11 +590,9 @@ public class AACGroupContainer {
         protected AnimatorSet as;
         protected Path s;
         protected float a[];
-        protected float mod;
-        protected int width;
 
-        public fold(int width, float mod) {
-            super(width, mod);
+        public fold(int width, float mod, int duration) {
+            super(width, mod, duration);
 
             s = new Path();
             s.moveTo(1f, 1f);
@@ -584,8 +606,8 @@ public class AACGroupContainer {
         public AnimatorSet getAs(View v) {
             oa_s = ObjectAnimator.ofFloat(v, View.SCALE_X, View.SCALE_Y, s);
             oa_a = ObjectAnimator.ofFloat(v, View.ALPHA, a[0], a[1]);
-            oa_s.setDuration(DURATION);
-            oa_a.setDuration(DURATION);
+            oa_s.setDuration(duration);
+            oa_a.setDuration(duration);
             oa_s.setInterpolator(AnimationUtils.loadInterpolator(context, android.R.interpolator.linear));
             oa_a.setInterpolator(AnimationUtils.loadInterpolator(context, android.R.interpolator.linear));
 
