@@ -70,21 +70,21 @@ public class ActionGroup extends ActionItem {
     /**
      * Created by Chrome on 5/8/15.
      */
-    public static class ActionGroupButton extends Button {
+    public static class Button extends ActionItem.Button {
         long groupID;
 
-        public ActionGroupButton(Context context, onClickClass onClickObj, AACGroupContainer container) {
+        public Button(Context context, onClickClass onClickObj, AACGroupContainer container) {
             super(context, onClickObj, container);
         }
 
-        public static class onClickClass extends Button.onClickClass {
+        public static class onClickClass extends ActionItem.Button.onClickClass {
             String message;
 
             public onClickClass(Context context) {super(context); }
 
             public void onClick(View v) {
                 Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
-                container.exploreGroup(((ActionGroupButton)button).getGroupID());
+                container.exploreGroup(((Button) button).getGroupID());
             }
             public void init(ContentValues values) {
                 message = "그룹 " + values.get(ActionWord.SQL.COLUMN_NAME_WORD) + "," + values.get(ActionWord.SQL.COLUMN_NAME_PRIORITY);

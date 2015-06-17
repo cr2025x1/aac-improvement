@@ -203,15 +203,15 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    @Override
-    public void onWindowFocusChanged(boolean hasFocus) {
-        super.onWindowFocusChanged(hasFocus);
-
-        if (!isInited) {
-            container.initDimInfo();
-
-            isInited = true;
-        }
-
-    }
+//    @Override
+//    public void onWindowFocusChanged(boolean hasFocus) {
+//        super.onWindowFocusChanged(hasFocus);
+//
+//        if (!isInited) {
+//            container.initDimInfo();
+//
+//            isInited = true;
+//        }
+//
+//    }
 }

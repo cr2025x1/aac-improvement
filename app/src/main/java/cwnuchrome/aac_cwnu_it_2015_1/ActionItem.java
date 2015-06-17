@@ -158,11 +158,14 @@ public abstract class ActionItem implements Serializable {
             Drawable d = context.getResources().getDrawable(values.getAsInteger(SQL.COLUMN_NAME_PICTURE), context.getTheme());
             this.setCompoundDrawablesWithIntrinsicBounds(null, d, null, null);
             int length = (int)TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 15, getResources().getDisplayMetrics());
-            this.setMaxWidth(d.getIntrinsicWidth() + length);
+            this.setMaxWidth(d.getIntrinsicWidth());
+//            this.setMaxWidth(d.getIntrinsicWidth() + length);
             image_half_height = d.getIntrinsicHeight() / 2;
             this.setLayoutParams(makeLayoutParam());
-            this.setPadding(0, 0, length, length);
-            ;
+//            this.setPadding(0, 0, length, length);
+//            this.setPadding(0, length, length, length);
+            this.setPadding(0, length, 0, length);
+
             this.setBackgroundColor(0x00000000);
         }
 

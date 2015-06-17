@@ -5,7 +5,6 @@ import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
 import android.content.ContentValues;
 import android.content.Context;
-import android.content.res.Resources;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Path;
@@ -14,18 +13,14 @@ import android.util.DisplayMetrics;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.AnimationUtils;
-import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.GridLayout;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
-import android.widget.ScrollView;
 import android.widget.TextView;
 
 import java.util.ArrayList;
 import java.util.Collections;
-
-import static java.lang.Math.ceil;
 
 /**
  * Created by Chrome on 5/9/15.
@@ -33,20 +28,15 @@ import static java.lang.Math.ceil;
 public class AACGroupContainer {
     protected LinearLayout mainLayout;
     protected GridLayout menuLayout;
-//    protected LinearLayout menuLayout;
     protected Context context;
     protected TextView titleView;
     protected ArrayList<View> contentList;
-//    protected ArrayList<ActionItem.Button> contentList;
     protected ActionDBHelper actDBHelper;
     protected ArrayList<ActionWord.Button.onClickClass> wordOCCList;
     protected ActionMain actionMain;
     protected long currentGroupID;
     protected TextToSpeech TTS;
 
-    protected int checkBoxMargin;
-    protected int checkBoxWidth;
-    protected int imageWidth;
     protected ArrayList<CheckBox> checkBoxes;
 
     protected final int DURATION = 200;
@@ -60,12 +50,11 @@ public class AACGroupContainer {
         actDBHelper = new ActionDBHelper(context);
         this.mainLayout = mainLayout;
         contentList = new ArrayList<View>();
-//        contentList = new ArrayList<ActionItem.Button>();
         actionMain = ActionMain.getInstance();
-        TTS = new TextToSpeech(context, new TTSListener()); // TODO: Make a option to turn off/on TTS?
+        TTS = new TextToSpeech(context, new TTSListener());
         actionMain.containerRef = this;
 
-        checkBoxMargin = 0;
+//        checkBoxMargin = 0;
         checkBoxes = new ArrayList<CheckBox>();
 
         // 그룹 제목 TextView 설정
@@ -79,7 +68,6 @@ public class AACGroupContainer {
         currentGroupID = id;
 
         for (View item : contentList) menuLayout.removeView(item);
-//        for (ActionItem.Button item : contentList) menuLayout.removeView(item);
         contentList.clear();
         checkBoxes.clear();
 
@@ -138,27 +126,15 @@ public class AACGroupContainer {
                     c.getColumnIndexOrThrow(ActionWord.SQL._ID)
             );
 
-            ActionWord.Button rowText = new ActionWord.Button(context, new ActionWord.Button.onClickClass(context), this);
-
             values.put(ActionWord.SQL.COLUMN_NAME_WORD, c.getString(c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_WORD)));
             values.put(ActionWord.SQL.COLUMN_NAME_PRIORITY, c.getLong(c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_PRIORITY)));
             values.put(ActionWord.SQL.COLUMN_NAME_PICTURE, c.getLong(c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_PICTURE)));
-            rowText.init(values);
-            rowText.setContainer(this);
-//            rowText.setBackground(Resources..getDrawable(values.getAsLong(ActionWord.SQL.COLUMN_NAME_PICTURE)));
 
-            RelativeLayout item_layout = (RelativeLayout)View.inflate(context, R.layout.aac_item_layout, null);
-            RelativeLayout.LayoutParams item_layoutParam = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-            item_layoutParam.addRule(RelativeLayout.RIGHT_OF, R.id.aac_item_checkbox);
-            CheckBox checkBox = (CheckBox)item_layout.findViewById(R.id.aac_item_checkbox);
-            if  (checkBoxMargin > 0) setMargins(checkBox, 0, checkBoxMargin, 0, 0);
-            item_layout.addView(rowText, item_layoutParam);
-            rowText.setId(R.id.aac_item_button_id);
+            addMenuWithCheckBox(
+                    new ActionWord.Button(context, new ActionWord.Button.onClickClass(context), this),
+                    values);
 
             values.clear();
-            checkBoxes.add(checkBox);
-            contentList.add(item_layout);
-//            contentList.add(rowText);
             c.moveToNext();
         }
 
@@ -196,28 +172,16 @@ public class AACGroupContainer {
                             c.getString(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_WORD))
             );
 
-            ActionMacro.Button rowText = new ActionMacro.Button(context, new ActionMacro.Button.onClickClass(context), this);
-
             values.put(ActionMacro.SQL.COLUMN_NAME_WORD, c.getString(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_WORD)));
             values.put(ActionMacro.SQL.COLUMN_NAME_WORDCHAIN, c.getString(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_WORDCHAIN)));
             values.put(ActionMacro.SQL.COLUMN_NAME_PRIORITY, c.getLong(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_PRIORITY)));
             values.put(ActionMacro.SQL.COLUMN_NAME_PICTURE, c.getLong(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_PICTURE)));
 
-            rowText.setContainer(this);
-            rowText.init(values);
-
-            RelativeLayout item_layout = (RelativeLayout)View.inflate(context, R.layout.aac_item_layout, null);
-            rowText.setId(R.id.aac_item_button_id);
-            RelativeLayout.LayoutParams item_layoutParam = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-            item_layoutParam.addRule(RelativeLayout.RIGHT_OF, R.id.aac_item_checkbox);
-            CheckBox checkBox = (CheckBox)item_layout.findViewById(R.id.aac_item_checkbox);
-            if  (checkBoxMargin > 0) setMargins(checkBox, 0, checkBoxMargin, 0, 0);
-            item_layout.addView(rowText, item_layoutParam);
+            addMenuWithCheckBox(
+                    new ActionMacro.Button(context, new ActionMacro.Button.onClickClass(context), this),
+                    values);
 
             values.clear();
-            checkBoxes.add(checkBox);
-            contentList.add(item_layout);
-//            contentList.add(rowText);
             c.moveToNext();
         }
 
@@ -250,29 +214,16 @@ public class AACGroupContainer {
                             c.getString(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_WORD))
             );
 
-            ActionGroup.ActionGroupButton rowText = new ActionGroup.ActionGroupButton(context, new ActionGroup.ActionGroupButton.onClickClass(context), this);
-
             values.put(ActionGroup.SQL.COLUMN_NAME_WORD, c.getString(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_WORD)));
             values.put(ActionGroup.SQL.COLUMN_NAME_PRIORITY, c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_PRIORITY));
             values.put(ActionGroup.SQL._ID, itemId);
             values.put(ActionGroup.SQL.COLUMN_NAME_PICTURE, c.getLong(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_PICTURE)));
 
-            rowText.setContainer(this);
-            rowText.init(values);
-
-            RelativeLayout item_layout = (RelativeLayout)View.inflate(context, R.layout.aac_item_layout, null);
-            rowText.setId(R.id.aac_item_button_id);
-            RelativeLayout.LayoutParams item_layoutParam = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-            item_layoutParam.addRule(RelativeLayout.RIGHT_OF, R.id.aac_item_checkbox);
-            CheckBox checkBox = (CheckBox)item_layout.findViewById(R.id.aac_item_checkbox);
-            if  (checkBoxMargin > 0) setMargins(checkBox, 0, checkBoxMargin, 0, 0);
-
-            item_layout.addView(rowText, item_layoutParam);
+            addMenuWithCheckBox(
+                    new ActionGroup.Button(context, new ActionGroup.Button.onClickClass(context), this),
+                    values);
 
             values.clear();
-            checkBoxes.add(checkBox);
-            contentList.add(item_layout);
-//            contentList.add(rowText);
             c.moveToNext();
         }
 
@@ -289,29 +240,18 @@ public class AACGroupContainer {
             );
             c.moveToFirst();
 
-            ActionGroup.ActionGroupButton parentGroupButton = new ActionGroup.ActionGroupButton(context, new ActionGroup.ActionGroupButton.onClickClass(context), this);
+            ActionGroup.Button parentGroupButton = new ActionGroup.Button(context, new ActionGroup.Button.onClickClass(context), this);
 
             values.put(ActionGroup.SQL.COLUMN_NAME_WORD, c.getString(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_WORD)));
             values.put(ActionGroup.SQL.COLUMN_NAME_PRIORITY, c.getLong(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_PRIORITY)));
             values.put(ActionGroup.SQL._ID, parentGroupID);
             values.put(ActionGroup.SQL.COLUMN_NAME_PICTURE, c.getLong(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_PICTURE)));
 
-            parentGroupButton.setContainer(this);
-            parentGroupButton.init(values);
+            addMenuWithoutCheckBox(parentGroupButton, values);
+
             parentGroupButton.setText("상위그룹 " + c.getString(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_WORD)));
 
-            RelativeLayout item_layout = (RelativeLayout)View.inflate(context, R.layout.aac_item_layout, null);
-            parentGroupButton.setId(R.id.aac_item_button_id);
-            RelativeLayout.LayoutParams item_layoutParam = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-            item_layoutParam.addRule(RelativeLayout.RIGHT_OF, R.id.aac_item_checkbox);
-            item_layout.addView(parentGroupButton, item_layoutParam);
-            CheckBox checkBox = (CheckBox)item_layout.findViewById(R.id.aac_item_checkbox);
-            if  (checkBoxMargin > 0) setMargins(checkBox, 0, checkBoxMargin, 0, 0);
-
             values.clear();
-            checkBoxes.add(checkBox);
-            contentList.add(item_layout);
-//            contentList.add(parentGroupButton);
             c.close();
         }
 
@@ -322,15 +262,43 @@ public class AACGroupContainer {
             menuLayout.addView(btn);
         }
 
-        if (checkBoxWidth > 0) setFoldAnimation();
+        setFoldAnimation();
+    }
+
+    void addMenuWithCheckBox(ActionItem.Button btn, ContentValues values) {
+        btn.init(values);
+        btn.setContainer(this);
+
+        LinearLayout item_layout = (LinearLayout) View.inflate(context, R.layout.aac_item_layout, null);
+        CheckBox checkBox = (CheckBox)item_layout.findViewById(R.id.aac_item_checkbox);
+        item_layout.addView(btn);
+        btn.setId(R.id.aac_item_button_id);
+
+        checkBoxes.add(checkBox);
+        contentList.add(item_layout);
+    }
+
+    void addMenuWithoutCheckBox(ActionItem.Button btn, ContentValues values) {
+        btn.init(values);
+        btn.setContainer(this);
+
+        LinearLayout item_layout = (LinearLayout) View.inflate(context, R.layout.aac_item_layout, null);
+        CheckBox checkBox = (CheckBox)item_layout.findViewById(R.id.aac_item_checkbox);
+        item_layout.addView(btn);
+        btn.setId(R.id.aac_item_button_id);
+
+        checkBox.setVisibility(View.INVISIBLE);
+        checkBox.setEnabled(false);
+
+        contentList.add(item_layout);
     }
 
     public long addWord(SQLiteDatabase db, ContentValues values) {
-        return ((ActionWord) actionMain.itemChain[ActionMain.item.ID_Word]).add(db, values);
+        return actionMain.itemChain[ActionMain.item.ID_Word].add(db, values);
     }
 
     public boolean removeWord(SQLiteDatabase db, String word) {
-        return ((ActionWord) actionMain.itemChain[ActionMain.item.ID_Word]).remove(db, word);
+        return actionMain.itemChain[ActionMain.item.ID_Word].remove(db, word);
     }
 
     public long getCurrentGroupID() {
@@ -354,31 +322,6 @@ public class AACGroupContainer {
 
     public void refresh() { exploreGroup(currentGroupID); }
 
-    protected static void setMargins (View v, int l, int t, int r, int b) {
-        if (v.getLayoutParams() instanceof ViewGroup.MarginLayoutParams) {
-            ViewGroup.MarginLayoutParams p = (ViewGroup.MarginLayoutParams) v.getLayoutParams();
-            p.setMargins(l, t, r, b);
-            v.requestLayout();
-        }
-    }
-
-    public void initDimInfo() {
-        if (contentList.size() > 0) {
-            View item = contentList.get(0);
-            View v = item.findViewById(R.id.aac_item_checkbox);
-            checkBoxMargin = ((ActionItem.Button)item.findViewById(R.id.aac_item_button_id)).image_half_height - v.getHeight() / 2;
-            checkBoxWidth = v.getWidth();
-            imageWidth = ((ActionItem.Button)item.findViewById(R.id.aac_item_button_id)).image_half_height * 2; // TODO: 바꿀 것
-        }
-
-        for (View item : contentList) {
-            View v = item.findViewById(R.id.aac_item_checkbox);
-            setMargins(v, 0, checkBoxMargin, 0, 0);
-        }
-
-        setFoldAnimation();
-    }
-
     public void setFoldAnimation() {
         isFolded = false;
 
@@ -386,76 +329,23 @@ public class AACGroupContainer {
 
         if (listSize <= 0) return;
 
-        int column_count = menuLayout.getColumnCount();
-        int fold_column_count = column_count;
-        if (listSize < column_count) fold_column_count = listSize;
+        AnimatorSet list[] = new AnimatorSet[listSize];
 
-        fold f[] = new fold[fold_column_count];
-        move m[] = new move[fold_column_count];
-
-        int side_pass_size = fold_column_count / 2;
-        int row_count = (int)ceil(listSize / column_count);
-        int last_row_leftover = listSize % column_count;
-        float left_mod;
-        if (fold_column_count % 2 == 1) left_mod = (-1) * checkBoxWidth;
-        else left_mod = 0;
-
-        int pos;
-        float mod;
-
-        if (fold_column_count > 1) {
-
-            // Left-pass
-            pos = side_pass_size - 1;
-            mod = left_mod;
-            int m_mod_seg = 0;
-
-            for (int j = 0; j < side_pass_size; j++) {
-                int mod_seg = (-1) * checkBoxWidth;
-                f[pos] = new fold(mod_seg, mod, DURATION);
-                m[pos] = new move(m_mod_seg, mod, DURATION);
-                mod -= checkBoxWidth;
-                m_mod_seg -= checkBoxWidth;
-                pos--;
-            }
-
-            // Right-pass
-            pos = column_count - side_pass_size;
-            mod = 0;
-
-            for (int j = 0; j < side_pass_size; j++) {
-                f[pos] = new fold(checkBoxWidth, mod, DURATION);
-                m[pos] = new move(checkBoxWidth, mod, DURATION);
-                mod += checkBoxWidth;
-                pos++;
-            }
-
-        }
-
-        // middle-pass
-        if (fold_column_count % 2 == 1) {
-            f[side_pass_size] = new fold((-1) * checkBoxWidth, 0, DURATION);
-            m[side_pass_size] = new move(0, 0, DURATION);
-        }
-
-        AnimatorSet list[] = new AnimatorSet[listSize * 2];
-        pos = 0;
         int listPos = 0;
-        float z = 0;
-        float z_mod = 1;
+//        Path p = new Path();
+//        p.moveTo(1f, 1f);
+//        p.lineTo(0f, 0f);
         for (View v : contentList) {
-            ActionItem.Button btn = (ActionItem.Button)v.findViewById(R.id.aac_item_button_id);
             CheckBox cbox = (CheckBox)v.findViewById(R.id.aac_item_checkbox);
-
-            list[listPos++] = f[pos].getAs(cbox);
-            list[listPos++] = m[pos].getAs(btn);
-
-            // z축 부분은 전혀 동작하지 않고 있음. 겹침 문제는 아직 해결이 안 됨.
-            v.setZ(z);
-            z += z_mod;
-            if (z == side_pass_size) z_mod *= -1;
-
-            pos = (pos + 1) % fold_column_count;
+            list[listPos] = new AnimatorSet();
+            list[listPos].playTogether(
+//                    ObjectAnimator.ofFloat(cbox, View.SCALE_X, View.SCALE_Y, p), // Over API Lv 21
+                    ObjectAnimator.ofFloat(cbox, View.SCALE_X, 1f, 0f),
+                    ObjectAnimator.ofFloat(cbox, View.SCALE_Y, 1f, 0f),
+                    ObjectAnimator.ofFloat(cbox, View.ALPHA, 1f, 0f)
+            );
+            list[listPos].setDuration(DURATION);
+            listPos++;
         }
 
         foldAniSet = new AnimatorSet();
@@ -472,27 +362,29 @@ public class AACGroupContainer {
             }
 
             @Override
-            public void onAnimationCancel(Animator animation) {}
+            public void onAnimationCancel(Animator animation) {
+            }
 
             @Override
-            public void onAnimationRepeat(Animator animation) {}
+            public void onAnimationRepeat(Animator animation) {
+            }
         });
 
-        for (int i = 0; i < fold_column_count; i++){
-            f[i].toReverse();
-            m[i].toReverse();
-        }
-
-        pos = 0;
         listPos = 0;
+//        p.reset();
+//        p.moveTo(0f, 0f);
+//        p.lineTo(1f, 1f);
         for (View v : contentList) {
-            ActionItem.Button btn = (ActionItem.Button)v.findViewById(R.id.aac_item_button_id);
             CheckBox cbox = (CheckBox)v.findViewById(R.id.aac_item_checkbox);
-
-            list[listPos++] = f[pos].getAs(cbox);
-            list[listPos++] = m[pos].getAs(btn);
-
-            pos = (pos + 1) % fold_column_count;
+            list[listPos] = new AnimatorSet();
+            list[listPos].playTogether(
+//                    ObjectAnimator.ofFloat(cbox, View.SCALE_X, View.SCALE_Y, p), // Over API Lv 21
+                    ObjectAnimator.ofFloat(cbox, View.SCALE_X, 0f, 1f),
+                    ObjectAnimator.ofFloat(cbox, View.SCALE_Y, 0f, 1f),
+                    ObjectAnimator.ofFloat(cbox, View.ALPHA, 0f, 1f)
+            );
+            list[listPos].setDuration(DURATION);
+            listPos++;
         }
 
         foldAniSet_reverse = new AnimatorSet();
@@ -516,18 +408,12 @@ public class AACGroupContainer {
         });
 
         // Setting default folded status
-        pos = 0;
         for (View v : contentList) {
-            ActionItem.Button btn = (ActionItem.Button)v.findViewById(R.id.aac_item_button_id);
             CheckBox cbox = (CheckBox)v.findViewById(R.id.aac_item_checkbox);
 
             cbox.setVisibility(View.INVISIBLE);
             cbox.setScaleX(0f);
-            cbox.setTranslationX(f[pos].getLineLength());
-
-            btn.setTranslationX(m[pos].getLineLength());
-
-            pos = (pos + 1) % fold_column_count;
+            cbox.setScaleY(0f);
         }
 
         isFolded = true;
@@ -540,93 +426,4 @@ public class AACGroupContainer {
         }
     }
 
-
-    protected class move {
-        protected ObjectAnimator oa_l;
-        protected AnimatorSet as;
-        protected Path p;
-        protected float mod;
-        protected int width;
-        protected int duration;
-        protected float lineLength;
-
-        public move(int width, float mod, int duration) {
-            this.mod = mod;
-            this.duration = duration;
-            DisplayMetrics dm = context.getResources().getDisplayMetrics();
-            this.width = width;
-            lineLength = -0.5f * width - mod;
-
-            p = new Path();
-            p.moveTo(0f, 0f);
-            p.lineTo(lineLength, 0f);
-        }
-
-        public AnimatorSet getAs(View v) {
-            oa_l = ObjectAnimator.ofFloat(v, View.TRANSLATION_X, View.TRANSLATION_Y, p);
-            oa_l.setDuration(duration);
-            oa_l.setInterpolator(AnimationUtils.loadInterpolator(context, android.R.interpolator.linear));
-
-            as = new AnimatorSet();
-            as.playTogether(oa_l);
-
-            return as;
-        }
-
-        public void toReverse() {
-            p.reset();
-            p.moveTo(lineLength, 0f);
-            p.lineTo(0f, 0f);
-        }
-
-        public float getLineLength() {
-            return lineLength;
-        }
-    }
-
-    protected class fold extends move {
-        protected ObjectAnimator oa_s;
-        protected ObjectAnimator oa_a;
-        protected AnimatorSet as;
-        protected Path s;
-        protected float a[];
-
-        public fold(int width, float mod, int duration) {
-            super(width, mod, duration);
-
-            s = new Path();
-            s.moveTo(1f, 1f);
-            s.lineTo(0f, 1f);
-
-            a = new float[2];
-            a[0] = 1f;
-            a[1] = 0f;
-        }
-
-        public AnimatorSet getAs(View v) {
-            oa_s = ObjectAnimator.ofFloat(v, View.SCALE_X, View.SCALE_Y, s);
-            oa_a = ObjectAnimator.ofFloat(v, View.ALPHA, a[0], a[1]);
-            oa_s.setDuration(duration);
-            oa_a.setDuration(duration);
-            oa_s.setInterpolator(AnimationUtils.loadInterpolator(context, android.R.interpolator.linear));
-            oa_a.setInterpolator(AnimationUtils.loadInterpolator(context, android.R.interpolator.linear));
-
-            as = new AnimatorSet();
-            as.playTogether(oa_a, oa_s, super.getAs(v));
-
-            return as;
-        }
-
-        public void toReverse() {
-            super.toReverse();
-            s.reset();
-
-            s.moveTo(0f, 1f);
-            s.lineTo(1f, 1f);
-
-            a[0] = 0f;
-            a[1] = 1f;
-        }
-
-    }
 }

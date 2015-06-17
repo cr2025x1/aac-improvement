@@ -42,12 +42,12 @@
             android:orientation="horizontal"
             android:layout_gravity="center_horizontal"
             android:gravity="center"
-            android:paddingStart="16dp"
-            android:paddingEnd="@dimen/activity_horizontal_margin"
-            android:paddingTop="16dp"
-            android:paddingBottom="16dp"
             android:id="@+id/AACMenuLayout">
             <!--android:background="#fff8dc"-->
+            <!--android:paddingStart="16dp"-->
+            <!--android:paddingEnd="@dimen/activity_horizontal_margin"-->
+            <!--android:paddingTop="16dp"-->
+            <!--android:paddingBottom="16dp"-->
 
         </GridLayout>
 
