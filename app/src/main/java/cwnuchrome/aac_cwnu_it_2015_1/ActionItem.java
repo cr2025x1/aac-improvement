@@ -85,6 +85,25 @@ public abstract class ActionItem implements Serializable {
         return -1;
     }
 
+    protected long existsWithID(SQLiteDatabase db, int id) {
+        // 워드 쿼리
+        Cursor c = db.query(
+                TABLE_NAME, // The table to query
+                new String[] {SQL._ID}, // The columns to return
+                SQL._ID + " = " + id, // The columns for the WHERE clause
+                null, // The values for the WHERE clause
+                null, // don't group the rows
+                null, // don't filter by row groups
+                null // The sort order
+        );
+        c.moveToFirst();
+        long cursorCount = c.getCount();
+
+        c.close();
+        if (cursorCount > 0) return id;
+        return -1;
+    }
+
     public long add(SQLiteDatabase db, ContentValues values) {
         return db.insert(TABLE_NAME, null, values);
     }
@@ -95,6 +114,18 @@ public abstract class ActionItem implements Serializable {
         db.delete(
                 TABLE_NAME,
                 SQL.COLUMN_NAME_WORD + " = '" + word + "'",
+                null
+        );
+        return true;
+    }
+
+
+    public boolean removeWithID(SQLiteDatabase db, int id) {
+        if (existsWithID(db, id) == -1) return false;
+
+        db.delete(
+                TABLE_NAME,
+                SQL._ID + " = " + id,
                 null
         );
         return true;
@@ -121,15 +152,19 @@ public abstract class ActionItem implements Serializable {
         }
 
         protected abstract static class onClickClass implements OnClickListener {
-            Context context;
-            AACGroupContainer container;
-            Button button;
-            String phonetic;
+            protected Context context;
+            protected AACGroupContainer container;
+            protected Button button;
+            protected String phonetic;
+            protected int itemCategoryID;
+            protected int itemID;
             public abstract void onClick(View v);
             public onClickClass(Context context) {
                 this.context = context;
             }
-            public abstract void init(ContentValues values);
+            public void init(ContentValues values) {
+                itemID = values.getAsInteger(SQL._ID);
+            }
             public void setContainer (AACGroupContainer container) {
                 this.container = container;
             }

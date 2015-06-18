@@ -92,6 +92,7 @@ public class ActionMacro extends ActionItem {
 
             public onClickClass(Context context) {
                 super(context);
+                itemCategoryID = ActionMain.item.ID_Macro;
                 // wordChain = new ArrayList<ActionWord.Button.onClickClass>();
                 wordMsgChain = new ArrayList<String>();
                 actionMain = ActionMain.getInstance();
@@ -104,6 +105,7 @@ public class ActionMacro extends ActionItem {
             }
 
             public void init(ContentValues values) {
+                super.init(values);
                 message = values.get(SQL.COLUMN_NAME_WORD) + "," + values.get(SQL.COLUMN_NAME_PRIORITY);
                 phonetic = values.getAsString(SQL.COLUMN_NAME_WORD);
 

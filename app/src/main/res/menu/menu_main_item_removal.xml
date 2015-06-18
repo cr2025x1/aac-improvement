@@ -1,0 +1,17 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools" tools:context=".MainActivity">
+
+    <group
+        android:id="@+id/menu_group_remove_item" >
+
+        <item android:id="@+id/action_remove_item_cancel" android:title="@string/menu_remove_item_cancel"
+            android:orderInCategory="100" app:showAsAction="never" />
+        <item android:id="@+id/action_remove_item_select_all" android:title="@string/menu_remove_item_select_all"
+            android:orderInCategory="100" app:showAsAction="never" />
+        <item android:id="@+id/action_remove_item_remove" android:title="@string/menu_remove_item_remove"
+            android:orderInCategory="100" app:showAsAction="never" />
+
+    </group>
+
+</menu>

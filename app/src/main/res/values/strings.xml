@@ -13,4 +13,12 @@
 
     <string name="fold">Fold</string>
 
+    <string name="test">Test</string>
+
+    <string name="menu_remove_item">Remove Item</string>
+    <string name="title_remove_item">Removal mode</string>
+    <string name="menu_remove_item_cancel">Cancel</string>
+    <string name="menu_remove_item_remove">Remove</string>
+    <string name="menu_remove_item_select_all">Select All</string>
+
 </resources>

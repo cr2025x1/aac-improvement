@@ -97,14 +97,17 @@ public class ActionWord extends ActionItem {
 
         public static class onClickClass extends ActionItem.Button.onClickClass {
             String message;
-            String phonetic;
-            public onClickClass(Context context) {super(context); }
+            public onClickClass(Context context) {
+                super(context);
+                itemCategoryID = ActionMain.item.ID_Word;
+            }
 
             public void onClick(View v) {
                 Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
                 container.getTTS().speak(phonetic, TextToSpeech.QUEUE_FLUSH, null, null);
             }
             public void init(ContentValues values) {
+                super.init(values);
                 message = values.get(SQL.COLUMN_NAME_WORD) + "," + values.get(SQL.COLUMN_NAME_PRIORITY);
                 phonetic = values.get(SQL.COLUMN_NAME_WORD).toString();
             }

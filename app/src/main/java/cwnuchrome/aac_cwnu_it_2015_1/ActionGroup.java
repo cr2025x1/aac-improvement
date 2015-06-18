@@ -71,7 +71,7 @@ public class ActionGroup extends ActionItem {
      * Created by Chrome on 5/8/15.
      */
     public static class Button extends ActionItem.Button {
-        long groupID;
+//        long groupID;
 
         public Button(Context context, onClickClass onClickObj, AACGroupContainer container) {
             super(context, onClickObj, container);
@@ -80,28 +80,32 @@ public class ActionGroup extends ActionItem {
         public static class onClickClass extends ActionItem.Button.onClickClass {
             String message;
 
-            public onClickClass(Context context) {super(context); }
+            public onClickClass(Context context) {
+                super(context);
+                itemCategoryID = ActionMain.item.ID_Group;
+            }
 
             public void onClick(View v) {
                 Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
-                container.exploreGroup(((Button) button).getGroupID());
+                container.exploreGroup(itemID);
             }
             public void init(ContentValues values) {
+                super.init(values);
                 message = "그룹 " + values.get(ActionWord.SQL.COLUMN_NAME_WORD) + "," + values.get(ActionWord.SQL.COLUMN_NAME_PRIORITY);
             }
         }
 
-        public void setGroupID (long groupID) {
-            this.groupID = groupID;
-        }
-        public long getGroupID() {
-            return groupID;
-        }
+//        public void setGroupID (long groupID) {
+//            this.groupID = groupID;
+//        }
+//        public long getGroupID() {
+//            return groupID;
+//        }
 
         public void init(ContentValues values) {
             super.init(values);
             this.setText("그룹 " + values.getAsString(SQL.COLUMN_NAME_WORD));
-            this.setGroupID(values.getAsLong(SQL._ID));
+//            this.setGroupID(values.getAsLong(SQL._ID));
             this.onClickObj.setContainer(container);
             this.onClickObj.setButton(this);
             this.onClickObj.init(values);

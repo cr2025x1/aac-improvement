@@ -16,11 +16,16 @@ import android.widget.Toast;
 
 
 public class MainActivity extends AppCompatActivity {
-    AACGroupContainer container;
-    ActionDBHelper mDbHelper;
-    SQLiteDatabase db;
+    protected AACGroupContainer container;
+    protected ActionDBHelper mDbHelper;
+    protected SQLiteDatabase db;
 
-    boolean isInited;
+    protected boolean isInited;
+
+    protected int status;
+    protected final int STATUS_NOT_QUEUED = 0;
+    protected final int STATUS_MAIN = 1;
+    protected final int STATUS_ITEM_REMOVAL = 2;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -37,6 +42,8 @@ public class MainActivity extends AppCompatActivity {
         LinearLayout baseLayout = (LinearLayout)findViewById(R.id.groupLayout);
         container = new AACGroupContainer(baseLayout);
 
+        status = STATUS_MAIN;
+
         isInited = false;
         container.exploreGroup(1);
     }
@@ -44,7 +51,35 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_main, menu);
+        switch (status) {
+            case STATUS_MAIN:
+                getMenuInflater().inflate(R.menu.menu_main, menu);
+                break;
+
+            case STATUS_ITEM_REMOVAL:
+                getMenuInflater().inflate(R.menu.menu_main_item_removal, menu);
+                break;
+        }
+
+        status = STATUS_NOT_QUEUED;
+        return true;
+    }
+
+    @Override
+    public boolean onPrepareOptionsMenu(Menu menu) {
+        switch (status) {
+            case STATUS_MAIN:
+                menu.removeGroup(R.id.menu_group_remove_item);
+                getMenuInflater().inflate(R.menu.menu_main, menu);
+                break;
+
+            case STATUS_ITEM_REMOVAL:
+                menu.removeGroup(R.id.menu_group_main);
+                getMenuInflater().inflate(R.menu.menu_main_item_removal, menu);
+                break;
+        }
+
+        status = STATUS_NOT_QUEUED;
         return true;
     }
 
@@ -173,8 +208,43 @@ public class MainActivity extends AppCompatActivity {
             return true;
         }
 
+        /* 아이템 제거 메뉴 선택 시의 메뉴들 */
+
+        if (id == R.id.action_remove_item) {
+            this.setTitle(R.string.title_remove_item);
+            status = STATUS_ITEM_REMOVAL;
+            supportInvalidateOptionsMenu();
+
+            container.toggleFold();
+            return true;
+        }
+
+        if (id == R.id.action_remove_item_cancel) {
+            this.setTitle(R.string.app_name);
+            status = STATUS_MAIN;
+            supportInvalidateOptionsMenu();
+
+            container.toggleFold();
+            return true;
+        }
+
+        if (id == R.id.action_remove_item_select_all) {
+            container.selectAll();
+            return true;
+        }
+
+        if (id == R.id.action_remove_item_remove) {
+            container.removeSelected();
+            return true;
+        }
+
         if (id == R.id.action_fold) {
-            container.fold();
+            container.toggleFold();
+            return true;
+        }
+
+        if (id == R.id.action_test) {
+            container.test();
             return true;
         }
 
@@ -203,15 +273,4 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-//    @Override
-//    public void onWindowFocusChanged(boolean hasFocus) {
-//        super.onWindowFocusChanged(hasFocus);
-//
-//        if (!isInited) {
-//            container.initDimInfo();
-//
-//            isInited = true;
-//        }
-//
-//    }
 }
