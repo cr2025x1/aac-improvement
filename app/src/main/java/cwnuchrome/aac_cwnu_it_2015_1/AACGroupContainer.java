@@ -3,28 +3,20 @@ package cwnuchrome.aac_cwnu_it_2015_1;
 import android.animation.Animator;
 import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
-import android.app.Notification;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-import android.graphics.Path;
 import android.speech.tts.TextToSpeech;
-import android.text.Layout;
-import android.util.DisplayMetrics;
 import android.view.View;
-import android.view.ViewGroup;
-import android.view.animation.AnimationUtils;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.GridLayout;
 import android.widget.LinearLayout;
-import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.Iterator;
 
 /**
@@ -51,7 +43,7 @@ public class AACGroupContainer {
     protected AnimatorSet foldAniSet;
     protected AnimatorSet foldAniSet_reverse;
 
-    protected int removeDepArray[];
+    protected ArrayList<ContentValues> removeDepArray;
 
     public AACGroupContainer(LinearLayout mainLayout) {
         this.context = mainLayout.getContext();
@@ -65,7 +57,7 @@ public class AACGroupContainer {
         checkBoxes = new ArrayList<CheckBox>();
         selectedList = new ArrayList<View>();
 
-        removeDepArray = null;
+        removeDepArray = new ArrayList<ContentValues>();
 
         // 그룹 제목 TextView 설정
         titleView = (TextView)(mainLayout.findViewById(R.id.groupTitle));
@@ -81,6 +73,8 @@ public class AACGroupContainer {
         contentList.clear();
         checkBoxes.clear();
         selectedList.clear();
+
+        isFolded = false;
 
         SQLiteDatabase db = actDBHelper.getWritableDatabase();
         Cursor c;
@@ -289,8 +283,6 @@ public class AACGroupContainer {
 
         checkBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                View aac_btn = ((LinearLayout) buttonView.getParent()).findViewById(R.id.aac_item_button_id);
-
                 if (isChecked) {
                     selectedList.add((LinearLayout) buttonView.getParent());
                 } else {
@@ -474,176 +466,300 @@ public class AACGroupContainer {
         if (selectedList.size() == 0) return;
 
         SQLiteDatabase db = actDBHelper.getWritableDatabase();
-        boolean dependencyWarning = false;
 
-        Collections.sort(selectedList, new Comparator<View>() {
-            @Override
-            public int compare(View lhs, View rhs) {
-                int lhs_id = ((ActionItem.Button)lhs.findViewById(R.id.aac_item_button_id)).onClickObj.itemID;
-                int rhs_id = ((ActionItem.Button)rhs.findViewById(R.id.aac_item_button_id)).onClickObj.itemID;
-                return lhs_id < rhs_id ? -1 : lhs_id > rhs_id ? 1 : 0;
-            }
-        });
+        removalListBundle listBundle = new removalListBundle();
 
-        for (View v : selectedList) {
-            System.out.println(((ActionItem.Button)v.findViewById(R.id.aac_item_button_id)).onClickObj.itemID);
-        }
+        for (View v : selectedList) listBundle.addByOCC(((ActionItem.Button)v.findViewById(R.id.aac_item_button_id)).onClickObj);
+        listBundle.soutList();
 
-        for (View v : selectedList) {
-            ActionItem.Button.onClickClass occ = ((ActionItem.Button)v.findViewById(R.id.aac_item_button_id)).onClickObj;
-            String word = occ.phonetic;
+        listBundle.checkDependency(); // TODO: 유저에게 확인받도록 만들기
 
-            if (occ.itemCategoryID == ActionMain.item.ID_Word) {
-                Cursor c;
+        System.out.println("List of non-selected dependencies:");
+        for (ContentValues v : removeDepArray) System.out.println(v.getAsString(ActionItem.SQL._ID));
+        System.out.println("End of the list");
 
-                String[] projection = {
-                        ActionMacro.SQL._ID
-                };
-
-                // 단어의 ID 찾기
-
-                String wordQueryClause = ActionWord.SQL.COLUMN_NAME_WORD  + " = '" + word + "'"; // 검색 조건
-                c = db.query(
-                        actionMain.itemChain[ActionMain.item.ID_Word].TABLE_NAME, // The table to query
-                        projection, // The columns to return
-                        wordQueryClause, // The columns for the WHERE clause
-                        null, // The values for the WHERE clause
-                        null, // don't group the rows
-                        null, // don't filter by row groups
-                        null // The sort order
-                );
-                c.moveToFirst();
-
-                int wordID = c.getInt(c.getColumnIndexOrThrow(ActionGroup.SQL._ID));
-                c.close();
-
-                // 이 단어를 사용하는 매크로가 현재 탐색 중인 그룹 외의 그룹에 존재하는지 먼저 확인
-
-                String macroQueryClause_NotCurrentGroup = ActionMacro.SQL.COLUMN_NAME_WORDCHAIN  + " LIKE '%:" + wordID + ":%'" +
-                        " AND " + ActionMacro.SQL.COLUMN_NAME_PARENT_ID + " != " + currentGroupID;
-                c = db.query(
-                        actionMain.itemChain[ActionMain.item.ID_Macro].TABLE_NAME, // The table to query
-                        projection, // The columns to return
-                        macroQueryClause_NotCurrentGroup, // The columns for the WHERE clause
-                        null, // The values for the WHERE clause
-                        null, // don't group the rows
-                        null, // don't filter by row groups
-                        null // The sort order
-                );
-                c.moveToFirst();
-
-                // 의존성이 있는 매크로가 있음 : 경고 필요
-                if (c.getCount() > 0) dependencyWarning = true; // 추후 확장 가능
-
-                c.close();
-
-                // 이 단어를 사용하는 매크로가 현재 탐색 중인 그룹에 있는지 확인
-
-                String macroQueryClause_CurrentGroup = ActionMacro.SQL.COLUMN_NAME_WORDCHAIN  + " LIKE '%:" + wordID + ":%'" +
-                        " AND " + ActionMacro.SQL.COLUMN_NAME_PARENT_ID + " = " + currentGroupID;
-                String sortOrder =
-                        ActionWord.SQL._ID + " ASC";
-                c = db.query(
-                        actionMain.itemChain[ActionMain.item.ID_Macro].TABLE_NAME, // The table to query
-                        projection, // The columns to return
-                        macroQueryClause_CurrentGroup, // The columns for the WHERE clause
-                        null, // The values for the WHERE clause
-                        null, // don't group the rows
-                        null, // don't filter by row groups
-                        sortOrder // The sort order
-                );
-                c.moveToFirst();
-
-                // 해당 매크로가 있다면, 그 매크로가 삭제 대상인지 확인
-                if (c.getCount() > 0) {
-                    int IDCol = c.getColumnIndexOrThrow(ActionGroup.SQL._ID);
-                    int ciID = c.getInt(IDCol);
-                    boolean endOfCursor = false;
-                    boolean foundMacro = false;
-
-                    // 선택된 아이템을 순차 검색하며 확인
-                    for (View vi : selectedList) {
-                        ActionItem.Button btn = (ActionItem.Button)vi.findViewById(R.id.aac_item_button_id);
-                        ActionItem.Button.onClickClass viOCC = btn.onClickObj;
-
-                        // 매크로만 검색 - 나머지는 넘김
-                        if (viOCC.itemCategoryID != ActionMain.item.ID_Macro) continue;
-
-                        // 현재 아이템의 ID값이 커서의 현재 아이템의 ID값보다 크다면?
-                        while (ciID < viOCC.itemID) {
-                            // 커서가 맨 끝에 도달하지 않은 이상 커서를 뒤로 계속 넘긴다.
-                            if (c.isLast()) {
-                                endOfCursor = true;
-                                break;
-                            }
-                            else {
-                                c.moveToNext();
-                                ciID = c.getInt(IDCol);
-                            }
-                        }
-
-                        // 동일 ID값 혹은 더 큰 ID값에 도달하지 못했는데 커서의 끝에 도달 : 선택된 리스트 중 의존성을 가지는 매크로가 포함되어 있지 않으므로 경고 표시
-                        if (endOfCursor) {
-                            dependencyWarning = true;
-                            break;
-                        }
-
-                        // 커서의 ID값이 현재 아이템의 ID값보다 크다 : 더 높은 ID값을 가지는 아이템을 찾아 리스트의 다음으로 넘어감.
-                        if (ciID > viOCC.itemID) continue;
-
-                        // 같은 ID값을 지니는 매크로를 선택 리스트에서 찾음.
-                        if (ciID == viOCC.itemID) {
-                            foundMacro = true;
-                            break;
-                        }
-
-                    }
-
-
-                    // 의존성을 가지는 매크로가 있으나 선택 리스트에서 빠져 있음 - 의존성 경고 표시 필요
-                    if (!foundMacro) {
-                        dependencyWarning = true;
-
-                        c.moveToFirst();
-                        removeDepArray = new int[c.getCount()];
-                        for (int i = 0; i < c.getCount(); i++) {
-                            removeDepArray[i] = c.getInt(IDCol);
-                            c.moveToNext();
-                        }
-                    }
-
-                }
-
-                c.close();
-                // TODO: 중복 검색의 문제가 발생할 수 있음. (예: 한 매크로가 A+B+C이고 A, B, C에 맞춰 각각 검색시 이 매크로는 3번 중복검사됨)
-            }
-
-        }
-
-        if (dependencyWarning) {
-            System.out.println("Dependency warning!"); // TODO: 의존성 문제를 유저에게 확인받도록 함.
-        }
-
-        for (View v : selectedList) {
-            ActionItem.Button.onClickClass occ = ((ActionItem.Button)v.findViewById(R.id.aac_item_button_id)).onClickObj;
-            actionMain.itemChain[occ.itemCategoryID].removeWithID(db, occ.itemID);
-        }
+        listBundle.execRemoval();
 
         // 선택 리스트에는 없으나 삭제 대상에 의존성을 가지는 매크로는 모두 삭제
-        if (removeDepArray != null) {
-            for (int i : removeDepArray) {
-                actionMain.itemChain[ActionMain.item.ID_Macro].removeWithID(db, i);
-            }
-            removeDepArray = null;
+        for (ContentValues v : removeDepArray) {
+            actionMain.itemChain[ActionMain.item.ID_Macro].removeWithID(db, v.getAsInteger(ActionItem.SQL._ID));
         }
+        removeDepArray.clear();
 
         db.close();
         exploreGroup(currentGroupID);
     }
 
-    public void test() {
-        for (View item : selectedList)  {
-            System.out.println(((ActionItem.Button)(item.findViewById(R.id.aac_item_button_id))).onClickObj.phonetic);
+    protected class removalListBundle {
+        protected ArrayList<Integer> wordList;
+        protected ArrayList<Integer> macroList;
+        protected ArrayList<Integer> groupList;
+        protected String[] projection;
+
+        public removalListBundle() {
+            wordList = new ArrayList<>();
+            macroList = new ArrayList<>();
+            groupList = new ArrayList<>();
+//            wordList = new ArrayList<Integer>();
+//            macroList = new ArrayList<Integer>();
+//            groupList = new ArrayList<Integer>();
+            projection = new String[] { ActionItem.SQL._ID };
+        }
+
+        public void addGroup(int id) {
+            groupList.add(id);
+
+            Cursor c;
+            int c_count;
+            int c_col;
+            SQLiteDatabase db = actDBHelper.getWritableDatabase();
+            String whereClause = ActionItem.SQL.COLUMN_NAME_PARENT_ID  + " = " + id;
+
+            // 해당 그룹 내의 그룹 처리
+            c = db.query(
+                    actionMain.itemChain[ActionMain.item.ID_Group].TABLE_NAME, // The table to query
+                    projection, // The columns to return
+                    whereClause, // The columns for the WHERE clause
+                    null, // The values for the WHERE clause
+                    null, // don't group the rows
+                    null, // don't filter by row groups
+                    null // The sort order
+            );
+            c.moveToFirst();
+
+            c_count = c.getCount();
+            c_col = c.getColumnIndexOrThrow(ActionItem.SQL._ID);
+            if (c_count > 0) {
+                for (int i = 0; i < c_count; i++) {
+                    int i_id = c.getInt(c_col);
+                    addGroup(i_id); // 재귀 호출
+                    c.moveToNext();
+                }
+            }
+
+            c.close();
+
+
+            // 해당 그룹 내의 매크로 처리
+            c = db.query(
+                    actionMain.itemChain[ActionMain.item.ID_Macro].TABLE_NAME, // The table to query
+                    projection, // The columns to return
+                    whereClause, // The columns for the WHERE clause
+                    null, // The values for the WHERE clause
+                    null, // don't group the rows
+                    null, // don't filter by row groups
+                    null // The sort order
+            );
+            c.moveToFirst();
+
+            c_count = c.getCount();
+            c_col = c.getColumnIndexOrThrow(ActionItem.SQL._ID);
+            if (c_count > 0) {
+                for (int i = 0; i < c_count; i++) {
+                    int i_id = c.getInt(c_col);
+                    addMacro(i_id);
+                    c.moveToNext();
+                }
+            }
+
+            c.close();
+
+
+            // 해당 그룹 내의 워드 처리
+            c = db.query(
+                    actionMain.itemChain[ActionMain.item.ID_Word].TABLE_NAME, // The table to query
+                    projection, // The columns to return
+                    whereClause, // The columns for the WHERE clause
+                    null, // The values for the WHERE clause
+                    null, // don't group the rows
+                    null, // don't filter by row groups
+                    null // The sort order
+            );
+            c.moveToFirst();
+
+            c_count = c.getCount();
+            c_col = c.getColumnIndexOrThrow(ActionItem.SQL._ID);
+            if (c_count > 0) {
+                for (int i = 0; i < c_count; i++) {
+                    int i_id = c.getInt(c_col);
+                    addWord(i_id);
+                    c.moveToNext();
+                }
+            }
+
+            c.close();
+        }
+
+        public void addMacro(int id) {
+            macroList.add(id);
+        }
+
+        public void addWord(int id) {
+            wordList.add(id);
+        }
+
+        public void addByOCC(ActionItem.Button.onClickClass occ) {
+            switch (occ.itemCategoryID) {
+                case ActionMain.item.ID_Group:
+                    addGroup(occ.itemID);
+                    break;
+
+                case ActionMain.item.ID_Macro:
+                    addMacro(occ.itemID);
+                    break;
+
+                case ActionMain.item.ID_Word:
+                    addWord(occ.itemID);
+                    break;
+            }
+        }
+
+        // 의존성 여부 검사
+        public boolean checkDependency() {
+            removeDepArray.clear();
+            if (wordList.size() == 0) return true;
+
+            /* 지울 단어들에 대해 의존성을 가지는 매크로들을 찾기 위한 쿼리문의 작성 */
+
+            Iterator<Integer> i = wordList.iterator();
+            int id = i.next();
+
+            final String OR = " OR ";
+            final String LIKE_AND_HEAD = " LIKE '%:";
+            final String TAIL = ":%'";
+
+            StringBuilder qBuilder = new StringBuilder();
+            qBuilder.append(ActionMacro.SQL.COLUMN_NAME_WORDCHAIN);
+            qBuilder.append(LIKE_AND_HEAD);
+            qBuilder.append(id);
+            qBuilder.append(TAIL);
+
+            // 매 단어마다 조건문 확장
+            while (i.hasNext()) {
+                id = i.next();
+                qBuilder.append(OR);
+                qBuilder.append(ActionMacro.SQL.COLUMN_NAME_WORDCHAIN);
+                qBuilder.append(LIKE_AND_HEAD);
+                qBuilder.append(id);
+                qBuilder.append(TAIL);
+            }
+
+            String whereClause = qBuilder.toString(); // 완성된 조건문을 String으로 변환
+            String sortOrder = ActionWord.SQL._ID + " ASC"; // 이후의 알고리즘을 위해 정렬 순서는 ID 기준 오름차순
+            String projection[] = { ActionItem.SQL._ID, ActionItem.SQL.COLUMN_NAME_WORD };
+
+            Cursor c;
+            int c_count;
+            int c_id_col;
+            SQLiteDatabase db = actDBHelper.getWritableDatabase();
+            c = db.query( // 삭제 대상 워드에 대한 의존성이 있는 모든 매크로가 이 커서에 담김
+                    actionMain.itemChain[ActionMain.item.ID_Macro].TABLE_NAME, // The table to query
+                    projection, // The columns to return
+                    whereClause, // The columns for the WHERE clause
+                    null, // The values for the WHERE clause
+                    null, // don't group the rows
+                    null, // don't filter by row groups
+                    sortOrder // The sort order
+            );
+            c.moveToFirst();
+
+            /* 삭제 대상으로 선택된 매크로와 앞서 찾아낸 매크로 목록과의 대조 */
+            /* - 앞서 찾아낸 매크로의 집합은 반드시 선택된 매크로 대상의 집합에 포함된 관계여야 한다. */
+
+            c_count = c.getCount();
+            c_id_col = c.getColumnIndexOrThrow(ActionItem.SQL._ID);
+            int c_word_col = c.getColumnIndexOrThrow(ActionItem.SQL.COLUMN_NAME_WORD);
+            int c_id = c.getInt(c_id_col);
+
+            boolean dependencyProper = true;
+
+            if (c_count > 0) {
+                Collections.sort(macroList); // 선택된 매크로 목록도 오름차순으로 정렬
+
+                boolean endOfCursor = false;
+
+                // 선택된 아이템을 순차 검색하며 확인
+                for (int j : macroList) {
+                    // 현재 아이템의 ID값이 커서의 현재 아이템의 ID값보다 크다면?
+                    while (c_id < j) {
+                        // 커서에 있는 아이템이 macroList에 없다: 의존성 문제가 있는 아이템이므로 removeDepArray에 추가
+                        ContentValues values = new ContentValues();
+                        values.put(ActionItem.SQL.COLUMN_NAME_WORD, c.getString(c_word_col));
+                        values.put(ActionItem.SQL._ID, c_id);
+                        removeDepArray.add(values);
+
+                        // 커서가 맨 끝에 도달하지 않은 이상 커서를 뒤로 계속 넘긴다.
+                        if (c.isLast()) {
+                            endOfCursor = true;
+                            break;
+                        }
+
+                        c.moveToNext();
+                        c_id = c.getInt(c_id_col);
+                    }
+
+                    if (endOfCursor) break; // 커서가 맨 끝에 도달했으므로 더 이상 대조할 대상이 없음. 루프 종료.
+
+                    // 같은 ID값을 지니는 매크로를 선택 리스트에서 찾았음.
+                    if (c_id == j) {
+                        // 의존성을 지니는 매크로가 제대로 선택 리스트에도 있음. 따라서 커서를 다음 항목으로 진행시킨 후, for 루프도 다음 회로 넘긴다.
+                        if (c.isLast()) {
+                            endOfCursor = true;
+                            break;
+                        }
+
+                        c.moveToNext();
+                        c_id = c.getInt(c_id_col);
+                    }
+
+                }
+
+                // 커서에 아직 여분이 남음 - 즉 선택된 리스트에 모든 의존성 있는 매크로가 포함되지 않았음을 의미.
+                if (!endOfCursor) {
+                    dependencyProper = false;
+                    while (true) {
+                        // 커서에 남은 매크로 아이템들은 모두 의존성이 있으나 선택된 리스트에 없는 아이템들이므로 removeDepArray에 넣는다.
+                        ContentValues values = new ContentValues();
+                        values.put(ActionItem.SQL.COLUMN_NAME_WORD, c.getString(c_word_col));
+                        values.put(ActionItem.SQL._ID, c_id);
+                        removeDepArray.add(values);
+
+                        if (c.isLast()) break;
+
+                        c.moveToNext();
+                        c_id = c.getInt(c_id_col);
+                    }
+                }
+            }
+
+            c.close();
+            return dependencyProper;
+        }
+
+        public void soutList() {
+            System.out.println("Selected item list for removal:");
+
+            System.out.println("Groups -");
+            for (int i : groupList) System.out.println(i);
+
+            System.out.println("Macros -");
+            for (int i : macroList) System.out.println(i);
+
+            System.out.println("Words -");
+            for (int i : wordList) System.out.println(i);
+
+            System.out.println("End of the list");
+        }
+
+        public void execRemoval() {
+            SQLiteDatabase db = actDBHelper.getWritableDatabase();
+
+            for (int i : macroList) actionMain.itemChain[ActionMain.item.ID_Macro].removeWithID(db, i);
+            macroList.clear();
+            for (int i : wordList) actionMain.itemChain[ActionMain.item.ID_Word].removeWithID(db, i);
+            wordList.clear();
+            for (int i : groupList) actionMain.itemChain[ActionMain.item.ID_Group].removeWithID(db, i);
+            groupList.clear();
         }
     }
 }

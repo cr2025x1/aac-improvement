@@ -235,16 +235,10 @@ public class MainActivity extends AppCompatActivity {
 
         if (id == R.id.action_remove_item_remove) {
             container.removeSelected();
-            return true;
-        }
+            this.setTitle(R.string.app_name);
+            status = STATUS_MAIN;
+            supportInvalidateOptionsMenu();
 
-        if (id == R.id.action_fold) {
-            container.toggleFold();
-            return true;
-        }
-
-        if (id == R.id.action_test) {
-            container.test();
             return true;
         }
 

@@ -17,10 +17,6 @@
             android:orderInCategory="100" app:showAsAction="never" />
         <item android:id="@+id/action_remove_item" android:title="@string/menu_remove_item"
             android:orderInCategory="100" app:showAsAction="never" />
-        <item android:id="@+id/action_fold" android:title="@string/fold"
-            android:orderInCategory="100" app:showAsAction="never" />
-        <item android:id="@+id/action_test" android:title="@string/test"
-            android:orderInCategory="100" app:showAsAction="never" />
 
     </group>
 
