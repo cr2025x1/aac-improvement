@@ -44,6 +44,7 @@ public class AACGroupContainer {
     protected AnimatorSet foldAniSet_reverse;
 
     protected ArrayList<ContentValues> removeDepArray;
+    RemovalListBundle removalListBundle;
 
     public AACGroupContainer(LinearLayout mainLayout) {
         this.context = mainLayout.getContext();
@@ -58,6 +59,7 @@ public class AACGroupContainer {
         selectedList = new ArrayList<View>();
 
         removeDepArray = new ArrayList<ContentValues>();
+        removalListBundle = new RemovalListBundle();
 
         // 그룹 제목 TextView 설정
         titleView = (TextView)(mainLayout.findViewById(R.id.groupTitle));
@@ -286,7 +288,8 @@ public class AACGroupContainer {
                 if (isChecked) {
                     selectedList.add((LinearLayout) buttonView.getParent());
                 } else {
-                    selectedList.remove((LinearLayout) buttonView.getParent());
+                    View v = (View)buttonView.getParent();
+                    selectedList.remove(v);
                 }
             }
         });
@@ -323,12 +326,7 @@ public class AACGroupContainer {
     }
 
     class TTSListener implements TextToSpeech.OnInitListener {
-        public void onInit(int status) {
-//            String myText1 = "Hello, World!";
-//            String myText2 = "This is Text-to-Speech speaking.";
-//            TTS.speak(myText1, TextToSpeech.QUEUE_FLUSH, null, null);
-//            TTS.speak(myText2, TextToSpeech.QUEUE_ADD, null, null);
-        }
+        public void onInit(int status) {}
     }
 
     public TextToSpeech getTTS() { return TTS; }
@@ -446,8 +444,9 @@ public class AACGroupContainer {
 
     public void selectAll() {
         for (View v : contentList) {
-            selectedList.add(v);
             CheckBox cbox = ((CheckBox)v.findViewById(R.id.aac_item_checkbox));
+            if (!cbox.isEnabled() || cbox.isChecked()) continue;
+            selectedList.add(v);
             cbox.setChecked(true);
         }
     }
@@ -462,42 +461,49 @@ public class AACGroupContainer {
         selectedList.clear();
     }
 
+    // 단순한 아이템 삭제가 이렇게 길어질 줄 누가 알았으랴...
     public void removeSelected() {
         if (selectedList.size() == 0) return;
 
-        SQLiteDatabase db = actDBHelper.getWritableDatabase();
+        removalListBundle.clear();
 
-        removalListBundle listBundle = new removalListBundle();
-
-        for (View v : selectedList) listBundle.addByOCC(((ActionItem.Button)v.findViewById(R.id.aac_item_button_id)).onClickObj);
-        listBundle.soutList();
-
-        listBundle.checkDependency(); // TODO: 유저에게 확인받도록 만들기
+        for (View v : selectedList)
+            removalListBundle.addByOCC(((ActionItem.Button) v.findViewById(R.id.aac_item_button_id)).onClickObj);
+        removalListBundle.soutList();
 
         System.out.println("List of non-selected dependencies:");
-        for (ContentValues v : removeDepArray) System.out.println(v.getAsString(ActionItem.SQL._ID));
+        for (ContentValues v : removeDepArray)
+            System.out.println(v.getAsString(ActionItem.SQL._ID));
         System.out.println("End of the list");
 
-        listBundle.execRemoval();
+        if (!removalListBundle.checkNoDependencyLeft()) ((MainActivity) context).confirmDependency();
+        else invokeRemoval();
+    }
+
+    public void invokeRemoval() {
+        removalListBundle.execRemoval();
 
         // 선택 리스트에는 없으나 삭제 대상에 의존성을 가지는 매크로는 모두 삭제
+        SQLiteDatabase db = actDBHelper.getWritableDatabase();
         for (ContentValues v : removeDepArray) {
             actionMain.itemChain[ActionMain.item.ID_Macro].removeWithID(db, v.getAsInteger(ActionItem.SQL._ID));
         }
         removeDepArray.clear();
-
         db.close();
+
+        ((MainActivity)context).revertMenu();
+
         exploreGroup(currentGroupID);
     }
 
-    protected class removalListBundle {
+    protected class RemovalListBundle {
         protected ArrayList<Integer> wordList;
         protected ArrayList<Integer> macroList;
         protected ArrayList<Integer> groupList;
         protected String[] projection;
 
-        public removalListBundle() {
-            wordList = new ArrayList<>();
+        public RemovalListBundle() {
+            wordList = new ArrayList<>(); // 자바 버전에 따른 컴파일 에러 발생 가능
             macroList = new ArrayList<>();
             groupList = new ArrayList<>();
 //            wordList = new ArrayList<Integer>();
@@ -615,7 +621,7 @@ public class AACGroupContainer {
         }
 
         // 의존성 여부 검사
-        public boolean checkDependency() {
+        public boolean checkNoDependencyLeft() {
             removeDepArray.clear();
             if (wordList.size() == 0) return true;
 
@@ -669,11 +675,12 @@ public class AACGroupContainer {
             c_count = c.getCount();
             c_id_col = c.getColumnIndexOrThrow(ActionItem.SQL._ID);
             int c_word_col = c.getColumnIndexOrThrow(ActionItem.SQL.COLUMN_NAME_WORD);
-            int c_id = c.getInt(c_id_col);
 
             boolean dependencyProper = true;
 
             if (c_count > 0) {
+                int c_id = c.getInt(c_id_col);
+
                 Collections.sort(macroList); // 선택된 매크로 목록도 오름차순으로 정렬
 
                 boolean endOfCursor = false;
@@ -760,6 +767,12 @@ public class AACGroupContainer {
             wordList.clear();
             for (int i : groupList) actionMain.itemChain[ActionMain.item.ID_Group].removeWithID(db, i);
             groupList.clear();
+        }
+
+        public void clear() {
+            groupList.clear();
+            macroList.clear();
+            wordList.clear();
         }
     }
 }

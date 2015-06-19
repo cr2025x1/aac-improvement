@@ -20,5 +20,11 @@
     <string name="menu_remove_item_cancel">Cancel</string>
     <string name="menu_remove_item_remove">Remove</string>
     <string name="menu_remove_item_select_all">Select All</string>
+    <string name="menu_remove_item_deselect_all">Deselect All</string>
+
+    <string name="menu_remove_item_dependency_warning_title">Dependency Warning</string>
+    <string name="menu_remove_item_dependency_warning_context">Macro with dependencies exists. It will be deleted too when you process this operation. Are you sure?</string>
+    <string name="menu_remove_item_dependency_warning_confirm">Confirm</string>
+    <string name="menu_remove_item_dependency_warning_cancel">Cancel</string>
 
 </resources>

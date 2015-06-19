@@ -4,6 +4,7 @@ import android.app.AlertDialog;
 import android.content.ContentValues;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.res.Resources;
 import android.database.sqlite.SQLiteDatabase;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -26,6 +27,8 @@ public class MainActivity extends AppCompatActivity {
     protected final int STATUS_NOT_QUEUED = 0;
     protected final int STATUS_MAIN = 1;
     protected final int STATUS_ITEM_REMOVAL = 2;
+
+    boolean userConfirmed;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -91,43 +94,41 @@ public class MainActivity extends AppCompatActivity {
         int id = item.getItemId();
 
         //noinspection SimplifiableIfStatement
-        /*
-        if (id == R.id.action_add_word) { // TODO: Going to be deleted
-            final LinearLayout linear = (LinearLayout)View.inflate(this, R.layout.add_word, null);
-
-            new AlertDialog.Builder(this)
-                    .setTitle("Add Word Menu(Temp)")
-                    .setView(linear)
-                    .setPositiveButton("Confirm",
-                            new DialogInterface.OnClickListener() {
-                                @Override
-                                public void onClick(DialogInterface dialog, int which) {
-                                    EditText ETWord = (EditText) linear.findViewById(R.id.etword);
-                                    ContentValues values = new ContentValues();
-                                    values.put(ActionWord.SQL.COLUMN_NAME_PARENT_ID, container.getCurrentGroupID());
-                                    values.put(ActionWord.SQL.COLUMN_NAME_WORD, ETWord.getText().toString());
-
-                                    if (container.addWord(db, values) != -1) {
-                                        container.exploreGroup(container.getCurrentGroupID());
-                                        Toast.makeText(getBaseContext(), "Word Added", Toast.LENGTH_SHORT)
-                                                .show();
-                                    } else {
-                                        Toast.makeText(getBaseContext(), "Word Already Exists", Toast.LENGTH_SHORT)
-                                                .show();
-                                    }
-
-                                }
-                            })
-                    .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialog, int which) {
-                        }
-                    })
-                    .show();
-
-            return true;
-        }
-        */
+//        if (id == R.id.action_add_word) { // TODO: Going to be deleted
+//            final LinearLayout linear = (LinearLayout)View.inflate(this, R.layout.aac_confirm_dependency, null);
+//
+//            new AlertDialog.Builder(this)
+//                    .setTitle("Add Word Menu(Temp)")
+//                    .setView(linear)
+//                    .setPositiveButton("Confirm",
+//                            new DialogInterface.OnClickListener() {
+//                                @Override
+//                                public void onClick(DialogInterface dialog, int which) {
+//                                    EditText ETWord = (EditText) linear.findViewById(R.id.etword);
+//                                    ContentValues values = new ContentValues();
+//                                    values.put(ActionWord.SQL.COLUMN_NAME_PARENT_ID, container.getCurrentGroupID());
+//                                    values.put(ActionWord.SQL.COLUMN_NAME_WORD, ETWord.getText().toString());
+//
+//                                    if (container.addWord(db, values) != -1) {
+//                                        container.exploreGroup(container.getCurrentGroupID());
+//                                        Toast.makeText(getBaseContext(), "Word Added", Toast.LENGTH_SHORT)
+//                                                .show();
+//                                    } else {
+//                                        Toast.makeText(getBaseContext(), "Word Already Exists", Toast.LENGTH_SHORT)
+//                                                .show();
+//                                    }
+//
+//                                }
+//                            })
+//                    .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+//                        @Override
+//                        public void onClick(DialogInterface dialog, int which) {
+//                        }
+//                    })
+//                    .show();
+//
+//            return true;
+//        }
 
         if (id == R.id.action_remove_word) { // 아직 작업 필요
             final LinearLayout linear = (LinearLayout)View.inflate(this, R.layout.remove_word, null);
@@ -233,11 +234,16 @@ public class MainActivity extends AppCompatActivity {
             return true;
         }
 
+        if (id == R.id.action_remove_item_deselect_all) {
+            container.deselectAll();
+            return true;
+        }
+
         if (id == R.id.action_remove_item_remove) {
             container.removeSelected();
-            this.setTitle(R.string.app_name);
-            status = STATUS_MAIN;
-            supportInvalidateOptionsMenu();
+//            this.setTitle(R.string.app_name);
+//            status = STATUS_MAIN;
+//            supportInvalidateOptionsMenu();
 
             return true;
         }
@@ -265,6 +271,36 @@ public class MainActivity extends AppCompatActivity {
             }
 
         }
+    }
+
+    public void confirmDependency() {
+        final LinearLayout linear = (LinearLayout)View.inflate(this, R.layout.aac_confirm_dependency, null);
+        Resources r = this.getResources();
+
+        new AlertDialog.Builder(this)
+                .setTitle(r.getString(R.string.menu_remove_item_dependency_warning_title))
+                .setView(linear)
+                .setPositiveButton(r.getString(R.string.menu_remove_item_dependency_warning_confirm),
+                        new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                container.invokeRemoval();
+                            }
+                        })
+                .setNegativeButton(r.getString(R.string.menu_remove_item_dependency_warning_cancel), new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                    }
+                })
+                .show();
+
+    }
+
+    public void revertMenu() {
+        this.setTitle(R.string.app_name);
+        status = STATUS_MAIN;
+        supportInvalidateOptionsMenu();
+        container.toggleFold();
     }
 
 }

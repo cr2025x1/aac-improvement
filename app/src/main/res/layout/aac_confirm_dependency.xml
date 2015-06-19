@@ -9,12 +9,7 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Word"
+        android:text="@string/menu_remove_item_dependency_warning_context"
         />
-
-    <EditText
-        android:id="@+id/etword"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content" />
 
 </LinearLayout>

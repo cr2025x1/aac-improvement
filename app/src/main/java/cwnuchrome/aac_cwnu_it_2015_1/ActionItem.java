@@ -191,6 +191,7 @@ public abstract class ActionItem implements Serializable {
             // TODO: Make this use XMLs.
             priority = values.getAsLong(SQL.COLUMN_NAME_PRIORITY);
             Drawable d = context.getResources().getDrawable(values.getAsInteger(SQL.COLUMN_NAME_PICTURE), context.getTheme());
+//            Drawable d = context.getResources().getDrawable(values.getAsInteger(SQL.COLUMN_NAME_PICTURE));
             this.setCompoundDrawablesWithIntrinsicBounds(null, d, null, null);
             int length = (int)TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 15, getResources().getDisplayMetrics());
             this.setMaxWidth(d.getIntrinsicWidth());
