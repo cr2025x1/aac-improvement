@@ -15,16 +15,23 @@
 
     <string name="test">Test</string>
 
-    <string name="menu_remove_item">Remove Item</string>
-    <string name="title_remove_item">Removal mode</string>
-    <string name="menu_remove_item_cancel">Cancel</string>
-    <string name="menu_remove_item_remove">Remove</string>
-    <string name="menu_remove_item_select_all">Select All</string>
-    <string name="menu_remove_item_deselect_all">Deselect All</string>
+    <!-- 아이템 선택 메뉴 관련 -->
+    <string name="menu_select_item">Select Item</string>
+    <string name="title_select_item">Selection mode</string>
+    <string name="menu_select_item_cancel">Cancel</string>
+    <string name="menu_select_item_remove">Remove</string>
+    <string name="menu_select_item_select_all">Select All</string>
+    <string name="menu_select_item_deselect_all">Deselect All</string>
 
+    <!-- 의존성 경고창 관련 -->
     <string name="menu_remove_item_dependency_warning_title">Dependency Warning</string>
     <string name="menu_remove_item_dependency_warning_context">Macro with dependencies exists. It will be deleted too when you process this operation. Are you sure?</string>
     <string name="menu_remove_item_dependency_warning_confirm">Confirm</string>
     <string name="menu_remove_item_dependency_warning_cancel">Cancel</string>
+
+    <!-- 검색 관련 -->
+    <string name="menu_search">Search</string>
+
+
 
 </resources>

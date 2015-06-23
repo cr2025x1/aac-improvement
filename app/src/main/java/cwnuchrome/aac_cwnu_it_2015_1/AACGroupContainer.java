@@ -21,6 +21,7 @@ import java.util.Iterator;
 
 /**
  * Created by Chrome on 5/9/15.
+ * AAC 레이아웃 객체
  */
 public class AACGroupContainer {
     protected LinearLayout mainLayout;
@@ -30,7 +31,6 @@ public class AACGroupContainer {
     protected ArrayList<View> contentList;
     protected ArrayList<View> selectedList;
     protected ActionDBHelper actDBHelper;
-    protected ArrayList<ActionWord.Button.onClickClass> wordOCCList;
     protected ActionMain actionMain;
     protected long currentGroupID;
     protected TextToSpeech TTS;
@@ -50,15 +50,15 @@ public class AACGroupContainer {
         this.context = mainLayout.getContext();
         actDBHelper = new ActionDBHelper(context);
         this.mainLayout = mainLayout;
-        contentList = new ArrayList<View>();
+        contentList = new ArrayList<>();
         actionMain = ActionMain.getInstance();
         TTS = new TextToSpeech(context, new TTSListener());
         actionMain.containerRef = this;
 
-        checkBoxes = new ArrayList<CheckBox>();
-        selectedList = new ArrayList<View>();
+        checkBoxes = new ArrayList<>();
+        selectedList = new ArrayList<>();
 
-        removeDepArray = new ArrayList<ContentValues>();
+        removeDepArray = new ArrayList<>();
         removalListBundle = new RemovalListBundle();
 
         // 그룹 제목 TextView 설정
@@ -313,14 +313,6 @@ public class AACGroupContainer {
         contentList.add(item_layout);
     }
 
-    public long addWord(SQLiteDatabase db, ContentValues values) {
-        return actionMain.itemChain[ActionMain.item.ID_Word].add(db, values);
-    }
-
-    public boolean removeWord(SQLiteDatabase db, String word) {
-        return actionMain.itemChain[ActionMain.item.ID_Word].remove(db, word);
-    }
-
     public long getCurrentGroupID() {
         return currentGroupID;
     }
@@ -469,7 +461,7 @@ public class AACGroupContainer {
 
         for (View v : selectedList)
             removalListBundle.addByOCC(((ActionItem.Button) v.findViewById(R.id.aac_item_button_id)).onClickObj);
-        removalListBundle.soutList();
+        removalListBundle.printList();
 
         System.out.println("List of non-selected dependencies:");
         for (ContentValues v : removeDepArray)
@@ -506,9 +498,6 @@ public class AACGroupContainer {
             wordList = new ArrayList<>(); // 자바 버전에 따른 컴파일 에러 발생 가능
             macroList = new ArrayList<>();
             groupList = new ArrayList<>();
-//            wordList = new ArrayList<Integer>();
-//            macroList = new ArrayList<Integer>();
-//            groupList = new ArrayList<Integer>();
             projection = new String[] { ActionItem.SQL._ID };
         }
 
@@ -743,7 +732,7 @@ public class AACGroupContainer {
             return dependencyProper;
         }
 
-        public void soutList() {
+        public void printList() {
             System.out.println("Selected item list for removal:");
 
             System.out.println("Groups -");
@@ -774,5 +763,7 @@ public class AACGroupContainer {
             macroList.clear();
             wordList.clear();
         }
+
+        // TODO: removeDepArray도 removeBundle 내로 통합시키기?
     }
 }
