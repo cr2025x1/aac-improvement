@@ -765,5 +765,6 @@ public class AACGroupContainer {
         }
 
         // TODO: removeDepArray도 removeBundle 내로 통합시키기?
+        // TODO: 각 아이템 macrolist, wordlist, grouplist 별로 동작하게 Action 계열로 분사, 유니버셜하게 만들기
     }
 }
