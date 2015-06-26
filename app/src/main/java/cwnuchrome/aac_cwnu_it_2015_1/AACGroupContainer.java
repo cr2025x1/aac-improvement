@@ -465,27 +465,17 @@ public class AACGroupContainer {
             removalListBundle.addByOCC(((ActionItem.Button) v.findViewById(R.id.aac_item_button_id)).onClickObj);
         removalListBundle.printList();
 
-//        for (ContentValues v : removeDepArray)
-//            System.out.println(v.getAsString(ActionItem.SQL._ID));
         removalListBundle.printMissingDependencyList();
 
+        // 만일 의존성 검사에서 문제 발생 시 유저의 확인을 받음 (문제가 없으면 확인 없이 바로 삭제)
         if (!removalListBundle.checkNoDependencyLeft()) ((MainActivity) context).confirmDependency();
         else invokeRemoval();
     }
 
+    // 아이템 삭제 명령 수행
     public void invokeRemoval() {
         removalListBundle.execRemoval();
-
-        // 선택 리스트에는 없으나 삭제 대상에 의존성을 가지는 매크로는 모두 삭제
-//        SQLiteDatabase db = actDBHelper.getWritableDatabase();
-//        for (ContentValues v : removeDepArray) {
-//            actionMain.itemChain[ActionMain.item.ID_Macro].removeWithID(db, v.getAsInteger(ActionItem.SQL._ID));
-//        }
-//        removeDepArray.clear();
-//        db.close();
-
         ((MainActivity)context).revertMenu();
-
         exploreGroup(currentGroupID);
     }
 
@@ -496,7 +486,6 @@ public class AACGroupContainer {
         protected String[] projection;
 
         protected Vector<ArrayList<Integer>> itemVector;
-//        protected ArrayList<Integer>[] itemVector;
         protected Vector<ArrayList<ContentValues>> missingDependencyVector;
 
         public RemovalListBundle() {
@@ -506,13 +495,9 @@ public class AACGroupContainer {
             projection = new String[] { ActionItem.SQL._ID };
 
             itemVector = new Vector<>(ActionMain.item.ITEM_COUNT);
-//            itemVector = (ArrayList<Integer>[])new ArrayList[ActionMain.item.ITEM_COUNT]; // http://stackoverflow.com/questions/8559092/create-an-array-of-arraylists
-//            for (ArrayList<Integer> l : itemVector) l = new ArrayList<>();
             for (int i = 0; i < ActionMain.item.ITEM_COUNT; i++) itemVector.add(new ArrayList<Integer>());
 
-//            missingDependencyVector = new ArrayList<>();
             missingDependencyVector = new Vector<>(ActionMain.item.ITEM_COUNT);
-//            for (ArrayList<ContentValues> l : missingDependencyVector) l = new ArrayList<>();
             for (int i = 0; i < ActionMain.item.ITEM_COUNT; i++) missingDependencyVector.add(new ArrayList<ContentValues>());
         }
 
@@ -520,120 +505,14 @@ public class AACGroupContainer {
             itemVector.get(category_id).add(id);
         }
 
-//        public void addGroup(int id) {
-//            groupList.add(id);
-//
-//            Cursor c;
-//            int c_count;
-//            int c_col;
-//            SQLiteDatabase db = actDBHelper.getWritableDatabase();
-//            String whereClause = ActionItem.SQL.COLUMN_NAME_PARENT_ID  + " = " + id;
-//
-//            // 해당 그룹 내의 그룹 처리
-//            c = db.query(
-//                    actionMain.itemChain[ActionMain.item.ID_Group].TABLE_NAME, // The table to query
-//                    projection, // The columns to return
-//                    whereClause, // The columns for the WHERE clause
-//                    null, // The values for the WHERE clause
-//                    null, // don't group the rows
-//                    null, // don't filter by row groups
-//                    null // The sort order
-//            );
-//            c.moveToFirst();
-//
-//            c_count = c.getCount();
-//            c_col = c.getColumnIndexOrThrow(ActionItem.SQL._ID);
-//            if (c_count > 0) {
-//                for (int i = 0; i < c_count; i++) {
-//                    int i_id = c.getInt(c_col);
-//                    addGroup(i_id); // 재귀 호출
-//                    c.moveToNext();
-//                }
-//            }
-//
-//            c.close();
-//
-//
-//            // 해당 그룹 내의 매크로 처리
-//            c = db.query(
-//                    actionMain.itemChain[ActionMain.item.ID_Macro].TABLE_NAME, // The table to query
-//                    projection, // The columns to return
-//                    whereClause, // The columns for the WHERE clause
-//                    null, // The values for the WHERE clause
-//                    null, // don't group the rows
-//                    null, // don't filter by row groups
-//                    null // The sort order
-//            );
-//            c.moveToFirst();
-//
-//            c_count = c.getCount();
-//            c_col = c.getColumnIndexOrThrow(ActionItem.SQL._ID);
-//            if (c_count > 0) {
-//                for (int i = 0; i < c_count; i++) {
-//                    int i_id = c.getInt(c_col);
-//                    addMacro(i_id);
-//                    c.moveToNext();
-//                }
-//            }
-//
-//            c.close();
-//
-//
-//            // 해당 그룹 내의 워드 처리
-//            c = db.query(
-//                    actionMain.itemChain[ActionMain.item.ID_Word].TABLE_NAME, // The table to query
-//                    projection, // The columns to return
-//                    whereClause, // The columns for the WHERE clause
-//                    null, // The values for the WHERE clause
-//                    null, // don't group the rows
-//                    null, // don't filter by row groups
-//                    null // The sort order
-//            );
-//            c.moveToFirst();
-//
-//            c_count = c.getCount();
-//            c_col = c.getColumnIndexOrThrow(ActionItem.SQL._ID);
-//            if (c_count > 0) {
-//                for (int i = 0; i < c_count; i++) {
-//                    int i_id = c.getInt(c_col);
-//                    addWord(i_id);
-//                    c.moveToNext();
-//                }
-//            }
-//
-//            c.close();
-//        }
-
-//        public void addMacro(int id) {
-//            macroList.add(id);
-//        }
-//
-//        public void addWord(int id) {
-//            wordList.add(id);
-//        }
-
         public void addByOCC(ActionItem.Button.onClickClass occ) {
             add(occ.itemCategoryID, occ.itemID);
 
-//            switch (occ.itemCategoryID) {
-//                case ActionMain.item.ID_Group:
-//                    addGroup(occ.itemID);
-//                    break;
-//
-//                case ActionMain.item.ID_Macro:
-//                    addMacro(occ.itemID);
-//                    break;
-//
-//                case ActionMain.item.ID_Word:
-//                    addWord(occ.itemID);
-//                    break;
-//            }
         }
 
         // 의존성 여부 검사
         public boolean checkNoDependencyLeft() {
             for (ArrayList<ContentValues> l : missingDependencyVector) l.clear();
-//            missingDependencyVector.clear();
 
             boolean result = true;
             for (ActionItem i : actionMain.itemChain) {
@@ -641,126 +520,6 @@ public class AACGroupContainer {
             }
 
             return result;
-
-
-//            if (wordList.size() == 0) return true;
-//
-//            /* 지울 단어들에 대해 의존성을 가지는 매크로들을 찾기 위한 쿼리문의 작성 */
-//
-//            Iterator<Integer> i = wordList.iterator();
-//            int id = i.next();
-//
-//            final String OR = " OR ";
-//            final String LIKE_AND_HEAD = " LIKE '%:";
-//            final String TAIL = ":%'";
-//
-//            StringBuilder qBuilder = new StringBuilder();
-//            qBuilder.append(ActionMacro.SQL.COLUMN_NAME_WORDCHAIN);
-//            qBuilder.append(LIKE_AND_HEAD);
-//            qBuilder.append(id);
-//            qBuilder.append(TAIL);
-//
-//            // 매 단어마다 조건문 확장
-//            while (i.hasNext()) {
-//                id = i.next();
-//                qBuilder.append(OR);
-//                qBuilder.append(ActionMacro.SQL.COLUMN_NAME_WORDCHAIN);
-//                qBuilder.append(LIKE_AND_HEAD);
-//                qBuilder.append(id);
-//                qBuilder.append(TAIL);
-//            }
-//
-//            String whereClause = qBuilder.toString(); // 완성된 조건문을 String으로 변환
-//            String sortOrder = ActionWord.SQL._ID + " ASC"; // 이후의 알고리즘을 위해 정렬 순서는 ID 기준 오름차순
-//            String projection[] = { ActionItem.SQL._ID, ActionItem.SQL.COLUMN_NAME_WORD };
-//
-//            Cursor c;
-//            int c_count;
-//            int c_id_col;
-//            SQLiteDatabase db = actDBHelper.getWritableDatabase();
-//            c = db.query( // 삭제 대상 워드에 대한 의존성이 있는 모든 매크로가 이 커서에 담김
-//                    actionMain.itemChain[ActionMain.item.ID_Macro].TABLE_NAME, // The table to query
-//                    projection, // The columns to return
-//                    whereClause, // The columns for the WHERE clause
-//                    null, // The values for the WHERE clause
-//                    null, // don't group the rows
-//                    null, // don't filter by row groups
-//                    sortOrder // The sort order
-//            );
-//            c.moveToFirst();
-//
-//            /* 삭제 대상으로 선택된 매크로와 앞서 찾아낸 매크로 목록과의 대조 */
-//            /* - 앞서 찾아낸 매크로의 집합은 반드시 선택된 매크로 대상의 집합에 포함된 관계여야 한다. */
-//
-//            c_count = c.getCount();
-//            c_id_col = c.getColumnIndexOrThrow(ActionItem.SQL._ID);
-//            int c_word_col = c.getColumnIndexOrThrow(ActionItem.SQL.COLUMN_NAME_WORD);
-//
-//            boolean dependencyProper = true;
-//
-//            if (c_count > 0) {
-//                int c_id = c.getInt(c_id_col);
-//
-//                Collections.sort(macroList); // 선택된 매크로 목록도 오름차순으로 정렬
-//
-//                boolean endOfCursor = false;
-//
-//                // 선택된 아이템을 순차 검색하며 확인
-//                for (int j : macroList) {
-//                    // 현재 아이템의 ID값이 커서의 현재 아이템의 ID값보다 크다면?
-//                    while (c_id < j) {
-//                        // 커서에 있는 아이템이 macroList에 없다: 의존성 문제가 있는 아이템이므로 removeDepArray에 추가
-//                        ContentValues values = new ContentValues();
-//                        values.put(ActionItem.SQL.COLUMN_NAME_WORD, c.getString(c_word_col));
-//                        values.put(ActionItem.SQL._ID, c_id);
-//                        missingDependencyVector.add(values);
-//
-//                        // 커서가 맨 끝에 도달하지 않은 이상 커서를 뒤로 계속 넘긴다.
-//                        if (c.isLast()) {
-//                            endOfCursor = true;
-//                            break;
-//                        }
-//
-//                        c.moveToNext();
-//                        c_id = c.getInt(c_id_col);
-//                    }
-//
-//                    if (endOfCursor) break; // 커서가 맨 끝에 도달했으므로 더 이상 대조할 대상이 없음. 루프 종료.
-//
-//                    // 같은 ID값을 지니는 매크로를 선택 리스트에서 찾았음.
-//                    if (c_id == j) {
-//                        // 의존성을 지니는 매크로가 제대로 선택 리스트에도 있음. 따라서 커서를 다음 항목으로 진행시킨 후, for 루프도 다음 회로 넘긴다.
-//                        if (c.isLast()) {
-//                            endOfCursor = true;
-//                            break;
-//                        }
-//
-//                        c.moveToNext();
-//                        c_id = c.getInt(c_id_col);
-//                    }
-//
-//                }
-//
-//                // 커서에 아직 여분이 남음 - 즉 선택된 리스트에 모든 의존성 있는 매크로가 포함되지 않았음을 의미.
-//                if (!endOfCursor) {
-//                    dependencyProper = false;
-//                    while (true) {
-//                        // 커서에 남은 매크로 아이템들은 모두 의존성이 있으나 선택된 리스트에 없는 아이템들이므로 removeDepArray에 넣는다.
-//                        ContentValues values = new ContentValues();
-//                        values.put(ActionItem.SQL.COLUMN_NAME_WORD, c.getString(c_word_col));
-//                        values.put(ActionItem.SQL._ID, c_id);
-//                        missingDependencyVector.add(values);
-//
-//                        if (c.isLast()) break;
-//
-//                        c.moveToNext();
-//                        c_id = c.getInt(c_id_col);
-//                    }
-//                }
-//            }
-//
-//            c.close();
-//            return dependencyProper;
         }
 
         public void printList() {
@@ -770,28 +529,17 @@ public class AACGroupContainer {
                 actionMain.itemChain[i].printRemovalList(this);
             }
 
-//            System.out.println("Groups -");
-//            for (int i : groupList) System.out.println(i);
-//
-//            System.out.println("Macros -");
-//            for (int i : macroList) System.out.println(i);
-//
-//            System.out.println("Words -");
-//            for (int i : wordList) System.out.println(i);
-
             System.out.println("End of the itemVector");
         }
 
         public void printMissingDependencyList() {
             System.out.println("List of non-selected dependencies:");
 
-            int cat_id = 0;
             for (ArrayList<ContentValues> l : missingDependencyVector) {
                 for (ContentValues v : l) {
                     System.out.println(v.getAsString(ActionItem.SQL._ID));
                 }
                 l.clear();
-                cat_id++;
             }
 
             System.out.println("End of the list");
@@ -802,19 +550,13 @@ public class AACGroupContainer {
 
             int cat_id;
 
+            // 선택 리스트 상의 모든 아이템 제거
             cat_id = 0;
             for (ArrayList<Integer> i : itemVector) {
                 for (int id : i) actionMain.itemChain[cat_id].removeWithID(db, id);
                 i.clear();
                 cat_id++;
             }
-
-//            for (int i : macroList) actionMain.itemChain[ActionMain.item.ID_Macro].removeWithID(db, i);
-//            macroList.clear();
-//            for (int i : wordList) actionMain.itemChain[ActionMain.item.ID_Word].removeWithID(db, i);
-//            wordList.clear();
-//            for (int i : groupList) actionMain.itemChain[ActionMain.item.ID_Group].removeWithID(db, i);
-//            groupList.clear();
 
             // 선택 리스트에는 없으나 삭제 대상에 의존성을 가지는 매크로는 모두 삭제
             cat_id = 0;
@@ -831,13 +573,7 @@ public class AACGroupContainer {
 
         public void clear() {
             for (ArrayList<Integer> i : itemVector) i.clear();
-
-//            groupList.clear();
-//            macroList.clear();
-//            wordList.clear();
         }
 
-        // TODO: removeDepArray도 removeBundle 내로 통합시키기?
-        // TODO: 각 아이템 macrolist, wordlist, grouplist 별로 동작하게 Action 계열로 분사, 유니버셜하게 만들기
     }
 }

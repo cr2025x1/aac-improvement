@@ -186,6 +186,7 @@ public class ActionMacro extends ActionItem {
 
     }
 
+    // 의존성 검사... 이것 때문에 단순하게 생각했던 아이템 제거에서 지옥문이 열렸다.
     protected boolean checkDependencyRemoval(Context context, AACGroupContainer.RemovalListBundle listBundle) {
         ActionMain actionMain = ActionMain.getInstance();
         ArrayList<Integer> wordList = listBundle.itemVector.get(ActionMain.item.ID_Word);
@@ -195,7 +196,7 @@ public class ActionMacro extends ActionItem {
 
         if (wordList.size() == 0) return true;
 
-            /* 지울 단어들에 대해 의존성을 가지는 매크로들을 찾기 위한 쿼리문의 작성 */
+        /* 지울 단어들에 대해 의존성을 가지는 매크로들을 찾기 위한 쿼리문의 작성 */
 
         Iterator<Integer> i = wordList.iterator();
         int id = i.next();
