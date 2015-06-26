@@ -86,6 +86,10 @@ public class ActionWord extends ActionItem {
 //        return false;
 //    }
 
+    protected void addToRemovalList(Context context, AACGroupContainer.RemovalListBundle list, int id) {
+        list.add(ActionMain.item.ID_Word, id);
+    }
+
     /**
      * Created by Chrome on 5/8/15.
      */
@@ -119,5 +123,12 @@ public class ActionWord extends ActionItem {
             this.onClickObj.init(values);
         }
 
+    }
+
+    protected boolean checkDependencyRemoval(Context context, AACGroupContainer.RemovalListBundle list) { return true; }
+
+    protected void printRemovalList(AACGroupContainer.RemovalListBundle listBundle) {
+        System.out.println("Words -");
+        for (int i : listBundle.itemVector.get(ActionMain.item.ID_Word)) System.out.println(i);
     }
 }

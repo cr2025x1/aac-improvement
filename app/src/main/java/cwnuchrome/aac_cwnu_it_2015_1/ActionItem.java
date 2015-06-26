@@ -15,6 +15,7 @@ import android.view.ViewGroup;
 import android.widget.LinearLayout;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Comparator;
 
 /**
@@ -66,7 +67,7 @@ public abstract class ActionItem implements Serializable {
         // 워드 쿼리
         Cursor c = db.query(
                 TABLE_NAME, // The table to query
-                new String[] {SQL._ID}, // The columns to return
+                new String[]{SQL._ID}, // The columns to return
                 SQL.COLUMN_NAME_WORD + " = '" + word + "'", // The columns for the WHERE clause
                 null, // The values for the WHERE clause
                 null, // don't group the rows
@@ -89,7 +90,7 @@ public abstract class ActionItem implements Serializable {
         // 워드 쿼리
         Cursor c = db.query(
                 TABLE_NAME, // The table to query
-                new String[] {SQL._ID}, // The columns to return
+                new String[]{SQL._ID}, // The columns to return
                 SQL._ID + " = " + id, // The columns for the WHERE clause
                 null, // The values for the WHERE clause
                 null, // don't group the rows
@@ -130,6 +131,11 @@ public abstract class ActionItem implements Serializable {
         );
         return true;
     }
+
+    abstract protected void addToRemovalList(Context context, AACGroupContainer.RemovalListBundle listBundle, int id);
+//    abstract protected void addToRemovalList(Context context, ArrayList<Integer> itemVector, int id);
+    abstract protected boolean checkDependencyRemoval(Context context, AACGroupContainer.RemovalListBundle listBundle);
+    abstract protected void printRemovalList(AACGroupContainer.RemovalListBundle listBundle);
 
     /**
      * Created by Chrome on 5/8/15.
@@ -217,6 +223,7 @@ public abstract class ActionItem implements Serializable {
         public void setContainer(AACGroupContainer container) {
             this.container = container;
         }
+
     }
 
 }

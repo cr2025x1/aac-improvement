@@ -2,6 +2,7 @@ package cwnuchrome.aac_cwnu_it_2015_1;
 
 import android.content.ContentValues;
 import android.content.Context;
+import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.provider.BaseColumns;
 import android.view.View;
@@ -111,5 +112,104 @@ public class ActionGroup extends ActionItem {
             this.onClickObj.init(values);
         }
 
+    }
+
+    protected void addToRemovalList(Context context, AACGroupContainer.RemovalListBundle listBundle, int id) {
+        ActionDBHelper actDBHelper = new ActionDBHelper(context);
+        ActionMain actionMain = ActionMain.getInstance();
+        String[] projection = new String[] { ActionItem.SQL._ID };
+
+//        listBundle.add(id);
+        listBundle.add(ActionMain.item.ID_Group, id);
+
+        Cursor c;
+        int c_count;
+        int c_col;
+        SQLiteDatabase db = actDBHelper.getWritableDatabase();
+        String whereClause = ActionItem.SQL.COLUMN_NAME_PARENT_ID  + " = " + id;
+
+        // 해당 그룹 내의 그룹 처리
+        c = db.query(
+                actionMain.itemChain[ActionMain.item.ID_Group].TABLE_NAME, // The table to query
+                projection, // The columns to return
+                whereClause, // The columns for the WHERE clause
+                null, // The values for the WHERE clause
+                null, // don't group the rows
+                null, // don't filter by row groups
+                null // The sort order
+        );
+        c.moveToFirst();
+
+        c_count = c.getCount();
+        c_col = c.getColumnIndexOrThrow(ActionItem.SQL._ID);
+        if (c_count > 0) {
+            for (int i = 0; i < c_count; i++) {
+                int i_id = c.getInt(c_col);
+                addToRemovalList(context, listBundle, i_id); // 재귀 호출
+//                addToRemovalList(i_id); // 재귀 호출
+                c.moveToNext();
+            }
+        }
+
+        c.close();
+
+
+        // 해당 그룹 내의 매크로 처리
+        c = db.query(
+                actionMain.itemChain[ActionMain.item.ID_Macro].TABLE_NAME, // The table to query
+                projection, // The columns to return
+                whereClause, // The columns for the WHERE clause
+                null, // The values for the WHERE clause
+                null, // don't group the rows
+                null, // don't filter by row groups
+                null // The sort order
+        );
+        c.moveToFirst();
+
+        c_count = c.getCount();
+        c_col = c.getColumnIndexOrThrow(ActionItem.SQL._ID);
+        if (c_count > 0) {
+            for (int i = 0; i < c_count; i++) {
+                int i_id = c.getInt(c_col);
+//                addMacro(i_id);
+                listBundle.add(ActionMain.item.ID_Macro, id);
+                c.moveToNext();
+            }
+        }
+
+        c.close();
+
+
+        // 해당 그룹 내의 워드 처리
+        c = db.query(
+                actionMain.itemChain[ActionMain.item.ID_Word].TABLE_NAME, // The table to query
+                projection, // The columns to return
+                whereClause, // The columns for the WHERE clause
+                null, // The values for the WHERE clause
+                null, // don't group the rows
+                null, // don't filter by row groups
+                null // The sort order
+        );
+        c.moveToFirst();
+
+        c_count = c.getCount();
+        c_col = c.getColumnIndexOrThrow(ActionItem.SQL._ID);
+        if (c_count > 0) {
+            for (int i = 0; i < c_count; i++) {
+                int i_id = c.getInt(c_col);
+//                addWord(i_id);
+                listBundle.add(ActionMain.item.ID_Word, id);
+                c.moveToNext();
+            }
+        }
+
+        c.close();
+    }
+
+    protected boolean checkDependencyRemoval(Context context, AACGroupContainer.RemovalListBundle listBundle) { return true; }
+
+    protected void printRemovalList(AACGroupContainer.RemovalListBundle listBundle) {
+        System.out.println("Groups -");
+        for (int i : listBundle.itemVector.get(ActionMain.item.ID_Group)) System.out.println(i);
     }
 }
