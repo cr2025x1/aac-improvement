@@ -318,4 +318,11 @@ public class ActionMacro extends ActionItem {
         System.out.println("Macros -");
         for (int i : listBundle.itemVector.get(ActionMain.item.ID_Macro)) System.out.println(i);
     }
+
+    protected void printMissingDependencyList(AACGroupContainer.RemovalListBundle listBundle) {
+        System.out.println("Macros -");
+        for (ContentValues v : listBundle.missingDependencyVector.get(ActionMain.item.ID_Macro)) {
+            System.out.println(v.getAsString(ActionItem.SQL.COLUMN_NAME_WORD) + "(" + v.getAsInteger(ActionItem.SQL._ID) + ")");
+        }
+    }
 }

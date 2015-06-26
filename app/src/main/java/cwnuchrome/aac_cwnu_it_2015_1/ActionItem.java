@@ -133,9 +133,9 @@ public abstract class ActionItem implements Serializable {
     }
 
     abstract protected void addToRemovalList(Context context, AACGroupContainer.RemovalListBundle listBundle, int id);
-//    abstract protected void addToRemovalList(Context context, ArrayList<Integer> itemVector, int id);
     abstract protected boolean checkDependencyRemoval(Context context, AACGroupContainer.RemovalListBundle listBundle);
     abstract protected void printRemovalList(AACGroupContainer.RemovalListBundle listBundle);
+    abstract protected void printMissingDependencyList(AACGroupContainer.RemovalListBundle listBundle);
 
     /**
      * Created by Chrome on 5/8/15.

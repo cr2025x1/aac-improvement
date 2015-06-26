@@ -290,7 +290,7 @@ public class AACGroupContainer {
                 if (isChecked) {
                     selectedList.add((LinearLayout) buttonView.getParent());
                 } else {
-                    View v = (View)buttonView.getParent();
+                    View v = (View) buttonView.getParent();
                     selectedList.remove(v);
                 }
             }
@@ -465,10 +465,11 @@ public class AACGroupContainer {
             removalListBundle.addByOCC(((ActionItem.Button) v.findViewById(R.id.aac_item_button_id)).onClickObj);
         removalListBundle.printList();
 
-        removalListBundle.printMissingDependencyList();
-
         // 만일 의존성 검사에서 문제 발생 시 유저의 확인을 받음 (문제가 없으면 확인 없이 바로 삭제)
-        if (!removalListBundle.checkNoDependencyLeft()) ((MainActivity) context).confirmDependency();
+        if (!removalListBundle.checkNoDependencyLeft()) {
+            removalListBundle.printMissingDependencyList();
+            ((MainActivity) context).confirmDependency();
+        }
         else invokeRemoval();
     }
 
@@ -523,23 +524,20 @@ public class AACGroupContainer {
         }
 
         public void printList() {
-            System.out.println("Selected item itemVector for removal:");
+            System.out.println("Selected item list for removal:");
 
             for (int i = 0; i < ActionMain.item.ITEM_COUNT; i++) {
                 actionMain.itemChain[i].printRemovalList(this);
             }
 
-            System.out.println("End of the itemVector");
+            System.out.println("End of the list");
         }
 
         public void printMissingDependencyList() {
             System.out.println("List of non-selected dependencies:");
 
-            for (ArrayList<ContentValues> l : missingDependencyVector) {
-                for (ContentValues v : l) {
-                    System.out.println(v.getAsString(ActionItem.SQL._ID));
-                }
-                l.clear();
+            for (int i = 0; i < ActionMain.item.ITEM_COUNT; i++) {
+                actionMain.itemChain[i].printMissingDependencyList(this);
             }
 
             System.out.println("End of the list");
