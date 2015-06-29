@@ -59,6 +59,7 @@ public class ActionPreset {
         record.put(ActionGroup.SQL.COLUMN_NAME_WORD, "테스트");
         record.put(ActionGroup.SQL.COLUMN_NAME_STEM, "테스트");
         record.put(ActionGroup.SQL.COLUMN_NAME_PICTURE, R.drawable.color);
+        record.put(ActionItem.SQL.COLUMN_NAME_PICTURE_IS_PRESET, 1);
         db.insert(actionMain.itemChain[ActionMain.item.ID_Group].TABLE_NAME, null, record);
         record.clear();
 
@@ -81,6 +82,7 @@ public class ActionPreset {
         record.put(ActionWord.SQL.COLUMN_NAME_WORD, "나는");
         record.put(ActionWord.SQL.COLUMN_NAME_STEM, "나는");
         record.put(ActionWord.SQL.COLUMN_NAME_PICTURE, R.drawable.play);
+        record.put(ActionItem.SQL.COLUMN_NAME_PICTURE_IS_PRESET, 1);
         db.insert(actionMain.itemChain[ActionMain.item.ID_Word].TABLE_NAME, null, record);
         record.clear();
 
@@ -89,6 +91,7 @@ public class ActionPreset {
         record.put(ActionWord.SQL.COLUMN_NAME_WORD, "당신을");
         record.put(ActionWord.SQL.COLUMN_NAME_STEM, "당신을");
         record.put(ActionWord.SQL.COLUMN_NAME_PICTURE, R.drawable.family);
+        record.put(ActionItem.SQL.COLUMN_NAME_PICTURE_IS_PRESET, 1);
         db.insert(actionMain.itemChain[ActionMain.item.ID_Word].TABLE_NAME, null, record);
         record.clear();
 
@@ -97,6 +100,7 @@ public class ActionPreset {
         record.put(ActionWord.SQL.COLUMN_NAME_WORD, "사랑합니다");
         record.put(ActionWord.SQL.COLUMN_NAME_STEM, "사랑합니다");
         record.put(ActionWord.SQL.COLUMN_NAME_PICTURE, R.drawable.feeling);
+        record.put(ActionItem.SQL.COLUMN_NAME_PICTURE_IS_PRESET, 1);
         db.insert(actionMain.itemChain[ActionMain.item.ID_Word].TABLE_NAME, null, record);
         record.clear();
 
@@ -106,6 +110,7 @@ public class ActionPreset {
         record.put(ActionMacro.SQL.COLUMN_NAME_STEM, "나는 당신을 사랑합니다");
         record.put(ActionMacro.SQL.COLUMN_NAME_WORDCHAIN, "|:1::2::3:|");
         record.put(ActionMacro.SQL.COLUMN_NAME_PICTURE, R.drawable.bookmark);
+        record.put(ActionItem.SQL.COLUMN_NAME_PICTURE_IS_PRESET, 1);
         db.insert(actionMain.itemChain[ActionMain.item.ID_Macro].TABLE_NAME, null, record);
         record.clear();
     }

@@ -90,7 +90,12 @@ public class AACGroupContainer {
         // 그룹 이름 가져오기
         c = db.query(
                 actionMain.itemChain[ActionMain.item.ID_Group].TABLE_NAME,
-                new String[] {ActionGroup.SQL.COLUMN_NAME_WORD, ActionGroup.SQL.COLUMN_NAME_PARENT_ID, ActionGroup.SQL.COLUMN_NAME_PICTURE},
+                new String[] {
+                        ActionGroup.SQL.COLUMN_NAME_WORD,
+                        ActionGroup.SQL.COLUMN_NAME_PARENT_ID,
+                        ActionGroup.SQL.COLUMN_NAME_PICTURE,
+                        ActionGroup.SQL.COLUMN_NAME_PICTURE_IS_PRESET
+                },
                 ActionGroup.SQL._ID + " = " + id,
                 null,
                 null,
@@ -110,7 +115,8 @@ public class AACGroupContainer {
                 ActionWord.SQL._ID,
                 ActionWord.SQL.COLUMN_NAME_PRIORITY,
                 ActionWord.SQL.COLUMN_NAME_WORD,
-                ActionWord.SQL.COLUMN_NAME_PICTURE
+                ActionWord.SQL.COLUMN_NAME_PICTURE,
+                ActionWord.SQL.COLUMN_NAME_PICTURE_IS_PRESET
         };
         String sortOrder =
                 ActionWord.SQL.COLUMN_NAME_PRIORITY + " DESC";
@@ -139,6 +145,7 @@ public class AACGroupContainer {
             values.put(ActionWord.SQL.COLUMN_NAME_WORD, c.getString(c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_WORD)));
             values.put(ActionWord.SQL.COLUMN_NAME_PRIORITY, c.getLong(c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_PRIORITY)));
             values.put(ActionWord.SQL.COLUMN_NAME_PICTURE, c.getLong(c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_PICTURE)));
+            values.put(ActionWord.SQL.COLUMN_NAME_PICTURE_IS_PRESET, c.getInt(c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_PICTURE_IS_PRESET)));
 
             addMenuWithCheckBox(
                     new ActionWord.Button(context, new ActionWord.Button.onClickClass(context), this),
@@ -155,7 +162,8 @@ public class AACGroupContainer {
                 ActionMacro.SQL.COLUMN_NAME_PRIORITY,
                 ActionMacro.SQL.COLUMN_NAME_WORD,
                 ActionMacro.SQL.COLUMN_NAME_WORDCHAIN,
-                ActionMacro.SQL.COLUMN_NAME_PICTURE
+                ActionMacro.SQL.COLUMN_NAME_PICTURE,
+                ActionMacro.SQL.COLUMN_NAME_PICTURE_IS_PRESET
         };
 
         c = db.query(
@@ -187,6 +195,7 @@ public class AACGroupContainer {
             values.put(ActionMacro.SQL.COLUMN_NAME_WORDCHAIN, c.getString(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_WORDCHAIN)));
             values.put(ActionMacro.SQL.COLUMN_NAME_PRIORITY, c.getLong(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_PRIORITY)));
             values.put(ActionMacro.SQL.COLUMN_NAME_PICTURE, c.getLong(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_PICTURE)));
+            values.put(ActionMacro.SQL.COLUMN_NAME_PICTURE_IS_PRESET, c.getInt(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_PICTURE_IS_PRESET)));
 
             addMenuWithCheckBox(
                     new ActionMacro.Button(context, new ActionMacro.Button.onClickClass(context), this),
@@ -229,6 +238,7 @@ public class AACGroupContainer {
             values.put(ActionGroup.SQL.COLUMN_NAME_PRIORITY, c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_PRIORITY));
             values.put(ActionGroup.SQL._ID, itemId);
             values.put(ActionGroup.SQL.COLUMN_NAME_PICTURE, c.getLong(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_PICTURE)));
+            values.put(ActionGroup.SQL.COLUMN_NAME_PICTURE_IS_PRESET, c.getInt(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_PICTURE_IS_PRESET)));
 
             addMenuWithCheckBox(
                     new ActionGroup.Button(context, new ActionGroup.Button.onClickClass(context), this),
@@ -257,6 +267,7 @@ public class AACGroupContainer {
             values.put(ActionGroup.SQL.COLUMN_NAME_PRIORITY, c.getLong(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_PRIORITY)));
             values.put(ActionGroup.SQL._ID, parentGroupID);
             values.put(ActionGroup.SQL.COLUMN_NAME_PICTURE, c.getLong(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_PICTURE)));
+            values.put(ActionGroup.SQL.COLUMN_NAME_PICTURE_IS_PRESET, c.getInt(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_PICTURE_IS_PRESET)));
 
             addMenuWithoutCheckBox(parentGroupButton, values);
 
@@ -481,18 +492,12 @@ public class AACGroupContainer {
     }
 
     protected class RemovalListBundle {
-        protected ArrayList<Integer> wordList;
-        protected ArrayList<Integer> macroList;
-        protected ArrayList<Integer> groupList;
         protected String[] projection;
 
         protected Vector<ArrayList<Integer>> itemVector;
         protected Vector<ArrayList<ContentValues>> missingDependencyVector;
 
         public RemovalListBundle() {
-            wordList = new ArrayList<>(); // 자바 버전에 따른 컴파일 에러 발생 가능
-            macroList = new ArrayList<>();
-            groupList = new ArrayList<>();
             projection = new String[] { ActionItem.SQL._ID };
 
             itemVector = new Vector<>(ActionMain.item.ITEM_COUNT);
@@ -574,4 +579,6 @@ public class AACGroupContainer {
         }
 
     }
+
+    public String getUserImagePathPrefix() { return userImageDirectoryPathPrefix; }
 }

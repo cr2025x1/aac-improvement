@@ -68,6 +68,7 @@ public class ActionDebug {
         record.put(ActionGroup.SQL.COLUMN_NAME_WORD, "A");
         record.put(ActionGroup.SQL.COLUMN_NAME_STEM, "A");
         record.put(ActionGroup.SQL.COLUMN_NAME_PICTURE, R.drawable.btn_default);
+        record.put(ActionItem.SQL.COLUMN_NAME_PICTURE_IS_PRESET, 1);
         db.insert(actionMain.itemChain[ActionMain.item.ID_Group].TABLE_NAME, null, record);
         record.clear();
 
@@ -78,6 +79,7 @@ public class ActionDebug {
         record.put(ActionGroup.SQL.COLUMN_NAME_WORD, "B");
         record.put(ActionGroup.SQL.COLUMN_NAME_STEM, "B");
         record.put(ActionGroup.SQL.COLUMN_NAME_PICTURE, R.drawable.btn_default);
+        record.put(ActionItem.SQL.COLUMN_NAME_PICTURE_IS_PRESET, 1);
         db.insert(actionMain.itemChain[ActionMain.item.ID_Group].TABLE_NAME, null, record);
         record.clear();
 
@@ -88,6 +90,7 @@ public class ActionDebug {
         record.put(ActionWord.SQL.COLUMN_NAME_WORD, "a");
         record.put(ActionWord.SQL.COLUMN_NAME_STEM, "a");
         record.put(ActionWord.SQL.COLUMN_NAME_PICTURE, R.drawable.btn_default);
+        record.put(ActionItem.SQL.COLUMN_NAME_PICTURE_IS_PRESET, 1);
         db.insert(actionMain.itemChain[ActionMain.item.ID_Word].TABLE_NAME, null, record);
         record.clear();
 
@@ -98,6 +101,7 @@ public class ActionDebug {
         record.put(ActionWord.SQL.COLUMN_NAME_WORD, "b");
         record.put(ActionWord.SQL.COLUMN_NAME_STEM, "b");
         record.put(ActionWord.SQL.COLUMN_NAME_PICTURE, R.drawable.btn_default);
+        record.put(ActionItem.SQL.COLUMN_NAME_PICTURE_IS_PRESET, 1);
         db.insert(actionMain.itemChain[ActionMain.item.ID_Word].TABLE_NAME, null, record);
         record.clear();
 
@@ -123,6 +127,7 @@ public class ActionDebug {
         record.put(ActionWord.SQL.COLUMN_NAME_WORD, "Aa");
         record.put(ActionWord.SQL.COLUMN_NAME_STEM, "Aa");
         record.put(ActionWord.SQL.COLUMN_NAME_PICTURE, R.drawable.btn_default);
+        record.put(ActionItem.SQL.COLUMN_NAME_PICTURE_IS_PRESET, 1);
         db.insert(actionMain.itemChain[ActionMain.item.ID_Word].TABLE_NAME, null, record);
         record.clear();
 
@@ -133,6 +138,7 @@ public class ActionDebug {
         record.put(ActionWord.SQL.COLUMN_NAME_WORD, "Ab");
         record.put(ActionWord.SQL.COLUMN_NAME_STEM, "Ab");
         record.put(ActionWord.SQL.COLUMN_NAME_PICTURE, R.drawable.btn_default);
+        record.put(ActionItem.SQL.COLUMN_NAME_PICTURE_IS_PRESET, 1);
         db.insert(actionMain.itemChain[ActionMain.item.ID_Word].TABLE_NAME, null, record);
         record.clear();
 
@@ -158,6 +164,7 @@ public class ActionDebug {
         record.put(ActionWord.SQL.COLUMN_NAME_WORD, "Ba");
         record.put(ActionWord.SQL.COLUMN_NAME_STEM, "Ba");
         record.put(ActionWord.SQL.COLUMN_NAME_PICTURE, R.drawable.btn_default);
+        record.put(ActionItem.SQL.COLUMN_NAME_PICTURE_IS_PRESET, 1);
         db.insert(actionMain.itemChain[ActionMain.item.ID_Word].TABLE_NAME, null, record);
         record.clear();
 
@@ -168,6 +175,7 @@ public class ActionDebug {
         record.put(ActionWord.SQL.COLUMN_NAME_WORD, "Bb");
         record.put(ActionWord.SQL.COLUMN_NAME_STEM, "Bb");
         record.put(ActionWord.SQL.COLUMN_NAME_PICTURE, R.drawable.btn_default);
+        record.put(ActionItem.SQL.COLUMN_NAME_PICTURE_IS_PRESET, 1);
         db.insert(actionMain.itemChain[ActionMain.item.ID_Word].TABLE_NAME, null, record);
         record.clear();
 
@@ -178,6 +186,7 @@ public class ActionDebug {
         record.put(ActionGroup.SQL.COLUMN_NAME_WORD, "B_A");
         record.put(ActionGroup.SQL.COLUMN_NAME_STEM, "B_A");
         record.put(ActionGroup.SQL.COLUMN_NAME_PICTURE, R.drawable.btn_default);
+        record.put(ActionItem.SQL.COLUMN_NAME_PICTURE_IS_PRESET, 1);
         groupID = db.insert(actionMain.itemChain[ActionMain.item.ID_Group].TABLE_NAME, null, record); // groupID에는 B_A 그룹의 PRIMARY KEY값이 반환
         record.clear();
 
@@ -188,6 +197,7 @@ public class ActionDebug {
         record.put(ActionWord.SQL.COLUMN_NAME_WORD, "BAa");
         record.put(ActionWord.SQL.COLUMN_NAME_STEM, "BAa");
         record.put(ActionWord.SQL.COLUMN_NAME_PICTURE, R.drawable.btn_default);
+        record.put(ActionItem.SQL.COLUMN_NAME_PICTURE_IS_PRESET, 1);
         db.insert(actionMain.itemChain[ActionMain.item.ID_Word].TABLE_NAME, null, record);
         record.clear();
 
@@ -198,6 +208,7 @@ public class ActionDebug {
         record.put(ActionWord.SQL.COLUMN_NAME_WORD, "BAb");
         record.put(ActionWord.SQL.COLUMN_NAME_STEM, "BAb");
         record.put(ActionWord.SQL.COLUMN_NAME_PICTURE, R.drawable.btn_default);
+        record.put(ActionItem.SQL.COLUMN_NAME_PICTURE_IS_PRESET, 1);
         db.insert(actionMain.itemChain[ActionMain.item.ID_Word].TABLE_NAME, null, record);
         record.clear();
 
@@ -209,6 +220,7 @@ public class ActionDebug {
         record.put(ActionMacro.SQL.COLUMN_NAME_STEM, "Ba a BAa");
         record.put(ActionMacro.SQL.COLUMN_NAME_WORDCHAIN, "|:5::1::7:|");
         record.put(ActionMacro.SQL.COLUMN_NAME_PICTURE, R.drawable.btn_default);
+        record.put(ActionItem.SQL.COLUMN_NAME_PICTURE_IS_PRESET, 1);
         db.insert(actionMain.itemChain[ActionMain.item.ID_Macro].TABLE_NAME, null, record);
         record.clear();
     }

@@ -1,6 +1,7 @@
 package cwnuchrome.aac_cwnu_it_2015_1;
 
 import android.app.AlertDialog;
+import android.content.ContentValues;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.res.Resources;
@@ -27,7 +28,8 @@ public class MainActivity extends AppCompatActivity {
     protected final int STATUS_ITEM_REMOVAL = 2;
 
     protected final int ACTIVITY_ADD = 0;
-    protected final int ACTIVITY_SEARCH = 0;
+    protected final int ACTIVITY_SEARCH = 1;
+    protected final int ACTIVITY_IMAGE_SELECTION = 2;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -247,6 +249,14 @@ public class MainActivity extends AppCompatActivity {
             return true;
         }
 
+        if (id == R.id.action_remove_item_set_image) {
+            Intent i = new Intent(this, ImageSelectionActivity.class);
+            i.putExtra("currentGroupID", container.getCurrentGroupID());
+            startActivityForResult(i, ACTIVITY_IMAGE_SELECTION);
+
+            return true;
+        }
+
         return super.onOptionsItemSelected(item);
     }
 
@@ -269,6 +279,36 @@ public class MainActivity extends AppCompatActivity {
                     break;
             }
 
+        }
+
+        if (requestCode == ACTIVITY_IMAGE_SELECTION) {
+            switch (resultCode) {
+                case RESULT_CANCELED:
+                    break;
+
+                case RESULT_OK:
+                    ContentValues v = new ContentValues();
+
+                    int isPreset = data.getIntExtra(ActionItem.SQL.COLUMN_NAME_PICTURE_IS_PRESET, -1);
+                    if (isPreset == -1) {
+                        System.out.println("Extra doesn't contain a required data. (IS_PRESET)");
+                        break;
+                    }
+                    else v.put(ActionItem.SQL.COLUMN_NAME_PICTURE_IS_PRESET, isPreset);
+
+                    String pictureFilename = data.getStringExtra(ActionItem.SQL.COLUMN_NAME_PICTURE);
+                    if (pictureFilename == null) {
+                        System.out.println("Extra doesn't contain a required data. (PICTURE_FILENAME)");
+                        break;
+                    }
+                    else v.put(ActionItem.SQL.COLUMN_NAME_PICTURE, pictureFilename);
+
+                    // TODO: 자료 업데이트 하기 하기 --> 메소드 추가! 이야 신난다!!
+
+                    container.exploreGroup(container.getCurrentGroupID());
+
+                    break;
+            }
         }
     }
 

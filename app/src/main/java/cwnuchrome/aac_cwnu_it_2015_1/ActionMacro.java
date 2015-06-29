@@ -16,6 +16,8 @@ import java.util.Iterator;
 
 /**
  * Created by Chrome on 5/5/15.
+ *
+ * 매크로 클래스. 단어 클래스에 대한 의존성을 가진다.
  */
 public class ActionMacro extends ActionItem {
 
@@ -25,13 +27,13 @@ public class ActionMacro extends ActionItem {
         SQL_CREATE_ENTRIES =
                 "CREATE TABLE IF NOT EXISTS " + TABLE_NAME + " (" +
                         BaseColumns._ID + " INTEGER PRIMARY KEY," +
-//                        SQL.COLUMN_NAME_ENTRY_ID + SQL.TEXT_TYPE + SQL.COMMA_SEP +
                         SQL.COLUMN_NAME_PARENT_ID + SQL.TEXT_TYPE + SQL.COMMA_SEP +
                         SQL.COLUMN_NAME_PRIORITY + SQL.TEXT_TYPE + SQL.COMMA_SEP +
                         SQL.COLUMN_NAME_WORD + SQL.TEXT_TYPE + SQL.COMMA_SEP +
                         SQL.COLUMN_NAME_STEM + SQL.TEXT_TYPE + SQL.COMMA_SEP +
                         SQL.COLUMN_NAME_WORDCHAIN + SQL.TEXT_TYPE + SQL.COMMA_SEP +
-                        SQL.COLUMN_NAME_PICTURE + SQL.TEXT_TYPE +
+                        SQL.COLUMN_NAME_PICTURE + SQL.TEXT_TYPE + SQL.COMMA_SEP +
+                        SQL.COLUMN_NAME_PICTURE_IS_PRESET + SQL.INTEGER_TYPE +
                         " )";
     }
 
@@ -65,13 +67,13 @@ public class ActionMacro extends ActionItem {
         if (result != -1) return result;
 
         ContentValues record = new ContentValues();
-//        record.put(SQL.COLUMN_NAME_ENTRY_ID, 999); // 임시! 아마도 삭제될 것 같음.
         record.put(SQL.COLUMN_NAME_PARENT_ID, values.getAsString(SQL.COLUMN_NAME_PARENT_ID));
         record.put(SQL.COLUMN_NAME_PRIORITY, ActionMain.getInstance().rand.nextInt(100)); // 이것도 임시
         record.put(SQL.COLUMN_NAME_WORD, word);
         record.put(SQL.COLUMN_NAME_STEM, word);
         record.put(ActionMacro.SQL.COLUMN_NAME_WORDCHAIN, values.getAsString(SQL.COLUMN_NAME_WORDCHAIN));
         record.put(SQL.COLUMN_NAME_PICTURE, R.drawable.btn_default);
+        record.put(SQL.COLUMN_NAME_PICTURE_IS_PRESET, 1);
         result = db.insert(TABLE_NAME, null, record);
         record.clear();
 

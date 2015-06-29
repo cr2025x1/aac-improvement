@@ -1,0 +1,10 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context="cwnuchrome.aac_cwnu_it_2015_1.ImageSelectionActivity">
+
+    <item android:id="@+id/button_image_selection"
+        app:showAsAction="always"
+        android:title="@string/button_image_selection" />
+
+</menu>

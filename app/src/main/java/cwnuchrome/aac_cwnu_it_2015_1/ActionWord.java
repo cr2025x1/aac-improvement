@@ -21,12 +21,12 @@ public class ActionWord extends ActionItem {
         SQL_CREATE_ENTRIES =
                 "CREATE TABLE IF NOT EXISTS " + TABLE_NAME + " (" +
                         BaseColumns._ID + " INTEGER PRIMARY KEY," +
-//                        SQL.COLUMN_NAME_ENTRY_ID + SQL.TEXT_TYPE + SQL.COMMA_SEP +
                         SQL.COLUMN_NAME_PARENT_ID + SQL.TEXT_TYPE + SQL.COMMA_SEP +
                         SQL.COLUMN_NAME_PRIORITY + SQL.TEXT_TYPE + SQL.COMMA_SEP +
                         SQL.COLUMN_NAME_WORD + SQL.TEXT_TYPE + SQL.COMMA_SEP +
                         SQL.COLUMN_NAME_STEM + SQL.TEXT_TYPE + SQL.COMMA_SEP +
-                        SQL.COLUMN_NAME_PICTURE + SQL.TEXT_TYPE +
+                        SQL.COLUMN_NAME_PICTURE + SQL.TEXT_TYPE + SQL.COMMA_SEP +
+                        SQL.COLUMN_NAME_PICTURE_IS_PRESET + SQL.INTEGER_TYPE +
                         " )";
     }
 
@@ -47,46 +47,17 @@ public class ActionWord extends ActionItem {
         if (result != -1) return result;
 
         ContentValues record = new ContentValues();
-//        record.put(SQL.COLUMN_NAME_ENTRY_ID, 999); // 임시! 아마도 삭제될 것 같음.
         record.put(SQL.COLUMN_NAME_PARENT_ID, values.getAsString(SQL.COLUMN_NAME_PARENT_ID));
         record.put(SQL.COLUMN_NAME_PRIORITY, ActionMain.getInstance().rand.nextInt(100)); // 이것도 임시
         record.put(SQL.COLUMN_NAME_WORD, word);
         record.put(SQL.COLUMN_NAME_STEM, word);
         record.put(SQL.COLUMN_NAME_PICTURE, R.drawable.btn_default);
+        record.put(SQL.COLUMN_NAME_PICTURE_IS_PRESET, 1);
         result = db.insert(TABLE_NAME, null, record);
         record.clear();
 
         return result;
     }
-
-//    public boolean remove(SQLiteDatabase db, String word) {
-//        if (!exists(db, word)) return false;
-//
-//        db.delete(
-//                TABLE_NAME,
-//                SQL.COLUMN_NAME_WORD + " = '" + word + "'",
-//                null
-//                );
-//        return true;
-//    }
-
-//    protected boolean exists(SQLiteDatabase db, String word) {
-//        // 워드 쿼리
-//        Cursor c = db.query(
-//                TABLE_NAME, // The table to query
-//                new String[] {ActionWord.SQL._ID}, // The columns to return
-//                ActionWord.SQL.COLUMN_NAME_WORD + " = '" + word + "'", // The columns for the WHERE clause
-//                null, // The values for the WHERE clause
-//                null, // don't group the rows
-//                null, // don't filter by row groups
-//                null // The sort order
-//        );
-//        c.moveToFirst();
-//        long cursorCount = c.getCount();
-//
-//        if (cursorCount > 0) return true;
-//        return false;
-//    }
 
     protected void addToRemovalList(Context context, AACGroupContainer.RemovalListBundle list, int id) {
         list.add(ActionMain.item.ID_Word, id);

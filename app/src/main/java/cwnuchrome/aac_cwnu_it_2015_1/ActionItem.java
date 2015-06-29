@@ -44,15 +44,17 @@ public abstract class ActionItem implements Serializable {
 
 
     interface SQL extends BaseColumns {
-        static final String TEXT_TYPE = " TEXT";
-        static final String COMMA_SEP = ",";
+        String TEXT_TYPE = " TEXT";
+        String INTEGER_TYPE = " INTEGER";
+        String REAL_TYPE = " REAL";
+        String COMMA_SEP = ",";
 
-//        static final String COLUMN_NAME_ENTRY_ID = "entryid";
-        static final String COLUMN_NAME_PARENT_ID = "parent_id";
-        static final String COLUMN_NAME_PRIORITY = "priority";
-        static final String COLUMN_NAME_WORD = "word";
-        static final String COLUMN_NAME_STEM = "stem";
+        String COLUMN_NAME_PARENT_ID = "parent_id";
+        String COLUMN_NAME_PRIORITY = "priority";
+        String COLUMN_NAME_WORD = "word";
+        String COLUMN_NAME_STEM = "stem";
         String COLUMN_NAME_PICTURE = "picture";
+        String COLUMN_NAME_PICTURE_IS_PRESET = "picture_is_preset";
 
         String VARIABLE_CONTAINER = "AACGroupContainer";
     }
@@ -118,6 +120,10 @@ public abstract class ActionItem implements Serializable {
                 null
         );
         return true;
+    }
+
+    public long update(SQLiteDatabase db, ContentValues values) {
+        return 0; // TODO: 구현하기!
     }
 
 
@@ -196,8 +202,16 @@ public abstract class ActionItem implements Serializable {
         public void init(ContentValues values) {
             // TODO: Make this use XMLs.
             priority = values.getAsLong(SQL.COLUMN_NAME_PRIORITY);
-            Drawable d = context.getResources().getDrawable(values.getAsInteger(SQL.COLUMN_NAME_PICTURE), context.getTheme());
+
+            Drawable d;
+            if (values.getAsInteger(SQL.COLUMN_NAME_PICTURE_IS_PRESET) == 1)
+                d = context.getResources().getDrawable(values.getAsInteger(SQL.COLUMN_NAME_PICTURE), context.getTheme());
+            else
+                d = Drawable.createFromPath(container.userImageDirectoryPathPrefix +
+                        values.getAsString(SQL.COLUMN_NAME_PICTURE)); // TODO: 검증할 것
+
 //            Drawable d = context.getResources().getDrawable(values.getAsInteger(SQL.COLUMN_NAME_PICTURE));
+            // TODO: 그림 크기에 따라 왜곡이 발생할 것 같으니 이에 따른 코드 수정 필요.
             this.setCompoundDrawablesWithIntrinsicBounds(null, d, null, null);
             int length = (int)TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 15, getResources().getDisplayMetrics());
             this.setMaxWidth(d.getIntrinsicWidth());

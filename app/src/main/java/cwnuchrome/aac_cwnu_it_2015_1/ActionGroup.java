@@ -10,6 +10,8 @@ import android.widget.Toast;
 
 /**
  * Created by Chrome on 5/5/15.
+ *
+ * 그룹 클래스.
  */
 public class ActionGroup extends ActionItem {
 
@@ -24,7 +26,8 @@ public class ActionGroup extends ActionItem {
                         SQL.COLUMN_NAME_PRIORITY + SQL.TEXT_TYPE + SQL.COMMA_SEP +
                         SQL.COLUMN_NAME_WORD + SQL.TEXT_TYPE + SQL.COMMA_SEP +
                         SQL.COLUMN_NAME_STEM + SQL.TEXT_TYPE + SQL.COMMA_SEP +
-                        SQL.COLUMN_NAME_PICTURE + SQL.TEXT_TYPE +
+                        SQL.COLUMN_NAME_PICTURE + SQL.TEXT_TYPE + SQL.COMMA_SEP +
+                        SQL.COLUMN_NAME_PICTURE_IS_PRESET + SQL.INTEGER_TYPE +
                         " )";
     }
 
@@ -43,30 +46,31 @@ public class ActionGroup extends ActionItem {
         db.execSQL("INSERT INTO " +
                         TABLE_NAME + " (" +
                         SQL._ID + SQL.COMMA_SEP +
-//                        SQL.COLUMN_NAME_ENTRY_ID + SQL.COMMA_SEP +
                         SQL.COLUMN_NAME_PARENT_ID + SQL.COMMA_SEP +
                         SQL.COLUMN_NAME_PRIORITY + SQL.COMMA_SEP +
                         SQL.COLUMN_NAME_WORD + SQL.COMMA_SEP +
                         SQL.COLUMN_NAME_STEM + SQL.COMMA_SEP +
-                        SQL.COLUMN_NAME_PICTURE +
+                        SQL.COLUMN_NAME_PICTURE + SQL.COMMA_SEP +
+                        SQL.COLUMN_NAME_PICTURE_IS_PRESET +
                         ") " +
                         "SELECT " +
                         "1" + SQL.COMMA_SEP +
-//                        "1" + SQL.COMMA_SEP +
                         "1" + SQL.COMMA_SEP +
                         "0" + SQL.COMMA_SEP +
                         "'" + SQL.ROOT_DEFAULT_NAME + "'" + SQL.COMMA_SEP +
                         "'" + SQL.ROOT_DEFAULT_NAME + "'" + SQL.COMMA_SEP +
-                        R.drawable.btn_default +
+                        R.drawable.btn_default + SQL.COMMA_SEP +
+                        "1" +
                         " WHERE NOT EXISTS (SELECT 1 FROM " +
                         TABLE_NAME + " WHERE " +
                         SQL._ID + " = 1 AND " +
-//                        SQL.COLUMN_NAME_ENTRY_ID + " = 1 AND " +
                         SQL.COLUMN_NAME_PARENT_ID + " = 1" +
                         ");"
         );
     }
 
+
+    // TODO: 그룹 추가 기능 넣기... 아직도 안 넣고 있었다니!
 
     /**
      * Created by Chrome on 5/8/15.
