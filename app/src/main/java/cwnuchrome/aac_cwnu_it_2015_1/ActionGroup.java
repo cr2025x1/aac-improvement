@@ -119,7 +119,6 @@ public class ActionGroup extends ActionItem {
         ActionMain actionMain = ActionMain.getInstance();
         String[] projection = new String[] { ActionItem.SQL._ID };
 
-//        listBundle.add(id);
         listBundle.add(ActionMain.item.ID_Group, id);
 
         Cursor c;
@@ -146,7 +145,6 @@ public class ActionGroup extends ActionItem {
             for (int i = 0; i < c_count; i++) {
                 int i_id = c.getInt(c_col);
                 addToRemovalList(context, listBundle, i_id); // 재귀 호출
-//                addToRemovalList(i_id); // 재귀 호출
                 c.moveToNext();
             }
         }

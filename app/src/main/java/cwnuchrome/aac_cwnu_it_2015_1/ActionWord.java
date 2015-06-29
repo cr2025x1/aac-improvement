@@ -10,6 +10,8 @@ import android.widget.Toast;
 
 /**
  * Created by Chrome on 5/5/15.
+ *
+ * 단어 클래스. ActionItem에 대해 의존성을 가짐.
  */
 public class ActionWord extends ActionItem {
 

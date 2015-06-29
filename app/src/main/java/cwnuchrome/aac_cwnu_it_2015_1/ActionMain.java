@@ -7,6 +7,10 @@ import java.util.Random;
 
 /**
  * Created by Chrome on 5/5/15.
+ *
+ * 각 아이템에 대한 핵심 정보가 담긴 싱글턴 객체.
+ * 많은 클래스가 이 클래스에 대한 의존성을 가지므로 조심히 다룰 것.
+ *
  */
 public class ActionMain {
     private static ActionMain ourInstance = new ActionMain();

@@ -11,6 +11,8 @@
             android:orderInCategory="100" app:showAsAction="never" />
         <item android:id="@+id/action_remove_item_deselect_all" android:title="@string/menu_select_item_deselect_all"
             android:orderInCategory="100" app:showAsAction="never" />
+        <item android:id="@+id/action_remove_item_set_image" android:title="@string/menu_select_item_set_image"
+            android:orderInCategory="100" app:showAsAction="never" />
         <item android:id="@+id/action_remove_item_remove" android:title="@string/menu_select_item_remove"
             android:orderInCategory="100" app:showAsAction="never" />
 

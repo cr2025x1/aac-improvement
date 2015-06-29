@@ -15,10 +15,8 @@ import android.widget.GridLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.Vector;
 
 /**
@@ -45,8 +43,9 @@ public class AACGroupContainer {
     protected AnimatorSet foldAniSet;
     protected AnimatorSet foldAniSet_reverse;
 
-//    protected ArrayList<ContentValues> removeDepArray;
-    RemovalListBundle removalListBundle;
+    protected RemovalListBundle removalListBundle;
+
+    protected String userImageDirectoryPathPrefix;
 
     public AACGroupContainer(LinearLayout mainLayout) {
         this.context = mainLayout.getContext();
@@ -60,8 +59,9 @@ public class AACGroupContainer {
         checkBoxes = new ArrayList<>();
         selectedList = new ArrayList<>();
 
-//        removeDepArray = new ArrayList<>();
         removalListBundle = new RemovalListBundle();
+
+        userImageDirectoryPathPrefix = context.getFilesDir() + "/pictures/";
 
         // 그룹 제목 TextView 설정
         titleView = (TextView)(mainLayout.findViewById(R.id.groupTitle));
