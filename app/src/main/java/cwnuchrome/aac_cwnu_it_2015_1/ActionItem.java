@@ -122,8 +122,22 @@ public abstract class ActionItem implements Serializable {
         return true;
     }
 
-    public long update(SQLiteDatabase db, ContentValues values) {
-        return 0; // TODO: 구현하기!
+    public long updateWithIDs(SQLiteDatabase db, ContentValues values, int[] idArray) {
+        StringBuilder sb = new StringBuilder();
+        for (int i : idArray) {
+            sb.append(SQL._ID);
+            sb.append("=");
+            sb.append(i);
+            sb.append(" OR ");
+        }
+        sb.delete(sb.length() - 4, sb.length() - 1); // 맨 마지막 " OR "를 삭제
+
+        System.out.println(sb.toString());
+
+        int t = db.update(TABLE_NAME, values, sb.toString(), null);
+        System.out.println("Result value = " + t + " Table = " + TABLE_NAME);
+        return t;
+//        return db.update(TABLE_NAME, values, sb.toString(), null);
     }
 
 
@@ -206,9 +220,10 @@ public abstract class ActionItem implements Serializable {
             Drawable d;
             if (values.getAsInteger(SQL.COLUMN_NAME_PICTURE_IS_PRESET) == 1)
                 d = context.getResources().getDrawable(values.getAsInteger(SQL.COLUMN_NAME_PICTURE), context.getTheme());
-            else
+            else {
                 d = Drawable.createFromPath(container.userImageDirectoryPathPrefix +
-                        values.getAsString(SQL.COLUMN_NAME_PICTURE)); // TODO: 검증할 것
+                        values.getAsString(SQL.COLUMN_NAME_PICTURE));
+            }
 
 //            Drawable d = context.getResources().getDrawable(values.getAsInteger(SQL.COLUMN_NAME_PICTURE));
             // TODO: 그림 크기에 따라 왜곡이 발생할 것 같으니 이에 따른 코드 수정 필요.

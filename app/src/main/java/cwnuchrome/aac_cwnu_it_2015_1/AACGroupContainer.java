@@ -144,7 +144,7 @@ public class AACGroupContainer {
             values.put(ActionItem.SQL._ID, itemId);
             values.put(ActionWord.SQL.COLUMN_NAME_WORD, c.getString(c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_WORD)));
             values.put(ActionWord.SQL.COLUMN_NAME_PRIORITY, c.getLong(c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_PRIORITY)));
-            values.put(ActionWord.SQL.COLUMN_NAME_PICTURE, c.getLong(c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_PICTURE)));
+            values.put(ActionWord.SQL.COLUMN_NAME_PICTURE, c.getString(c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_PICTURE)));
             values.put(ActionWord.SQL.COLUMN_NAME_PICTURE_IS_PRESET, c.getInt(c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_PICTURE_IS_PRESET)));
 
             addMenuWithCheckBox(
@@ -194,7 +194,7 @@ public class AACGroupContainer {
             values.put(ActionMacro.SQL.COLUMN_NAME_WORD, c.getString(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_WORD)));
             values.put(ActionMacro.SQL.COLUMN_NAME_WORDCHAIN, c.getString(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_WORDCHAIN)));
             values.put(ActionMacro.SQL.COLUMN_NAME_PRIORITY, c.getLong(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_PRIORITY)));
-            values.put(ActionMacro.SQL.COLUMN_NAME_PICTURE, c.getLong(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_PICTURE)));
+            values.put(ActionMacro.SQL.COLUMN_NAME_PICTURE, c.getString(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_PICTURE)));
             values.put(ActionMacro.SQL.COLUMN_NAME_PICTURE_IS_PRESET, c.getInt(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_PICTURE_IS_PRESET)));
 
             addMenuWithCheckBox(
@@ -237,7 +237,7 @@ public class AACGroupContainer {
             values.put(ActionGroup.SQL.COLUMN_NAME_WORD, c.getString(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_WORD)));
             values.put(ActionGroup.SQL.COLUMN_NAME_PRIORITY, c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_PRIORITY));
             values.put(ActionGroup.SQL._ID, itemId);
-            values.put(ActionGroup.SQL.COLUMN_NAME_PICTURE, c.getLong(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_PICTURE)));
+            values.put(ActionGroup.SQL.COLUMN_NAME_PICTURE, c.getString(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_PICTURE)));
             values.put(ActionGroup.SQL.COLUMN_NAME_PICTURE_IS_PRESET, c.getInt(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_PICTURE_IS_PRESET)));
 
             addMenuWithCheckBox(
@@ -266,7 +266,7 @@ public class AACGroupContainer {
             values.put(ActionGroup.SQL.COLUMN_NAME_WORD, c.getString(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_WORD)));
             values.put(ActionGroup.SQL.COLUMN_NAME_PRIORITY, c.getLong(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_PRIORITY)));
             values.put(ActionGroup.SQL._ID, parentGroupID);
-            values.put(ActionGroup.SQL.COLUMN_NAME_PICTURE, c.getLong(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_PICTURE)));
+            values.put(ActionGroup.SQL.COLUMN_NAME_PICTURE, c.getString(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_PICTURE)));
             values.put(ActionGroup.SQL.COLUMN_NAME_PICTURE_IS_PRESET, c.getInt(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_PICTURE_IS_PRESET)));
 
             addMenuWithoutCheckBox(parentGroupButton, values);
@@ -581,4 +581,34 @@ public class AACGroupContainer {
     }
 
     public String getUserImagePathPrefix() { return userImageDirectoryPathPrefix; }
+
+    public int setImageForSelected(ContentValues values) {
+        Vector<ArrayList<Integer>> id_Vector = new Vector<>(ActionMain.item.ITEM_COUNT);
+        ActionMain actionMain = ActionMain.getInstance();
+
+        for (int i = 0; i < ActionMain.item.ITEM_COUNT; i++) id_Vector.add(new ArrayList<Integer>());
+
+        for (View v : selectedList) {
+            ActionItem.Button.onClickClass occ = ((ActionItem.Button)v.findViewById(R.id.aac_item_button_id)).onClickObj;
+            System.out.println("OCC CatID = " + occ.itemCategoryID);
+            id_Vector.get(occ.itemCategoryID).add(occ.itemID);
+        }
+
+        int i = 0;
+        for (ArrayList<Integer> list : id_Vector) {
+            if (list.size() == 0) {
+                i++;
+                continue;
+            }
+
+            int[] id_ary = new int[list.size()];
+            int j = 0;
+
+            for (int k : list) id_ary[j++] = k;
+
+            actionMain.itemChain[i++].updateWithIDs(actDBHelper.getWritableDatabase(), values, id_ary);
+        }
+
+        return 0;
+    }
 }

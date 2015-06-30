@@ -1,10 +1,12 @@
 package cwnuchrome.aac_cwnu_it_2015_1;
 
 import android.content.ContentValues;
+import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.provider.BaseColumns;
 
+import java.io.File;
 import java.math.BigInteger;
 import java.security.SecureRandom;
 import java.util.Random;
@@ -29,7 +31,17 @@ public class ActionDebug {
     private Random random_weak = new Random();
     public int random() { return random_weak.nextInt(100); }
 
-    public void insertTestRecords(SQLiteDatabase db) {
+    public void insertTestRecords(SQLiteDatabase db, Context context) {
+        File dir = new File(context.getFilesDir() + "/pictures");
+
+        if (dir.isDirectory()) {
+            String[] children = dir.list();
+            for (int i = 0; i < children.length; i++) {
+                new File(dir, children[i]).delete();
+            }
+        }
+
+
         Cursor c;
         ContentValues record;
 

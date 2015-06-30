@@ -188,7 +188,7 @@ public class MainActivity extends AppCompatActivity {
             actionMain.actDBHelper.onCreate(db);
             actionMain.actDBHelper.initTable(db);
             ActionDebug.getInstance().deleteFlag(db);
-            ActionDebug.getInstance().insertTestRecords(db);
+            ActionDebug.getInstance().insertTestRecords(db, this);
 
             isInited = false;
             container.exploreGroup(1);
@@ -202,7 +202,7 @@ public class MainActivity extends AppCompatActivity {
             actionMain.actDBHelper.onCreate(db);
             actionMain.actDBHelper.initTable(db);
             ActionPreset.getInstance().deleteFlag(db);
-            ActionPreset.getInstance().insertDefaultRecords(db);
+            ActionPreset.getInstance().insertDefaultRecords(db, this);
 
             isInited = false;
             container.exploreGroup(1);
@@ -303,7 +303,7 @@ public class MainActivity extends AppCompatActivity {
                     }
                     else v.put(ActionItem.SQL.COLUMN_NAME_PICTURE, pictureFilename);
 
-                    // TODO: 자료 업데이트 하기 하기 --> 메소드 추가! 이야 신난다!!
+                    container.setImageForSelected(v);
 
                     container.exploreGroup(container.getCurrentGroupID());
 
