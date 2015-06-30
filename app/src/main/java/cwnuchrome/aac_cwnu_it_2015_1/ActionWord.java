@@ -80,6 +80,8 @@ public class ActionWord extends ActionItem {
             }
 
             public void onClick(View v) {
+                if (!isOnline) return;
+
                 Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
                 container.getTTS().speak(phonetic, TextToSpeech.QUEUE_FLUSH, null, null);
             }

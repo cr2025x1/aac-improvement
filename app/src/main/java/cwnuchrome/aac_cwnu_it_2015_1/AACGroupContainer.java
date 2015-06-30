@@ -442,8 +442,23 @@ public class AACGroupContainer {
 
     public void toggleFold() {
         if (!(foldAniSet.isRunning() || foldAniSet_reverse.isRunning())) {
-            if (isFolded) foldAniSet_reverse.start();
-            else  foldAniSet.start();
+            if (isFolded) {
+                foldAniSet_reverse.start();
+
+                for (View v : contentList) {
+                    ActionItem.Button btn = (ActionItem.Button)v.findViewById(R.id.aac_item_button_id);
+                    btn.onClickObj.toogleOnline();
+                }
+            }
+            else {
+                for (View v : contentList) {
+                    ActionItem.Button btn = (ActionItem.Button)v.findViewById(R.id.aac_item_button_id);
+                    btn.onClickObj.toogleOnline();
+                }
+
+                foldAniSet.start();
+            }
+
         }
     }
 
@@ -611,4 +626,5 @@ public class AACGroupContainer {
 
         return 0;
     }
+
 }

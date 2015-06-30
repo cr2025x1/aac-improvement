@@ -108,6 +108,8 @@ public class ActionMacro extends ActionItem {
             }
 
             public void onClick(View v) {
+                if (!isOnline) return;
+
                 Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
                 // for (ActionWord.Button.onClickClass wordOCC : wordChain) wordOCC.onClick(v);
                 container.getTTS().speak(phonetic, TextToSpeech.QUEUE_FLUSH, null, null);

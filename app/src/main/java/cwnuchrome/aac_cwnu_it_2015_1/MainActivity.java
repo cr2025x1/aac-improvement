@@ -241,6 +241,12 @@ public class MainActivity extends AppCompatActivity {
         }
 
         if (id == R.id.action_remove_item_remove) {
+            if (container.selectedList.size() == 0) {
+                Toast.makeText(getBaseContext(), "Nothing is selected.", Toast.LENGTH_SHORT)
+                        .show();
+                return true;
+            }
+
             container.removeSelected();
 //            this.setTitle(R.string.app_name);
 //            status = STATUS_MAIN;
@@ -250,6 +256,12 @@ public class MainActivity extends AppCompatActivity {
         }
 
         if (id == R.id.action_remove_item_set_image) {
+            if (container.selectedList.size() == 0) {
+                Toast.makeText(getBaseContext(), "Nothing is selected.", Toast.LENGTH_SHORT)
+                        .show();
+                return true;
+            }
+
             Intent i = new Intent(this, ImageSelectionActivity.class);
             i.putExtra("currentGroupID", container.getCurrentGroupID());
             startActivityForResult(i, ACTIVITY_IMAGE_SELECTION);
@@ -307,8 +319,11 @@ public class MainActivity extends AppCompatActivity {
 
                     container.exploreGroup(container.getCurrentGroupID());
 
+                    revertMenu();
+
                     break;
             }
+
         }
     }
 

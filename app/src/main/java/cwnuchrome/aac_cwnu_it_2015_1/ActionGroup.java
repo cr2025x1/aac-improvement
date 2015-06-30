@@ -91,6 +91,8 @@ public class ActionGroup extends ActionItem {
             }
 
             public void onClick(View v) {
+                if (!isOnline) return;
+
                 Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
                 container.exploreGroup(itemID);
             }

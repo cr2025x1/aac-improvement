@@ -2,20 +2,19 @@ package cwnuchrome.aac_cwnu_it_2015_1;
 
 import android.content.ContentValues;
 import android.content.Context;
-import android.content.res.Resources;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.drawable.Drawable;
 import android.provider.BaseColumns;
-import android.support.annotation.Nullable;
+import android.speech.tts.TextToSpeech;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
+import android.widget.Toast;
 
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.Comparator;
 
 /**
@@ -184,10 +183,13 @@ public abstract class ActionItem implements Serializable {
             protected String phonetic;
             protected int itemCategoryID;
             protected int itemID;
+            protected boolean isOnline;
             public abstract void onClick(View v);
             public onClickClass(Context context) {
                 this.context = context;
+                isOnline = true;
             }
+
             public void init(ContentValues values) {
                 itemID = values.getAsInteger(SQL._ID);
             }
@@ -196,6 +198,12 @@ public abstract class ActionItem implements Serializable {
             }
             public void setButton (Button button) {
                 this.button = button;
+            }
+            public boolean isOnline() {
+                return isOnline;
+            }
+            public void toogleOnline() {
+                isOnline = !isOnline;
             }
         }
 
@@ -215,6 +223,7 @@ public abstract class ActionItem implements Serializable {
 
         public void init(ContentValues values) {
             // TODO: Make this use XMLs.
+
             priority = values.getAsLong(SQL.COLUMN_NAME_PRIORITY);
 
             Drawable d;
@@ -225,17 +234,44 @@ public abstract class ActionItem implements Serializable {
                         values.getAsString(SQL.COLUMN_NAME_PICTURE));
             }
 
+            /*
+            * 현재 표준 이미지 사이즈
+            * 369 * 369 (pixel)
+            * 123 * 123 (dp)
+            *
+            * 검출에 사용한 코드:
+            * System.out.println("Intrinsic Width = " + d.getIntrinsicWidth());
+            * System.out.println("Intrinsic Height = " + d.getIntrinsicHeight());
+            * System.out.println("Width in DP = " + DisplayUnitConverter.convertPixelsToDp(d.getIntrinsicWidth(), context));
+            * System.out.println("Height in DP = " + DisplayUnitConverter.convertPixelsToDp(d.getIntrinsicHeight(), context));
+            */
+
+            // 123 dp, 369 px? <-- 현재 표준 이미지 사이즈
+
+
+            // 그림 크기 설정
+            d = DrawableResizer.fitToArea(d, context, 369, 369);
+
 //            Drawable d = context.getResources().getDrawable(values.getAsInteger(SQL.COLUMN_NAME_PICTURE));
             // TODO: 그림 크기에 따라 왜곡이 발생할 것 같으니 이에 따른 코드 수정 필요.
             this.setCompoundDrawablesWithIntrinsicBounds(null, d, null, null);
             int length = (int)TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 15, getResources().getDisplayMetrics());
             this.setMaxWidth(d.getIntrinsicWidth());
+
+
+
+
 //            this.setMaxWidth(d.getIntrinsicWidth() + length);
             image_half_height = d.getIntrinsicHeight() / 2;
             this.setLayoutParams(makeLayoutParam());
 //            this.setPadding(0, 0, length, length);
 //            this.setPadding(0, length, length, length);
-            this.setPadding(0, length, 0, length);
+
+            // 패딩 설정
+            int paddingX = (369 - d.getIntrinsicWidth()) / 2 + length;
+            int paddingY = (369 - d.getIntrinsicHeight()) / 2;
+            this.setPadding(paddingX, paddingY, paddingX, paddingY);
+//            this.setPadding(length, 0 , length, 0);
 
             this.setBackgroundColor(0x00000000);
         }
