@@ -7,13 +7,6 @@
     android:gravity="center"
     android:id="@+id/groupLayout">
 
-    <!--<LinearLayout-->
-        <!--android:orientation="horizontal"-->
-        <!--android:layout_width="match_parent"-->
-        <!--android:layout_height="wrap_content"-->
-        <!--android:gravity="center"-->
-        <!--android:background="#dcf5ff">-->
-
         <TextView
             android:layout_width="match_parent"
             android:layout_height="48dp"
@@ -21,14 +14,6 @@
             android:gravity="center"
             android:background="#dcf5ff"
             android:id="@+id/groupTitle" />
-            <!--android:layout_marginStart="5dp"-->
-
-    <!--</LinearLayout>-->
-
-    <!--<TextView-->
-        <!--android:layout_width="wrap_content"-->
-        <!--android:layout_height="wrap_content"-->
-        <!--android:id="@+id/groupTitle"/>-->
 
     <ScrollView
         android:layout_width="match_parent"
@@ -43,11 +28,6 @@
             android:layout_gravity="center_horizontal"
             android:gravity="center"
             android:id="@+id/AACMenuLayout">
-            <!--android:background="#fff8dc"-->
-            <!--android:paddingStart="16dp"-->
-            <!--android:paddingEnd="@dimen/activity_horizontal_margin"-->
-            <!--android:paddingTop="16dp"-->
-            <!--android:paddingBottom="16dp"-->
 
         </GridLayout>
 

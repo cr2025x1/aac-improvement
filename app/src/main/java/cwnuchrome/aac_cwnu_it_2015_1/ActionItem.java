@@ -217,7 +217,6 @@ public abstract class ActionItem implements Serializable {
                 Button rhs_btn = (ActionItem.Button)rhs.findViewById(R.id.aac_item_button_id);
 
                 return lhs_btn.priority > rhs_btn.priority ? -1 : lhs_btn.priority < rhs_btn.priority ? 1 : 0;
-//                return lhs.priority > rhs.priority ? -1 : lhs.priority < rhs.priority ? 1 : 0;
             }
         }
 
@@ -234,44 +233,27 @@ public abstract class ActionItem implements Serializable {
                         values.getAsString(SQL.COLUMN_NAME_PICTURE));
             }
 
-            /*
-            * 현재 표준 이미지 사이즈
-            * 369 * 369 (pixel)
-            * 123 * 123 (dp)
-            *
-            * 검출에 사용한 코드:
-            * System.out.println("Intrinsic Width = " + d.getIntrinsicWidth());
-            * System.out.println("Intrinsic Height = " + d.getIntrinsicHeight());
-            * System.out.println("Width in DP = " + DisplayUnitConverter.convertPixelsToDp(d.getIntrinsicWidth(), context));
-            * System.out.println("Height in DP = " + DisplayUnitConverter.convertPixelsToDp(d.getIntrinsicHeight(), context));
-            */
-
-            // 123 dp, 369 px? <-- 현재 표준 이미지 사이즈
-
-
-            // 그림 크기 설정
-            d = DrawableResizer.fitToArea(d, context, 369, 369);
+            // 그림 리사이징
+            d = DrawableResizer.fitToAreaByDP(
+                    d,
+                    context,
+                    AACGroupContainerPreferences.IMAGE_WIDTH_DP,
+                    AACGroupContainerPreferences.IMAGE_HEIGHT_DP
+            );
 
 //            Drawable d = context.getResources().getDrawable(values.getAsInteger(SQL.COLUMN_NAME_PICTURE));
             // TODO: 그림 크기에 따라 왜곡이 발생할 것 같으니 이에 따른 코드 수정 필요.
             this.setCompoundDrawablesWithIntrinsicBounds(null, d, null, null);
-            int length = (int)TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 15, getResources().getDisplayMetrics());
-            this.setMaxWidth(d.getIntrinsicWidth());
+            int padding = (int)TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 15, getResources().getDisplayMetrics());
+            this.setMaxWidth((int)DisplayUnitConverter.convertDpToPixel((float)AACGroupContainerPreferences.IMAGE_WIDTH_DP, context) + padding * 2);
 
-
-
-
-//            this.setMaxWidth(d.getIntrinsicWidth() + length);
             image_half_height = d.getIntrinsicHeight() / 2;
             this.setLayoutParams(makeLayoutParam());
-//            this.setPadding(0, 0, length, length);
-//            this.setPadding(0, length, length, length);
 
             // 패딩 설정
-            int paddingX = (369 - d.getIntrinsicWidth()) / 2 + length;
+            int paddingX = (369 - d.getIntrinsicWidth()) / 2 + padding;
             int paddingY = (369 - d.getIntrinsicHeight()) / 2;
             this.setPadding(paddingX, paddingY, paddingX, paddingY);
-//            this.setPadding(length, 0 , length, 0);
 
             this.setBackgroundColor(0x00000000);
         }

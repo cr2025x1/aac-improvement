@@ -35,6 +35,7 @@ public class ImageSelectionActivity extends ActionBarActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_image_selection);
 
+        setTitle(R.string.title_activity_image_selection);
     }
 
     @Override
@@ -53,12 +54,13 @@ public class ImageSelectionActivity extends ActionBarActivity {
 
         //noinspection SimplifiableIfStatement
         if (id == R.id.button_image_selection) {
-            // TODO: 라디오그룹 선택에 따른 변화 주기
             RadioGroup rg = (RadioGroup)findViewById(R.id.radiogroup_image_selection);
             int btn_id = rg.getCheckedRadioButtonId();
 
             switch (btn_id) {
                 case R.id.radiobutton_image_selection_preset:
+                    Intent i = new Intent(this, PresetImageSelectionActivity.class);
+                    startActivityForResult(i, USE_PRESET_IMAGE);
 
                     break;
 
@@ -80,6 +82,7 @@ public class ImageSelectionActivity extends ActionBarActivity {
 
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (resultCode == RESULT_OK) {
+            // TODO: 실질적인 이미지 관련 작업은 이 액티비티가 아닌 AACGroupContainer로 넘기고 이 액티비티의 역할은 이미지의 경로값이나 ID값만을 패스하는 것으로 축소?
             if (requestCode == USE_USER_IMAGE) {
                 Uri selectedImageUri = data.getData();
                 selectedImagePath = selectedImageUri.getPath();
@@ -146,8 +149,12 @@ public class ImageSelectionActivity extends ActionBarActivity {
                 setResult(RESULT_OK, i);
                 finish();
 
+                return;
             }
 
+            if (requestCode == USE_PRESET_IMAGE) {
+                return;
+            }
         }
     }
 

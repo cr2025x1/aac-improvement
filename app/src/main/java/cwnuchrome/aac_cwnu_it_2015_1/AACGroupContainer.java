@@ -597,18 +597,22 @@ public class AACGroupContainer {
 
     public String getUserImagePathPrefix() { return userImageDirectoryPathPrefix; }
 
+    // 선택된 항목들의 이미지를 지정한 것으로 바꿈.
     public int setImageForSelected(ContentValues values) {
         Vector<ArrayList<Integer>> id_Vector = new Vector<>(ActionMain.item.ITEM_COUNT);
         ActionMain actionMain = ActionMain.getInstance();
 
+        // 각 분류별 리스트를 가지는 백터 객체 생성
         for (int i = 0; i < ActionMain.item.ITEM_COUNT; i++) id_Vector.add(new ArrayList<Integer>());
 
+        // 선택된 리스트의 각 객체별로 OCC 객체에서 아이템의 분류 ID값과 ID값을 추출해 넣음.
         for (View v : selectedList) {
             ActionItem.Button.onClickClass occ = ((ActionItem.Button)v.findViewById(R.id.aac_item_button_id)).onClickObj;
             System.out.println("OCC CatID = " + occ.itemCategoryID);
             id_Vector.get(occ.itemCategoryID).add(occ.itemID);
         }
 
+        // 각 분류 단위로 지정된 이미지를 쓰도록 DB 업데이트
         int i = 0;
         for (ArrayList<Integer> list : id_Vector) {
             if (list.size() == 0) {

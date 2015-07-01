@@ -18,10 +18,11 @@ public class DisplayUnitConverter {
      * @return A float value to represent px equivalent to dp depending on device density
      */
     public static float convertDpToPixel(float dp, Context context){
+        // 이 메소드는 아래의 코드와 같은 역할을 함.
+        // TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp, getResources().getDisplayMetrics())
         Resources resources = context.getResources();
         DisplayMetrics metrics = resources.getDisplayMetrics();
-        float px = dp * (metrics.densityDpi / 160f);
-        return px;
+        return dp * (metrics.densityDpi / 160f);
     }
 
     /**
@@ -34,7 +35,6 @@ public class DisplayUnitConverter {
     public static float convertPixelsToDp(float px, Context context){
         Resources resources = context.getResources();
         DisplayMetrics metrics = resources.getDisplayMetrics();
-        float dp = px / (metrics.densityDpi / 160f);
-        return dp;
+        return px / (metrics.densityDpi / 160f);
     }
 }

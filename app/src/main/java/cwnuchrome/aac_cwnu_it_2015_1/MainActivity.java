@@ -248,9 +248,6 @@ public class MainActivity extends AppCompatActivity {
             }
 
             container.removeSelected();
-//            this.setTitle(R.string.app_name);
-//            status = STATUS_MAIN;
-//            supportInvalidateOptionsMenu();
 
             return true;
         }
