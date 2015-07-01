@@ -1,5 +1,6 @@
 package cwnuchrome.aac_cwnu_it_2015_1;
 
+import android.app.Notification;
 import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
@@ -153,7 +154,15 @@ public class ImageSelectionActivity extends ActionBarActivity {
             }
 
             if (requestCode == USE_PRESET_IMAGE) {
-                return;
+                Intent i = new Intent();
+                Bundle extra = new Bundle();
+                Bundle dataExtra = data.getExtras();
+                extra.putString(ActionItem.SQL.COLUMN_NAME_PICTURE, Integer.toString(dataExtra.getInt(ActionItem.SQL.COLUMN_NAME_PICTURE)));
+                extra.putInt(ActionItem.SQL.COLUMN_NAME_PICTURE_IS_PRESET, dataExtra.getInt(ActionItem.SQL.COLUMN_NAME_PICTURE_IS_PRESET));
+                i.putExtras(extra);
+
+                setResult(RESULT_OK, i);
+                finish();
             }
         }
     }

@@ -1,12 +1,21 @@
 package cwnuchrome.aac_cwnu_it_2015_1;
 
-import android.support.v7.app.ActionBarActivity;
+import android.content.Intent;
 import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.AdapterView;
+import android.widget.GridView;
+
+/*
+ * 이 클래스의 상당 부분은 아래의 예제에 기초함.
+ * 참조: http://developer.android.com/guide/topics/ui/layout/gridview.html
+ */
 
 
-public class PresetImageSelectionActivity extends ActionBarActivity {
+public class PresetImageSelectionActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -14,6 +23,19 @@ public class PresetImageSelectionActivity extends ActionBarActivity {
         setContentView(R.layout.activity_preset_image_selection);
 
         setTitle(R.string.title_activity_preset_image_selection);
+
+        GridView gridview = (GridView)findViewById(R.id.gridview_preset_image_selection);
+        gridview.setColumnWidth((int)DisplayUnitConverter.convertDpToPixel(AACGroupContainerPreferences.IMAGE_WIDTH_DP, this));
+
+        gridview.setAdapter(new ImageAdapter(this, AACGroupContainerPreferences.VALID_PRESET_IMAGE_R_ID));
+
+        // 이보시오, 의사 양반!! 람다 표현을 못 쓰다니 이게 무슨 소리요!!
+        gridview.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            public void onItemClick(AdapterView<?> parent, View v,
+                                    int position, long id) {
+                PresetImageSelectionActivity.this.deliverPictureID(AACGroupContainerPreferences.VALID_PRESET_IMAGE_R_ID[position]);
+            }
+        });
     }
 
     @Override
@@ -36,5 +58,16 @@ public class PresetImageSelectionActivity extends ActionBarActivity {
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    protected void deliverPictureID(int pictureID) {
+        Intent i = new Intent();
+        Bundle extra = new Bundle();
+        extra.putInt(ActionItem.SQL.COLUMN_NAME_PICTURE, pictureID);
+        extra.putInt(ActionItem.SQL.COLUMN_NAME_PICTURE_IS_PRESET, 1);
+        i.putExtras(extra);
+
+        setResult(RESULT_OK, i);
+        finish();
     }
 }
