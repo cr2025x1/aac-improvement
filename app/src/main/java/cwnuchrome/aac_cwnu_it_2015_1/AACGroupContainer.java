@@ -37,8 +37,6 @@ public class AACGroupContainer {
 
     protected ArrayList<CheckBox> checkBoxes;
 
-    protected final int DURATION = 200;
-
     protected boolean isFolded;
     protected AnimatorSet foldAniSet;
     protected AnimatorSet foldAniSet_reverse;
@@ -364,7 +362,7 @@ public class AACGroupContainer {
                     ObjectAnimator.ofFloat(cbox, View.SCALE_Y, 1f, 0f),
                     ObjectAnimator.ofFloat(cbox, View.ALPHA, 1f, 0f)
             );
-            list[listPos].setDuration(DURATION);
+            list[listPos].setDuration(AACGroupContainerPreferences.CHECKBOX_ANIMATION_DURATION);
             listPos++;
         }
 
@@ -404,7 +402,7 @@ public class AACGroupContainer {
                     ObjectAnimator.ofFloat(cbox, View.SCALE_Y, 0f, 1f),
                     ObjectAnimator.ofFloat(cbox, View.ALPHA, 0f, 1f)
             );
-            list[listPos].setDuration(DURATION);
+            list[listPos].setDuration(AACGroupContainerPreferences.CHECKBOX_ANIMATION_DURATION);
             listPos++;
         }
 

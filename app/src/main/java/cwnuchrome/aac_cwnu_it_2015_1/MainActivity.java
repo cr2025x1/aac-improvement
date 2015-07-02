@@ -314,9 +314,10 @@ public class MainActivity extends AppCompatActivity {
 
                     container.setImageForSelected(v);
 
+                    revertMenu();
+
                     container.exploreGroup(container.getCurrentGroupID());
 
-                    revertMenu();
 
                     break;
             }

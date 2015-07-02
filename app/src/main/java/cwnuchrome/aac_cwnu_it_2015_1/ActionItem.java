@@ -242,7 +242,6 @@ public abstract class ActionItem implements Serializable {
             );
 
 //            Drawable d = context.getResources().getDrawable(values.getAsInteger(SQL.COLUMN_NAME_PICTURE));
-            // TODO: 그림 크기에 따라 왜곡이 발생할 것 같으니 이에 따른 코드 수정 필요.
             this.setCompoundDrawablesWithIntrinsicBounds(null, d, null, null);
             int padding = (int)TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 15, getResources().getDisplayMetrics());
             this.setMaxWidth((int)DisplayUnitConverter.convertDpToPixel((float)AACGroupContainerPreferences.IMAGE_WIDTH_DP, context) + padding * 2);

@@ -32,18 +32,16 @@
 
     <!-- 검색 관련 -->
     <string name="menu_search">Search</string>
-    <string name="title_activity_image_selection">ImageSelectionActivity</string>
 
     <!-- 그림 선택 관련 -->
+    <string name="title_activity_image_selection">Image Selection</string>
     <string name="title_image_selection">Select Image</string>
     <string name="text_image_selection_preset">Use Preset Images</string>
     <string name="text_image_selection_user">Use User Images from Gallery</string>
     <string name="button_image_selection">Next</string>
-    <string name="title_activity_preset_image_selection">PresetImageSelectionActivity</string>
 
     <!-- 프리셋 그림 선택 관련 -->
-    <string name="title_preset_image_selection">Select Preset Image</string>
+    <string name="title_activity_preset_image_selection">Select Preset Image</string>
     <string name="button_preset_image_selection">Next</string>
-
 
 </resources>

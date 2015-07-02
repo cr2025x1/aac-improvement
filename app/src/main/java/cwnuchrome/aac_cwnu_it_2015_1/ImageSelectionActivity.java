@@ -81,6 +81,7 @@ public class ImageSelectionActivity extends ActionBarActivity {
         return super.onOptionsItemSelected(item);
     }
 
+    @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (resultCode == RESULT_OK) {
             // TODO: 실질적인 이미지 관련 작업은 이 액티비티가 아닌 AACGroupContainer로 넘기고 이 액티비티의 역할은 이미지의 경로값이나 ID값만을 패스하는 것으로 축소?

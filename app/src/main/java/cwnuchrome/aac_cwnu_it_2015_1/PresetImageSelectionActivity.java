@@ -1,13 +1,19 @@
 package cwnuchrome.aac_cwnu_it_2015_1;
 
+import android.content.Context;
 import android.content.Intent;
+import android.graphics.Point;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.view.Display;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.AdapterView;
+import android.widget.BaseAdapter;
 import android.widget.GridView;
+import android.widget.ImageView;
 
 /*
  * 이 클래스의 상당 부분은 아래의 예제에 기초함.
@@ -17,6 +23,8 @@ import android.widget.GridView;
 
 public class PresetImageSelectionActivity extends AppCompatActivity {
 
+    GridView gridView;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -24,13 +32,14 @@ public class PresetImageSelectionActivity extends AppCompatActivity {
 
         setTitle(R.string.title_activity_preset_image_selection);
 
-        GridView gridview = (GridView)findViewById(R.id.gridview_preset_image_selection);
-        gridview.setColumnWidth((int)DisplayUnitConverter.convertDpToPixel(AACGroupContainerPreferences.IMAGE_WIDTH_DP, this));
+        gridView = (GridView)findViewById(R.id.gridview_preset_image_selection);
+        prepareGridViewRelativeValues();
+        initGridView();
 
-        gridview.setAdapter(new ImageAdapter(this, AACGroupContainerPreferences.VALID_PRESET_IMAGE_R_ID));
+        gridView.setAdapter(new ImageAdapter(this, AACGroupContainerPreferences.VALID_PRESET_IMAGE_R_ID));
 
         // 이보시오, 의사 양반!! 람다 표현을 못 쓰다니 이게 무슨 소리요!!
-        gridview.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+        gridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             public void onItemClick(AdapterView<?> parent, View v,
                                     int position, long id) {
                 PresetImageSelectionActivity.this.deliverPictureID(AACGroupContainerPreferences.VALID_PRESET_IMAGE_R_ID[position]);
@@ -70,4 +79,71 @@ public class PresetImageSelectionActivity extends AppCompatActivity {
         setResult(RESULT_OK, i);
         finish();
     }
+
+    public class ImageAdapter extends BaseAdapter {
+        private Context mContext;
+        private int[] mThumbIds;
+
+        public ImageAdapter(Context c, int[] mThumbIds) {
+            mContext = c;
+            this.mThumbIds = mThumbIds;
+        }
+
+        public int getCount() {
+            return mThumbIds.length;
+        }
+
+        public Object getItem(int position) {
+            return null;
+        }
+
+        public long getItemId(int position) {
+            return 0;
+        }
+
+        // create a new ImageView for each item referenced by the Adapter
+        public View getView(int position, View convertView, ViewGroup parent) {
+            ImageView imageView;
+            if (convertView == null) {
+                // if it's not recycled, initialize some attributes
+                imageView = new ImageView(mContext);
+                imageView.setLayoutParams(new GridView.LayoutParams(preset_image_selection_column_width, preset_image_selection_column_width));
+                imageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
+                imageView.setPadding(
+                        preset_image_selection_image_padding_pixel,
+                        preset_image_selection_image_padding_pixel,
+                        preset_image_selection_image_padding_pixel,
+                        preset_image_selection_image_padding_pixel
+                );
+            } else {
+                imageView = (ImageView) convertView;
+            }
+
+            imageView.setImageResource(mThumbIds[position]);
+            return imageView;
+        }
+    }
+
+    protected int preset_image_selection_column_width;
+    protected Point displaySize;
+    protected int preset_image_selection_image_padding_pixel;
+
+    // 그리드뷰 세팅값 준비
+    protected void prepareGridViewRelativeValues() {
+        Display display = getWindowManager().getDefaultDisplay();
+        displaySize = new Point();
+        display.getSize(displaySize);
+        preset_image_selection_column_width = (displaySize.x - gridView.getPaddingLeft() - gridView.getPaddingRight()) / AACGroupContainerPreferences.PRESET_IMAGE_SELECTION_GRIDVIEW_COLUMNS;
+
+        preset_image_selection_image_padding_pixel = (int)DisplayUnitConverter.convertDpToPixel(AACGroupContainerPreferences.PRESET_IMAGE_SELECTION_IMAGE_PADDING_DP, this);
+    }
+
+    // 그리드뷰 세팅값 적용
+    protected void initGridView() {
+        gridView.setColumnWidth(preset_image_selection_column_width);
+        gridView.setNumColumns(AACGroupContainerPreferences.PRESET_IMAGE_SELECTION_GRIDVIEW_COLUMNS); // 열 개수값을 받아오는 getNumColumns가 이상하게 동작함. 그리하여 이 방식으로 전환함.
+    }
+
+
+
 }
