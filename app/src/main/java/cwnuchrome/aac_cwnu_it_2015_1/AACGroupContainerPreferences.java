@@ -48,4 +48,7 @@ public class AACGroupContainerPreferences {
     // 프리셋 이미지 선택 액티비티
     public static final int PRESET_IMAGE_SELECTION_IMAGE_PADDING_DP = 4; // 그리드뷰 이미지의 패딩 (DP)
     public static final int PRESET_IMAGE_SELECTION_GRIDVIEW_COLUMNS = 3; // 그리드뷰 열 개수
+
+    // 외부 이미지 보관 디렉토리
+    public static final String USER_IMAGE_DIRECTORY = "pictures";
 }

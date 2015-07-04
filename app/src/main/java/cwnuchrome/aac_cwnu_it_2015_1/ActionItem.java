@@ -6,24 +6,22 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.drawable.Drawable;
 import android.provider.BaseColumns;
-import android.speech.tts.TextToSpeech;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
-import android.widget.Toast;
 
+import java.io.File;
 import java.io.Serializable;
 import java.util.Comparator;
 
 /**
  * Created by Chrome on 5/2/15.
+ *
+ * 모든 사용자 메뉴 그룹의 요소들은 ActionItem 추상 클래스를 구현해서 따라야 한다.
  */
 public abstract class ActionItem implements Serializable {
-    /*
-        모든 사용자 메뉴 그룹의 요소들은 ActionItem 추상 클래스를 구현해서 따라야 한다.
-     */
 
     public abstract int execute(); // 버튼 클릭 시 수행되는 메소드
     public abstract int init(ContentValues values); // 초기화 메소드 (중복 호출 가능)
@@ -121,7 +119,7 @@ public abstract class ActionItem implements Serializable {
         return true;
     }
 
-    public long updateWithIDs(SQLiteDatabase db, ContentValues values, int[] idArray) {
+    public long updateWithIDs(Context context, SQLiteDatabase db, ContentValues values, int[] idArray) {
         StringBuilder sb = new StringBuilder();
         for (int i : idArray) {
             sb.append(SQL._ID);
@@ -130,24 +128,75 @@ public abstract class ActionItem implements Serializable {
             sb.append(" OR ");
         }
         sb.delete(sb.length() - 4, sb.length() - 1); // 맨 마지막 " OR "를 삭제
+        String whereClause = sb.toString();
 
-        System.out.println(sb.toString());
+        if (values.containsKey(SQL.COLUMN_NAME_PICTURE) && values.containsKey(SQL.COLUMN_NAME_PICTURE_IS_PRESET)) {
+            sb.append(" AND ");
+            sb.append(SQL.COLUMN_NAME_PICTURE);
+            sb.append("!='");
+            sb.append(values.getAsString(SQL.COLUMN_NAME_PICTURE));
+            sb.append("'");
+            String pictureWhereClause = sb.toString();
 
-        int t = db.update(TABLE_NAME, values, sb.toString(), null);
+            removeExclusiveImage(context, db, pictureWhereClause);
+        }
+
+        int t = db.update(TABLE_NAME, values, whereClause, null);
         System.out.println("Result value = " + t + " Table = " + TABLE_NAME);
         return t;
-//        return db.update(TABLE_NAME, values, sb.toString(), null);
     }
 
+    protected int removeExclusiveImage(Context context, SQLiteDatabase db, String whereClause) {
+        String pictureWhereClause = whereClause + " AND "
+                + SQL.COLUMN_NAME_PICTURE_IS_PRESET + "=0";
 
-    public boolean removeWithID(SQLiteDatabase db, int id) {
+        Cursor c = db.rawQuery(
+                "SELECT DISTINCT " + SQL.COLUMN_NAME_PICTURE + " FROM " + TABLE_NAME + " WHERE " + pictureWhereClause
+                + " EXCEPT SELECT DISTINCT " + SQL.COLUMN_NAME_PICTURE + " FROM " + TABLE_NAME + " WHERE NOT (" + pictureWhereClause + ")",
+                null);
+        c.moveToFirst();
+
+        int count = c.getCount();
+
+        if (count > 0) {
+            int d_col_i = c.getColumnIndexOrThrow(SQL.COLUMN_NAME_PICTURE);
+
+            System.out.println("*** Exclusive image file list in the range ***");
+            for (int i = 0; i < count; i++) {
+                String fileName = c.getString(d_col_i);
+                System.out.println(fileName);
+            }
+            System.out.println("*** End of the list ***");
+
+            String path = context.getFilesDir() + "/" + AACGroupContainerPreferences.USER_IMAGE_DIRECTORY + "/";
+            for (int i = 0; i < count; i++) {
+
+                String fileName = c.getString(d_col_i);
+                File file = new File(path, fileName);
+                if (!file.delete()) {
+                    System.out.println("Failed to delete \"" + fileName + "\".");
+                }
+
+                c.moveToNext();
+            }
+        }
+        else System.out.println("*** No image file is exclusive ***");
+
+        c.close();
+        return count;
+    }
+
+    public boolean removeWithID(Context context, SQLiteDatabase db, int id) {
         if (existsWithID(db, id) == -1) return false;
+
+        removeExclusiveImage(context, db, SQL._ID + "=" + id);
 
         db.delete(
                 TABLE_NAME,
                 SQL._ID + " = " + id,
                 null
         );
+
         return true;
     }
 

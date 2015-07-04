@@ -1,30 +1,14 @@
 package cwnuchrome.aac_cwnu_it_2015_1;
 
-import android.app.Notification;
-import android.content.Context;
 import android.content.Intent;
-import android.database.Cursor;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.net.Uri;
-import android.provider.DocumentsContract;
-import android.provider.MediaStore;
-import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
-import android.util.Base64;
+import android.support.v7.app.AppCompatActivity;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.widget.ImageView;
 import android.widget.RadioGroup;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-
-
-public class ImageSelectionActivity extends ActionBarActivity {
+public class ImageSelectionActivity extends AppCompatActivity {
 
     String selectedImagePath;
 
@@ -34,8 +18,8 @@ public class ImageSelectionActivity extends ActionBarActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_image_selection);
 
+        setContentView(R.layout.activity_image_selection);
         setTitle(R.string.title_activity_image_selection);
     }
 
@@ -84,67 +68,14 @@ public class ImageSelectionActivity extends ActionBarActivity {
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (resultCode == RESULT_OK) {
-            // TODO: 실질적인 이미지 관련 작업은 이 액티비티가 아닌 AACGroupContainer로 넘기고 이 액티비티의 역할은 이미지의 경로값이나 ID값만을 패스하는 것으로 축소?
             if (requestCode == USE_USER_IMAGE) {
                 Uri selectedImageUri = data.getData();
                 selectedImagePath = selectedImageUri.getPath();
-                String filepath = getRealPathFromURI_API19(this, selectedImageUri);
-                String filename = filepath.substring(filepath.lastIndexOf("/") + 1);
-
-                // String picturePath = Environment.getExternalStorageDirectory() + "/pictures"; // 외부 저장소 이용
-                String picturePath = this.getFilesDir() + "/pictures"; // 내부 저장소 이용
-                File picturePathFO = new File(picturePath);
-                if (picturePathFO.mkdirs()) System.out.println("Created 'pictures' directory.");
-                else System.out.println("'pictures' directory already exists.");
-
-
-                // 선택한 이미지의 InputStream 인스턴스 생성
-                InputStream inStream;
-                try {
-                    inStream = getContentResolver().openInputStream(selectedImageUri);
-                } catch (Exception e) {
-                    System.out.println("Error occurred while opening the selected file.");
-                    return;
-                }
-
-                // inStream을 입력해 파일 이름으로 사용할 MD5 해쉬값 생성
-                String hashedFilename;
-                try {
-                    hashedFilename = Base64.encodeToString(MD5Checksum.createChecksumWithStream(inStream), Base64.DEFAULT);
-                    hashedFilename = hashedFilename.substring(0, hashedFilename.lastIndexOf("\n") - 1) + filename.substring(filename.lastIndexOf("."));
-                    inStream.close();
-                } catch (Exception e){
-                    System.out.println("MD5 hashing met an exception.");
-                    return;
-                }
-
-                // 출력 File 객체 생성
-                File imgFile = new File(picturePath, hashedFilename);
-                System.out.println("Image file absolute path = " + imgFile.getAbsolutePath());
-                if (imgFile.exists()) {
-                    System.out.println("Duplicate file detected.");
-                }
-                else {
-                    try {
-                        // 파일 복사
-                        inStream = getContentResolver().openInputStream(selectedImageUri); // 해쉬 생성 때 기존 InputStream 객체를 썼으므로 재할당
-                        OutputStream outStream = new FileOutputStream(imgFile);
-                        copyFile(inStream, outStream);
-                        inStream.close();
-                        outStream.flush();
-                        outStream.close();
-                    } catch (Exception e) {
-                        System.out.println("Error occurred while copying the selected file.");
-                        return;
-                    }
-
-                }
-
-                System.out.println("Hashcode = " + hashedFilename);
+                String filepath = ExternalImageProcessor.getRealPathFromURI_API19(this, selectedImageUri);
 
                 Intent i = new Intent();
                 Bundle extra = new Bundle();
-                extra.putString(ActionItem.SQL.COLUMN_NAME_PICTURE, hashedFilename);
+                extra.putString(ActionItem.SQL.COLUMN_NAME_PICTURE, filepath);
                 extra.putInt(ActionItem.SQL.COLUMN_NAME_PICTURE_IS_PRESET, 0);
                 i.putExtras(extra);
 
@@ -166,38 +97,6 @@ public class ImageSelectionActivity extends ActionBarActivity {
                 finish();
             }
         }
-    }
-
-    protected void copyFile(InputStream in, OutputStream out) throws IOException {
-        byte[] buffer = new byte[1024];
-        int read;
-        while ((read = in.read(buffer)) != -1) {
-            out.write(buffer, 0, read);
-        }
-    }
-
-    protected static String getRealPathFromURI_API19(Context context, Uri uri){
-        String filePath = "";
-        String wholeID = DocumentsContract.getDocumentId(uri);
-
-        // Split at colon, use second item in the array
-        String id = wholeID.split(":")[1];
-
-        String[] column = { MediaStore.Images.Media.DATA };
-
-        // where id is equal to
-        String sel = MediaStore.Images.Media._ID + "=?";
-
-        Cursor cursor = context.getContentResolver().query(MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                column, sel, new String[]{ id }, null);
-
-        int columnIndex = cursor.getColumnIndex(column[0]);
-
-        if (cursor.moveToFirst()) {
-            filePath = cursor.getString(columnIndex);
-        }
-        cursor.close();
-        return filePath;
     }
 
 }

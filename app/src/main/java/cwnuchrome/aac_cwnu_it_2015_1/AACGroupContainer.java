@@ -569,7 +569,7 @@ public class AACGroupContainer {
             // 선택 리스트 상의 모든 아이템 제거
             cat_id = 0;
             for (ArrayList<Integer> i : itemVector) {
-                for (int id : i) actionMain.itemChain[cat_id].removeWithID(db, id);
+                for (int id : i) actionMain.itemChain[cat_id].removeWithID(context, db, id);
                 i.clear();
                 cat_id++;
             }
@@ -578,7 +578,7 @@ public class AACGroupContainer {
             cat_id = 0;
             for (ArrayList<ContentValues> l : missingDependencyVector) {
                 for (ContentValues v : l) {
-                    actionMain.itemChain[cat_id].removeWithID(db, v.getAsInteger(ActionItem.SQL._ID));
+                    actionMain.itemChain[cat_id].removeWithID(context, db, v.getAsInteger(ActionItem.SQL._ID));
                 }
                 l.clear();
                 cat_id++;
@@ -597,6 +597,12 @@ public class AACGroupContainer {
 
     // 선택된 항목들의 이미지를 지정한 것으로 바꿈.
     public int setImageForSelected(ContentValues values) {
+        if (values.getAsInteger(ActionItem.SQL.COLUMN_NAME_PICTURE_IS_PRESET) == 0) {
+            String filepath = values.getAsString(ActionItem.SQL.COLUMN_NAME_PICTURE);
+            values.remove(ActionItem.SQL.COLUMN_NAME_PICTURE);
+            values.put(ActionItem.SQL.COLUMN_NAME_PICTURE, ExternalImageProcessor.copyAfterHashing(context, filepath));
+        }
+
         Vector<ArrayList<Integer>> id_Vector = new Vector<>(ActionMain.item.ITEM_COUNT);
         ActionMain actionMain = ActionMain.getInstance();
 
@@ -623,7 +629,7 @@ public class AACGroupContainer {
 
             for (int k : list) id_ary[j++] = k;
 
-            actionMain.itemChain[i++].updateWithIDs(actDBHelper.getWritableDatabase(), values, id_ary);
+            actionMain.itemChain[i++].updateWithIDs(context, actDBHelper.getWritableDatabase(), values, id_ary);
         }
 
         return 0;
