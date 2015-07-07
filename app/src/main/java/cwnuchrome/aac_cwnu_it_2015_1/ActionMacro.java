@@ -1,6 +1,5 @@
 package cwnuchrome.aac_cwnu_it_2015_1;
 
-import android.app.Notification;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
@@ -48,19 +47,6 @@ public class ActionMacro extends ActionItem {
         String COLUMN_NAME_WORDCHAIN = "wordchain";
     }
 
-//    public void createTable(SQLiteDatabase db) {
-//        db.execSQL(SQL_CREATE_ENTRIES);
-//    }
-//    public void clearTable(SQLiteDatabase db) {
-//        db.execSQL(SQL_DELETE_ENTRIES);
-//    }
-//    public void initTable(SQLiteDatabase db) {
-//
-//    }
-//    public void deleteTable(SQLiteDatabase db) {
-//        db.execSQL("DROP TABLE IF EXISTS " + TABLE_NAME + ";");
-//    }
-
     public long add(SQLiteDatabase db, ContentValues values) {
         String word = values.getAsString(ActionWord.SQL.COLUMN_NAME_WORD);
         long result = exists(db, word);
@@ -84,9 +70,6 @@ public class ActionMacro extends ActionItem {
         list.add(ActionMain.item.ID_Macro, id);
     }
 
-    /**
-     * Created by Chrome on 5/8/15.
-     */
     public static class Button extends ActionItem.Button {
 
         public Button(Context context, onClickClass onClickObj, AACGroupContainer container) {
@@ -95,14 +78,12 @@ public class ActionMacro extends ActionItem {
 
         public static class onClickClass extends ActionItem.Button.onClickClass {
             String message;
-            // ArrayList<ActionWord.Button.onClickClass> wordChain;
             ArrayList<String> wordMsgChain;
             ActionMain actionMain;
 
             public onClickClass(Context context) {
                 super(context);
                 itemCategoryID = ActionMain.item.ID_Macro;
-                // wordChain = new ArrayList<ActionWord.Button.onClickClass>();
                 wordMsgChain = new ArrayList<String>();
                 actionMain = ActionMain.getInstance();
             }
@@ -111,7 +92,6 @@ public class ActionMacro extends ActionItem {
                 if (!isOnline) return;
 
                 Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
-                // for (ActionWord.Button.onClickClass wordOCC : wordChain) wordOCC.onClick(v);
                 container.getTTS().speak(phonetic, TextToSpeech.QUEUE_FLUSH, null, null);
             }
 
@@ -158,17 +138,6 @@ public class ActionMacro extends ActionItem {
                             );
                             c.moveToFirst();
 
-                            /*
-                            ActionWord.Button.onClickClass wordOCC = new ActionWord.Button.onClickClass(context);
-                            values.put(ActionWord.SQL.COLUMN_NAME_WORD, c.getString(c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_WORD)));
-                            long priority = c.getLong(c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_PRIORITY));
-                            values.put(ActionWord.SQL.COLUMN_NAME_PRIORITY, priority);
-                            wordOCC.init(values);
-                            wordOCC.setContainer(actionMain.containerRef);
-
-                            values.clear();
-                            wordChain.add(wordOCC);
-                            */
                             c.close();
                             buffer.setLength(0);
                         }

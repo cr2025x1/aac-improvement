@@ -290,7 +290,6 @@ public abstract class ActionItem implements Serializable {
                     AACGroupContainerPreferences.IMAGE_HEIGHT_DP
             );
 
-//            Drawable d = context.getResources().getDrawable(values.getAsInteger(SQL.COLUMN_NAME_PICTURE));
             this.setCompoundDrawablesWithIntrinsicBounds(null, d, null, null);
             int padding = (int)TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 15, getResources().getDisplayMetrics());
             this.setMaxWidth((int)DisplayUnitConverter.convertDpToPixel((float)AACGroupContainerPreferences.IMAGE_WIDTH_DP, context) + padding * 2);

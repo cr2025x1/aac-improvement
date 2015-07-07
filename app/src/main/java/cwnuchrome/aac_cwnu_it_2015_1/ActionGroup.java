@@ -13,6 +13,8 @@ import android.widget.Toast;
  *
  * 그룹 클래스.
  */
+
+// TODO: 그룹도 멀티워드를 지원해야 한다.
 public class ActionGroup extends ActionItem {
 
     public ActionGroup() {
@@ -21,7 +23,6 @@ public class ActionGroup extends ActionItem {
         SQL_CREATE_ENTRIES =
                 "CREATE TABLE IF NOT EXISTS " + TABLE_NAME + " (" +
                         BaseColumns._ID + " INTEGER PRIMARY KEY," +
-//                        SQL.COLUMN_NAME_ENTRY_ID + SQL.TEXT_TYPE + SQL.COMMA_SEP +
                         SQL.COLUMN_NAME_PARENT_ID + SQL.TEXT_TYPE + SQL.COMMA_SEP +
                         SQL.COLUMN_NAME_PRIORITY + SQL.TEXT_TYPE + SQL.COMMA_SEP +
                         SQL.COLUMN_NAME_WORD + SQL.TEXT_TYPE + SQL.COMMA_SEP +
