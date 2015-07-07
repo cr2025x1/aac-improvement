@@ -18,6 +18,8 @@ import android.widget.Toast;
 public class ActionGroup extends ActionItem {
 
     public ActionGroup() {
+        super(ActionMain.item.ID_Group);
+
         TABLE_NAME = "LocalGroup";
         SQL_DELETE_ENTRIES = "DROP TABLE IF EXISTS " + TABLE_NAME;
         SQL_CREATE_ENTRIES =

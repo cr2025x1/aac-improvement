@@ -132,7 +132,7 @@ public class AddWordMacroActivity extends AppCompatActivity {
             record.put(ActionWord.SQL.COLUMN_NAME_PARENT_ID, currentGroupID);
             record.put(ActionWord.SQL.COLUMN_NAME_WORD, textTokens[i]);
 
-            wordIDs[i] = ((ActionWord)actionMain.itemChain[ActionMain.item.ID_Word]).add(db, record);
+            wordIDs[i] = actionMain.itemChain[ActionMain.item.ID_Word].add(db, record);
             record.clear();
         }
 
@@ -147,7 +147,6 @@ public class AddWordMacroActivity extends AppCompatActivity {
             String wordChainString = wordchain.toString();
 
             ContentValues record = new ContentValues();
-//        record.put(SQL.COLUMN_NAME_ENTRY_ID, 999); // 임시! 아마도 삭제될 것 같음.
             record.put(ActionMacro.SQL.COLUMN_NAME_PARENT_ID, currentGroupID);
             record.put(ActionMacro.SQL.COLUMN_NAME_PRIORITY, ActionMain.getInstance().rand.nextInt(100)); // 이것도 임시
             record.put(ActionMacro.SQL.COLUMN_NAME_WORD, itemValue);

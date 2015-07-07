@@ -23,6 +23,12 @@ import java.util.Comparator;
  */
 public abstract class ActionItem implements Serializable {
 
+    int itemID;
+
+    protected ActionItem(int itemID) {
+        this.itemID = itemID;
+    }
+
     public abstract int execute(); // 버튼 클릭 시 수행되는 메소드
     public abstract int init(ContentValues values); // 초기화 메소드 (중복 호출 가능)
 

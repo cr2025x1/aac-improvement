@@ -16,6 +16,8 @@ import android.widget.Toast;
 public class ActionWord extends ActionItem {
 
     public ActionWord () {
+        super(ActionMain.item.ID_Word);
+
         TABLE_NAME = "LocalWord";
         SQL_DELETE_ENTRIES = "DROP TABLE IF EXISTS " + TABLE_NAME;
         SQL_CREATE_ENTRIES =
@@ -41,6 +43,7 @@ public class ActionWord extends ActionItem {
         // 필요한 고정 스트링 추가
     }
 
+    // 주어진 단어가 이미 DB 상에 존재하면 그 단어의 ID를 반환, 없으면 추가 후 추가된 단어의 ID를 반환.
     public long add(SQLiteDatabase db, ContentValues values) {
         String word = values.getAsString(ActionWord.SQL.COLUMN_NAME_WORD);
         long result = exists(db, word);
