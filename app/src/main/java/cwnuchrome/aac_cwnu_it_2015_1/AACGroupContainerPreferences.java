@@ -51,4 +51,7 @@ public class AACGroupContainerPreferences {
 
     // 외부 이미지 보관 디렉토리
     public static final String USER_IMAGE_DIRECTORY = "pictures";
+
+    // 최상위 그룹 이름
+    public static final String ROOT_GROUP_NAME = "최상위";
 }

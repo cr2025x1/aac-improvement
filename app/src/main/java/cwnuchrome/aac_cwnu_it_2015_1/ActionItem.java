@@ -23,7 +23,8 @@ import java.util.Comparator;
  */
 public abstract class ActionItem implements Serializable {
 
-    int itemID;
+    protected int itemID;
+    protected int[] reservedID;
 
     protected ActionItem(int itemID) {
         this.itemID = itemID;
@@ -156,10 +157,26 @@ public abstract class ActionItem implements Serializable {
         String pictureWhereClause = whereClause + " AND "
                 + SQL.COLUMN_NAME_PICTURE_IS_PRESET + "=0";
 
-        Cursor c = db.rawQuery(
-                "SELECT DISTINCT " + SQL.COLUMN_NAME_PICTURE + " FROM " + TABLE_NAME + " WHERE " + pictureWhereClause
-                + " EXCEPT SELECT DISTINCT " + SQL.COLUMN_NAME_PICTURE + " FROM " + TABLE_NAME + " WHERE NOT (" + pictureWhereClause + ")",
-                null);
+        ActionMain actionMain = ActionMain.getInstance();
+        StringBuilder sb = new StringBuilder("SELECT DISTINCT ");
+        sb.append(SQL.COLUMN_NAME_PICTURE);
+        sb.append(" FROM ");
+        sb.append(TABLE_NAME);
+        sb.append(" WHERE ");
+        sb.append(pictureWhereClause);
+        for (int i = 0; i < ActionMain.item.ITEM_COUNT; i++) {
+            sb.append(" EXCEPT SELECT DISTINCT ");
+            sb.append(SQL.COLUMN_NAME_PICTURE);
+            sb.append(" FROM ");
+            sb.append(actionMain.itemChain[i].TABLE_NAME);
+            if (i == itemID) {
+                sb.append(" WHERE NOT (");
+                sb.append(pictureWhereClause);
+                sb.append(")");
+            }
+        }
+
+        Cursor c = db.rawQuery(sb.toString(), null);
         c.moveToFirst();
 
         int count = c.getCount();
@@ -207,9 +224,17 @@ public abstract class ActionItem implements Serializable {
     }
 
     abstract protected void addToRemovalList(Context context, AACGroupContainer.RemovalListBundle listBundle, int id);
-    abstract protected boolean checkDependencyRemoval(Context context, AACGroupContainer.RemovalListBundle listBundle);
-    abstract protected void printRemovalList(AACGroupContainer.RemovalListBundle listBundle);
-    abstract protected void printMissingDependencyList(AACGroupContainer.RemovalListBundle listBundle);
+    abstract protected boolean verifyAndCorrectDependencyRemoval(Context context, AACGroupContainer.RemovalListBundle listBundle);
+
+    protected void printRemovalList(AACGroupContainer.RemovalListBundle listBundle) {
+        for (int i : listBundle.itemVector.get(itemID)) System.out.println(i);
+    }
+
+    protected void printMissingDependencyList(AACGroupContainer.RemovalListBundle listBundle) {
+        for (ContentValues v : listBundle.missingDependencyPrintVector.get(itemID)) {
+            System.out.println(v.getAsString(SQL.COLUMN_NAME_WORD) + "(" + v.getAsInteger(SQL._ID) + ")");
+        }
+    }
 
     /**
      * Created by Chrome on 5/8/15.
@@ -282,7 +307,8 @@ public abstract class ActionItem implements Serializable {
 
             Drawable d;
             if (values.getAsInteger(SQL.COLUMN_NAME_PICTURE_IS_PRESET) == 1)
-                d = context.getResources().getDrawable(values.getAsInteger(SQL.COLUMN_NAME_PICTURE), context.getTheme());
+                d = context.getResources().getDrawable(values.getAsInteger(SQL.COLUMN_NAME_PICTURE));
+//                d = context.getResources().getDrawable(values.getAsInteger(SQL.COLUMN_NAME_PICTURE), context.getTheme()); // API 21 이상 필요
             else {
                 d = Drawable.createFromPath(container.userImageDirectoryPathPrefix +
                         values.getAsString(SQL.COLUMN_NAME_PICTURE));

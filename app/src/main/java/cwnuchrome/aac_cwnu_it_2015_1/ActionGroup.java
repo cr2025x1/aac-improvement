@@ -8,18 +8,21 @@ import android.provider.BaseColumns;
 import android.view.View;
 import android.widget.Toast;
 
+import java.util.ArrayList;
+import java.util.ListIterator;
+
 /**
  * Created by Chrome on 5/5/15.
  *
  * 그룹 클래스.
  */
 
-// TODO: 그룹도 멀티워드를 지원해야 한다.
-public class ActionGroup extends ActionItem {
+public class ActionGroup extends ActionMultiWord {
 
     public ActionGroup() {
         super(ActionMain.item.ID_Group);
 
+        reservedID = new int[] {1};
         TABLE_NAME = "LocalGroup";
         SQL_DELETE_ENTRIES = "DROP TABLE IF EXISTS " + TABLE_NAME;
         SQL_CREATE_ENTRIES =
@@ -29,6 +32,7 @@ public class ActionGroup extends ActionItem {
                         SQL.COLUMN_NAME_PRIORITY + SQL.TEXT_TYPE + SQL.COMMA_SEP +
                         SQL.COLUMN_NAME_WORD + SQL.TEXT_TYPE + SQL.COMMA_SEP +
                         SQL.COLUMN_NAME_STEM + SQL.TEXT_TYPE + SQL.COMMA_SEP +
+                        SQL.COLUMN_NAME_WORDCHAIN + SQL.TEXT_TYPE + SQL.COMMA_SEP +
                         SQL.COLUMN_NAME_PICTURE + SQL.TEXT_TYPE + SQL.COMMA_SEP +
                         SQL.COLUMN_NAME_PICTURE_IS_PRESET + SQL.INTEGER_TYPE +
                         " )";
@@ -41,10 +45,11 @@ public class ActionGroup extends ActionItem {
         return 0;
     }
 
-    interface SQL extends ActionItem.SQL {
-        String ROOT_DEFAULT_NAME = "root";
-    }
-    
+//    interface SQL extends ActionMultiWord.SQL {
+//        String ROOT_DEFAULT_NAME = "root";
+//    }
+
+    @Override
     public void initTable(SQLiteDatabase db) {
         db.execSQL("INSERT INTO " +
                         TABLE_NAME + " (" +
@@ -53,6 +58,7 @@ public class ActionGroup extends ActionItem {
                         SQL.COLUMN_NAME_PRIORITY + SQL.COMMA_SEP +
                         SQL.COLUMN_NAME_WORD + SQL.COMMA_SEP +
                         SQL.COLUMN_NAME_STEM + SQL.COMMA_SEP +
+                        SQL.COLUMN_NAME_WORDCHAIN + SQL.COMMA_SEP +
                         SQL.COLUMN_NAME_PICTURE + SQL.COMMA_SEP +
                         SQL.COLUMN_NAME_PICTURE_IS_PRESET +
                         ") " +
@@ -60,8 +66,9 @@ public class ActionGroup extends ActionItem {
                         "1" + SQL.COMMA_SEP +
                         "1" + SQL.COMMA_SEP +
                         "0" + SQL.COMMA_SEP +
-                        "'" + SQL.ROOT_DEFAULT_NAME + "'" + SQL.COMMA_SEP +
-                        "'" + SQL.ROOT_DEFAULT_NAME + "'" + SQL.COMMA_SEP +
+                        "'" + AACGroupContainerPreferences.ROOT_GROUP_NAME + "'" + SQL.COMMA_SEP +
+                        "'" + AACGroupContainerPreferences.ROOT_GROUP_NAME + "'" + SQL.COMMA_SEP +
+                        "'|:1:|'" + SQL.COMMA_SEP +
                         R.drawable.btn_default + SQL.COMMA_SEP +
                         "1" +
                         " WHERE NOT EXISTS (SELECT 1 FROM " +
@@ -71,7 +78,6 @@ public class ActionGroup extends ActionItem {
                         ");"
         );
     }
-
 
     // TODO: 그룹 추가 기능 넣기... 아직도 안 넣고 있었다니!
 
@@ -136,89 +142,102 @@ public class ActionGroup extends ActionItem {
         SQLiteDatabase db = actDBHelper.getWritableDatabase();
         String whereClause = ActionItem.SQL.COLUMN_NAME_PARENT_ID  + " = " + id;
 
-        // 해당 그룹 내의 그룹 처리
-        c = db.query(
-                actionMain.itemChain[ActionMain.item.ID_Group].TABLE_NAME, // The table to query
-                projection, // The columns to return
-                whereClause, // The columns for the WHERE clause
-                null, // The values for the WHERE clause
-                null, // don't group the rows
-                null, // don't filter by row groups
-                null // The sort order
-        );
-        c.moveToFirst();
+        for (int i = 0; i < ActionMain.item.ITEM_COUNT; i++) {
+            c = db.query(
+                    actionMain.itemChain[i].TABLE_NAME, // The table to query
+                    projection, // The columns to return
+                    whereClause, // The columns for the WHERE clause
+                    null, // The values for the WHERE clause
+                    null, // don't group the rows
+                    null, // don't filter by row groups
+                    null // The sort order
+            );
+            c.moveToFirst();
 
-        c_count = c.getCount();
-        c_col = c.getColumnIndexOrThrow(ActionItem.SQL._ID);
-        if (c_count > 0) {
-            for (int i = 0; i < c_count; i++) {
-                int i_id = c.getInt(c_col);
-                addToRemovalList(context, listBundle, i_id); // 재귀 호출
-                c.moveToNext();
+            c_count = c.getCount();
+            c_col = c.getColumnIndexOrThrow(ActionItem.SQL._ID);
+            if (c_count > 0) {
+                for (int j = 0; j < c_count; j++) {
+                    int j_id = c.getInt(c_col);
+                    actionMain.itemChain[i].addToRemovalList(context, listBundle, j_id); // 재귀 호출이 될 수 있음. (만일 i = ActionMain.item.ID_Group이면 재귀)
+                    c.moveToNext();
+                }
             }
+
+            c.close();
+            db.close();
         }
-
-        c.close();
-
-
-        // 해당 그룹 내의 매크로 처리
-        c = db.query(
-                actionMain.itemChain[ActionMain.item.ID_Macro].TABLE_NAME, // The table to query
-                projection, // The columns to return
-                whereClause, // The columns for the WHERE clause
-                null, // The values for the WHERE clause
-                null, // don't group the rows
-                null, // don't filter by row groups
-                null // The sort order
-        );
-        c.moveToFirst();
-
-        c_count = c.getCount();
-        c_col = c.getColumnIndexOrThrow(ActionItem.SQL._ID);
-        if (c_count > 0) {
-            for (int i = 0; i < c_count; i++) {
-                int i_id = c.getInt(c_col);
-//                addMacro(i_id);
-                listBundle.add(ActionMain.item.ID_Macro, id);
-                c.moveToNext();
-            }
-        }
-
-        c.close();
-
-
-        // 해당 그룹 내의 워드 처리
-        c = db.query(
-                actionMain.itemChain[ActionMain.item.ID_Word].TABLE_NAME, // The table to query
-                projection, // The columns to return
-                whereClause, // The columns for the WHERE clause
-                null, // The values for the WHERE clause
-                null, // don't group the rows
-                null, // don't filter by row groups
-                null // The sort order
-        );
-        c.moveToFirst();
-
-        c_count = c.getCount();
-        c_col = c.getColumnIndexOrThrow(ActionItem.SQL._ID);
-        if (c_count > 0) {
-            for (int i = 0; i < c_count; i++) {
-                int i_id = c.getInt(c_col);
-//                addWord(i_id);
-                listBundle.add(ActionMain.item.ID_Word, id);
-                c.moveToNext();
-            }
-        }
-
-        c.close();
     }
 
-    protected boolean checkDependencyRemoval(Context context, AACGroupContainer.RemovalListBundle listBundle) { return true; }
+    @Override
+    protected boolean verifyAndCorrectDependencyRemoval(Context context, AACGroupContainer.RemovalListBundle listBundle) {
+        boolean result = true;
+        ActionMain actionMain = ActionMain.getInstance();
+        SQLiteDatabase db = actionMain.db;
 
+        int[] endIndex = new int[ActionMain.item.ITEM_COUNT];
+
+        while (true) {
+            boolean loopResult = super.verifyAndCorrectDependencyRemoval(context, listBundle);
+            result = result && loopResult;
+            if (loopResult) break;
+
+            for (int i = 0; i < ActionMain.item.ITEM_COUNT; i++) {
+                if (i == ActionMain.item.ID_Group) endIndex[i] = listBundle.itemVector.get(i).size() + 1;
+                else endIndex[i] = listBundle.itemVector.get(i).size();
+            }
+
+            int cat_id = 0;
+            for (ArrayList<Integer> l : listBundle.missingDependencyVector) {
+                for (int i : l) {
+                    actionMain.itemChain[cat_id].addToRemovalList(context, listBundle, i);
+                }
+                l.clear();
+                cat_id++;
+            }
+
+            for (int i = 0; i < ActionMain.item.ITEM_COUNT; i++) {
+                ArrayList<Integer> list = listBundle.itemVector.get(i);
+                if (endIndex[i] < list.size()) {
+                    ListIterator<Integer> lI = list.listIterator(endIndex[i]);
+                    while (lI.hasNext()) {
+                        int j = lI.next();
+
+                        Cursor c = db.query(
+                                actionMain.itemChain[i].TABLE_NAME,
+                                new String[] {SQL.COLUMN_NAME_WORD},
+                                SQL._ID + "=" + j,
+                                null,
+                                null,
+                                null,
+                                null
+                                );
+                        c.moveToFirst();
+
+                        ContentValues values = new ContentValues();
+                        values.put(SQL._ID, j);
+                        values.put(SQL.COLUMN_NAME_WORD, c.getString(c.getColumnIndexOrThrow(SQL.COLUMN_NAME_WORD)));
+                        listBundle.missingDependencyPrintVector.get(i).add(values);
+                        c.close();
+                    }
+                }
+            }
+        }
+
+        return result;
+    }
+
+    @Override
     protected void printRemovalList(AACGroupContainer.RemovalListBundle listBundle) {
         System.out.println("Groups -");
-        for (int i : listBundle.itemVector.get(ActionMain.item.ID_Group)) System.out.println(i);
+        super.printRemovalList(listBundle);
     }
 
-    protected void printMissingDependencyList(AACGroupContainer.RemovalListBundle listBundle) {}
+    @Override
+    protected void printMissingDependencyList(AACGroupContainer.RemovalListBundle listBundle) {
+        System.out.println("Groups -");
+        super.printMissingDependencyList(listBundle);
+    }
+
+
 }

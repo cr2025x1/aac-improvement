@@ -1,13 +1,16 @@
 package cwnuchrome.aac_cwnu_it_2015_1;
 
+import android.app.Notification;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
+import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.sax.RootElement;
 import android.support.v7.app.AppCompatActivity;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -126,7 +129,33 @@ public class AddWordMacroActivity extends AppCompatActivity {
         for (int i = 0; i < textTokens.length; i++) {
             System.out.println("Adding " + textTokens[i]);
 
-            if (actionMain.itemChain[ActionMain.item.ID_Word].exists(db, textTokens[i]) == -1) madeChange = true;
+            long existCheck = actionMain.itemChain[ActionMain.item.ID_Word].exists(db, textTokens[i]);
+            if (existCheck == -1) madeChange = true;
+            else {
+                Cursor c = db.query(
+                        actionMain.itemChain[ActionMain.item.ID_Word].TABLE_NAME,
+                        new String[] {ActionWord.SQL._ID, ActionWord.SQL.COLUMN_NAME_PARENT_ID},
+                        ActionWord.SQL.COLUMN_NAME_WORD + "='" + textTokens[i] + "'",
+                        null,
+                        null,
+                        null,
+                        null
+                );
+                c.moveToFirst();
+                int parentID = c.getInt(c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_PARENT_ID));
+                int id = c.getInt(c.getColumnIndexOrThrow(ActionWord.SQL._ID));
+                c.close();
+
+//                if (parentID == 0 && actionMain.containerRef.rootGroupElement.ids.contains(id)) {
+                if (parentID == 0) {
+                    ContentValues record = new ContentValues();
+                    record.put(ActionWord.SQL.COLUMN_NAME_PARENT_ID, currentGroupID);
+                    actionMain.itemChain[ActionMain.item.ID_Word].updateWithIDs(context, db, record, new int[] {id});
+                    madeChange = true;
+                    continue;
+                }
+
+            }
 
             ContentValues record = new ContentValues();
             record.put(ActionWord.SQL.COLUMN_NAME_PARENT_ID, currentGroupID);

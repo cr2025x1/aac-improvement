@@ -65,10 +65,20 @@ public class ActionPreset {
 
         ActionMain actionMain = ActionMain.getInstance();
 
+        record.put(ActionWord.SQL.COLUMN_NAME_PARENT_ID, 1);
+        record.put(ActionWord.SQL.COLUMN_NAME_PRIORITY, 2);
+        record.put(ActionWord.SQL.COLUMN_NAME_WORD, "테스트");
+        record.put(ActionWord.SQL.COLUMN_NAME_STEM, "테스트");
+        record.put(ActionWord.SQL.COLUMN_NAME_PICTURE, R.drawable.number);
+        record.put(ActionItem.SQL.COLUMN_NAME_PICTURE_IS_PRESET, 1);
+        db.insert(actionMain.itemChain[ActionMain.item.ID_Word].TABLE_NAME, null, record);
+        record.clear();
+
         record.put(ActionGroup.SQL.COLUMN_NAME_PARENT_ID, 1); // parent is root
         record.put(ActionWord.SQL.COLUMN_NAME_PRIORITY, 1);
         record.put(ActionGroup.SQL.COLUMN_NAME_WORD, "테스트");
         record.put(ActionGroup.SQL.COLUMN_NAME_STEM, "테스트");
+        record.put(ActionMacro.SQL.COLUMN_NAME_WORDCHAIN, "|:2:|");
         record.put(ActionGroup.SQL.COLUMN_NAME_PICTURE, R.drawable.color);
         record.put(ActionItem.SQL.COLUMN_NAME_PICTURE_IS_PRESET, 1);
         db.insert(actionMain.itemChain[ActionMain.item.ID_Group].TABLE_NAME, null, record);
@@ -119,7 +129,7 @@ public class ActionPreset {
         record.put(ActionMacro.SQL.COLUMN_NAME_PRIORITY, random());
         record.put(ActionMacro.SQL.COLUMN_NAME_WORD, "나는 당신을 사랑합니다");
         record.put(ActionMacro.SQL.COLUMN_NAME_STEM, "나는 당신을 사랑합니다");
-        record.put(ActionMacro.SQL.COLUMN_NAME_WORDCHAIN, "|:1::2::3:|");
+        record.put(ActionMacro.SQL.COLUMN_NAME_WORDCHAIN, "|:3::4::5:|");
         record.put(ActionMacro.SQL.COLUMN_NAME_PICTURE, R.drawable.bookmark);
         record.put(ActionItem.SQL.COLUMN_NAME_PICTURE_IS_PRESET, 1);
         db.insert(actionMain.itemChain[ActionMain.item.ID_Macro].TABLE_NAME, null, record);

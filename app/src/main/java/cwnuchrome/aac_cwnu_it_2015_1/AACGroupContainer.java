@@ -45,6 +45,8 @@ public class AACGroupContainer {
 
     protected String userImageDirectoryPathPrefix;
 
+    final GroupElement rootGroupElement = new GroupElement();
+
     public AACGroupContainer(LinearLayout mainLayout) {
         this.context = mainLayout.getContext();
         actDBHelper = new ActionDBHelper(context);
@@ -134,8 +136,44 @@ public class AACGroupContainer {
 
         cursorCount = c.getCount();
 
+        // 최상위 그룹의 이름에 사용되는 단어 파악
+        Cursor rName_c = db.query(
+                actionMain.itemChain[ActionMain.item.ID_Group].TABLE_NAME,
+                new String[] {ActionGroup.SQL.COLUMN_NAME_WORDCHAIN},
+                ActionItem.SQL._ID + "=" + 1,
+                null,
+                null,
+                null,
+                null
+        );
+        rName_c.moveToFirst();
+        ((ActionGroup)actionMain.itemChain[ActionMain.item.ID_Group]).parseWordChain(
+                rName_c.getString(rName_c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_WORDCHAIN)),
+                new ActionMultiWord.onParseCommand() {
+                    @Override
+                    public void onParse(int itemID) {
+                        rootGroupElement.ids.add(itemID);
+
+                        Cursor c = actionMain.db.query(
+                                actionMain.itemChain[ActionMain.item.ID_Word].TABLE_NAME,
+                                new String[] {ActionWord.SQL.COLUMN_NAME_WORD},
+                                ActionWord.SQL._ID + "=" + itemID,
+                                null,
+                                null,
+                                null,
+                                null
+                        );
+                        c.moveToFirst();
+                        rootGroupElement.words.add(c.getString(c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_WORD)));
+
+                        c.close();
+                    }
+                });
+        rName_c.close();
+
+
         for (int i = 0; i < cursorCount; i++) {
-            long itemId = c.getLong(
+            int itemId = c.getInt(
                     c.getColumnIndexOrThrow(ActionWord.SQL._ID)
             );
 
@@ -508,7 +546,8 @@ public class AACGroupContainer {
         protected String[] projection;
 
         protected Vector<ArrayList<Integer>> itemVector;
-        protected Vector<ArrayList<ContentValues>> missingDependencyVector;
+        protected Vector<ArrayList<ContentValues>> missingDependencyPrintVector;
+        protected Vector<ArrayList<Integer>> missingDependencyVector;
 
         public RemovalListBundle() {
             projection = new String[] { ActionItem.SQL._ID };
@@ -516,8 +555,11 @@ public class AACGroupContainer {
             itemVector = new Vector<>(ActionMain.item.ITEM_COUNT);
             for (int i = 0; i < ActionMain.item.ITEM_COUNT; i++) itemVector.add(new ArrayList<Integer>());
 
+            missingDependencyPrintVector = new Vector<>(ActionMain.item.ITEM_COUNT);
+            for (int i = 0; i < ActionMain.item.ITEM_COUNT; i++) missingDependencyPrintVector.add(new ArrayList<ContentValues>());
+
             missingDependencyVector = new Vector<>(ActionMain.item.ITEM_COUNT);
-            for (int i = 0; i < ActionMain.item.ITEM_COUNT; i++) missingDependencyVector.add(new ArrayList<ContentValues>());
+            for (int i = 0; i < ActionMain.item.ITEM_COUNT; i++) missingDependencyVector.add(new ArrayList<Integer>());
         }
 
         public void add(int category_id, int id) {
@@ -531,11 +573,12 @@ public class AACGroupContainer {
 
         // 의존성 여부 검사
         public boolean checkNoDependencyLeft() {
-            for (ArrayList<ContentValues> l : missingDependencyVector) l.clear();
+            for (ArrayList<ContentValues> l : missingDependencyPrintVector) l.clear();
+            for (ArrayList<Integer> l : missingDependencyVector) l.clear();
 
             boolean result = true;
             for (ActionItem i : actionMain.itemChain) {
-                result = result && i.checkDependencyRemoval(context, this);
+                result = result && i.verifyAndCorrectDependencyRemoval(context, this);
             }
 
             return result;
@@ -566,21 +609,21 @@ public class AACGroupContainer {
 
             int cat_id;
 
-            // 선택 리스트 상의 모든 아이템 제거
+            // 선택 리스트에는 없으나 삭제 대상에 의존성을 가지는 아이템들을 모두 삭제 대상 리스트에 포함
+            cat_id = 0;
+            for (ArrayList<Integer> l : missingDependencyVector) {
+                for (int i : l) {
+                    actionMain.itemChain[cat_id].addToRemovalList(context, this, i);
+                }
+                l.clear();
+                cat_id++;
+            }
+
+            // 삭제 리스트 상의 모든 아이템 제거 (선택되지 않은 삭제 대상들도 모두 포함됨)
             cat_id = 0;
             for (ArrayList<Integer> i : itemVector) {
                 for (int id : i) actionMain.itemChain[cat_id].removeWithID(context, db, id);
                 i.clear();
-                cat_id++;
-            }
-
-            // 선택 리스트에는 없으나 삭제 대상에 의존성을 가지는 매크로는 모두 삭제
-            cat_id = 0;
-            for (ArrayList<ContentValues> l : missingDependencyVector) {
-                for (ContentValues v : l) {
-                    actionMain.itemChain[cat_id].removeWithID(context, db, v.getAsInteger(ActionItem.SQL._ID));
-                }
-                l.clear();
                 cat_id++;
             }
 
@@ -633,6 +676,15 @@ public class AACGroupContainer {
         }
 
         return 0;
+    }
+
+    protected class GroupElement {
+        ArrayList<Integer> ids;
+        ArrayList<String> words;
+        public GroupElement() {
+            ids = new ArrayList<>();
+            words = new ArrayList<>();
+        }
     }
 
 }

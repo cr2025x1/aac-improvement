@@ -31,11 +31,12 @@ public abstract class ActionMultiWord extends ActionItem {
     }
 
     // 의존성 검사... 이것 때문에 단순하게 생각했던 아이템 제거에서 지옥문이 열렸다.
-    protected boolean checkDependencyRemoval(Context context, AACGroupContainer.RemovalListBundle listBundle) {
+    protected boolean verifyAndCorrectDependencyRemoval(Context context, AACGroupContainer.RemovalListBundle listBundle) {
         ActionMain actionMain = ActionMain.getInstance();
         ArrayList<Integer> wordList = listBundle.itemVector.get(ActionMain.item.ID_Word);
         ArrayList<Integer> itemList = listBundle.itemVector.get(itemID);
-        ArrayList<ContentValues> itemMissingList = listBundle.missingDependencyVector.get(itemID);
+        ArrayList<ContentValues> itemMissingPrintList = listBundle.missingDependencyPrintVector.get(itemID);
+        ArrayList<Integer> itemMissingList = listBundle.missingDependencyVector.get(itemID);
         ActionDBHelper actDBHelper = new ActionDBHelper(context);
 
         if (wordList.size() == 0) return true;
@@ -49,7 +50,7 @@ public abstract class ActionMultiWord extends ActionItem {
         final String LIKE_AND_HEAD = " LIKE '%:";
         final String TAIL = ":%'";
 
-        StringBuilder qBuilder = new StringBuilder();
+        StringBuilder qBuilder = new StringBuilder("(");
         qBuilder.append(SQL.COLUMN_NAME_WORDCHAIN);
         qBuilder.append(LIKE_AND_HEAD);
         qBuilder.append(id);
@@ -63,6 +64,20 @@ public abstract class ActionMultiWord extends ActionItem {
             qBuilder.append(LIKE_AND_HEAD);
             qBuilder.append(id);
             qBuilder.append(TAIL);
+        }
+        qBuilder.append(")");
+
+        // 예약 ID에 대한 조건문 확장
+        if (reservedID != null) {
+            qBuilder.append(" AND (");
+            for (int j : reservedID) {
+                qBuilder.append(SQL._ID);
+                qBuilder.append("!=");
+                qBuilder.append(j);
+                qBuilder.append(" AND ");
+            }
+            qBuilder.delete(qBuilder.length() - 5, qBuilder.length() - 1);
+            qBuilder.append(")");
         }
 
         String whereClause = qBuilder.toString(); // 완성된 조건문을 String으로 변환
@@ -108,7 +123,8 @@ public abstract class ActionMultiWord extends ActionItem {
                     ContentValues values = new ContentValues();
                     values.put(SQL.COLUMN_NAME_WORD, c.getString(c_word_col));
                     values.put(SQL._ID, c_id);
-                    itemMissingList.add(values);
+                    itemMissingPrintList.add(values);
+                    itemMissingList.add(c_id);
 
                     // 커서가 맨 끝에 도달하지 않은 이상 커서를 뒤로 계속 넘긴다.
                     if (c.isLast()) {
@@ -144,7 +160,8 @@ public abstract class ActionMultiWord extends ActionItem {
                     ContentValues values = new ContentValues();
                     values.put(SQL.COLUMN_NAME_WORD, c.getString(c_word_col));
                     values.put(SQL._ID, c_id);
-                    itemMissingList.add(values);
+                    itemMissingPrintList.add(values);
+                    itemMissingList.add(c_id);
 
                     if (c.isLast()) break;
 

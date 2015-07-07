@@ -9,8 +9,6 @@ import android.speech.tts.TextToSpeech;
 import android.view.View;
 import android.widget.Toast;
 
-import java.util.ArrayList;
-
 /**
  * Created by Chrome on 5/5/15.
  *
@@ -42,10 +40,6 @@ public class ActionMacro extends ActionMultiWord {
     public int execute () {
         return 0;
     }
-
-//    interface SQL extends ActionItem.SQL {
-//        String COLUMN_NAME_WORDCHAIN = "wordchain";
-//    }
 
     public long add(SQLiteDatabase db, ContentValues values) {
         String word = values.getAsString(ActionWord.SQL.COLUMN_NAME_WORD);
@@ -145,15 +139,16 @@ public class ActionMacro extends ActionMultiWord {
 
     }
 
+    @Override
     protected void printRemovalList(AACGroupContainer.RemovalListBundle listBundle) {
         System.out.println("Macros -");
-        for (int i : listBundle.itemVector.get(ActionMain.item.ID_Macro)) System.out.println(i);
+        super.printRemovalList(listBundle);
     }
 
+    @Override
     protected void printMissingDependencyList(AACGroupContainer.RemovalListBundle listBundle) {
         System.out.println("Macros -");
-        for (ContentValues v : listBundle.missingDependencyVector.get(ActionMain.item.ID_Macro)) {
-            System.out.println(v.getAsString(ActionItem.SQL.COLUMN_NAME_WORD) + "(" + v.getAsInteger(ActionItem.SQL._ID) + ")");
-        }
+        super.printMissingDependencyList(listBundle);
     }
+
 }
