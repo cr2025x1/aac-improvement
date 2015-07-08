@@ -45,10 +45,6 @@ public class ActionGroup extends ActionMultiWord {
         return 0;
     }
 
-//    interface SQL extends ActionMultiWord.SQL {
-//        String ROOT_DEFAULT_NAME = "root";
-//    }
-
     @Override
     public void initTable(SQLiteDatabase db) {
         db.execSQL("INSERT INTO " +

@@ -1,6 +1,5 @@
 package cwnuchrome.aac_cwnu_it_2015_1;
 
-import android.app.Notification;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
