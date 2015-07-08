@@ -31,7 +31,9 @@ public class ActionDebug {
     private Random random_weak = new Random();
     public int random() { return random_weak.nextInt(100); }
 
-    public void insertTestRecords(SQLiteDatabase db, Context context) {
+    public void insertTestRecords(Context context) {
+        ActionMain actionMain = ActionMain.getInstance();
+        SQLiteDatabase db = actionMain.getDB();
         File dir = new File(context.getFilesDir() + "/pictures");
 
         if (dir.isDirectory()) {
@@ -66,7 +68,6 @@ public class ActionDebug {
 
         // 테이블 청소
 
-        ActionMain actionMain = ActionMain.getInstance();
 
         // 테이블 생성
 //        for (int i = 0; i < ActionMain.item.ITEM_COUNT; i++) {
@@ -247,8 +248,8 @@ public class ActionDebug {
                 "DROP TABLE IF EXISTS " + TABLE_NAME;
     }
 
-    void deleteFlag (SQLiteDatabase db) {
-        db.execSQL(SQL.SQL_DELETE_ENTRIES);
+    void deleteFlag() {
+        ActionMain.getInstance().getDB().execSQL(SQL.SQL_DELETE_ENTRIES);
     }
 
 }

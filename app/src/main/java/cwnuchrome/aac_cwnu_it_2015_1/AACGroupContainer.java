@@ -30,7 +30,6 @@ public class AACGroupContainer {
     protected TextView titleView;
     protected ArrayList<View> contentList;
     protected ArrayList<View> selectedList;
-    protected ActionDBHelper actDBHelper;
     protected ActionMain actionMain;
     protected long currentGroupID;
     protected TextToSpeech TTS;
@@ -38,8 +37,8 @@ public class AACGroupContainer {
     protected ArrayList<CheckBox> checkBoxes;
 
     protected boolean isFolded;
-    protected AnimatorSet foldAniSet;
-    protected AnimatorSet foldAniSet_reverse;
+    protected AnimatorSet checkbox_appearing_animation;
+    protected AnimatorSet checkbox_appearing_animation_reverse;
 
     protected RemovalListBundle removalListBundle;
 
@@ -49,7 +48,6 @@ public class AACGroupContainer {
 
     public AACGroupContainer(LinearLayout mainLayout) {
         this.context = mainLayout.getContext();
-        actDBHelper = new ActionDBHelper(context);
         this.mainLayout = mainLayout;
         contentList = new ArrayList<>();
         actionMain = ActionMain.getInstance();
@@ -80,7 +78,7 @@ public class AACGroupContainer {
 
         isFolded = false;
 
-        SQLiteDatabase db = actDBHelper.getWritableDatabase();
+        SQLiteDatabase db = actionMain.getDB();
         Cursor c;
         String groupName;
         long parentGroupID;
@@ -154,9 +152,9 @@ public class AACGroupContainer {
                     public void onParse(int itemID) {
                         rootGroupElement.ids.add(itemID);
 
-                        Cursor c = actionMain.db.query(
+                        Cursor c = actionMain.getDB().query(
                                 actionMain.itemChain[ActionMain.item.ID_Word].TABLE_NAME,
-                                new String[] {ActionWord.SQL.COLUMN_NAME_WORD},
+                                new String[]{ActionWord.SQL.COLUMN_NAME_WORD},
                                 ActionWord.SQL._ID + "=" + itemID,
                                 null,
                                 null,
@@ -404,9 +402,9 @@ public class AACGroupContainer {
             listPos++;
         }
 
-        foldAniSet = new AnimatorSet();
-        foldAniSet.playTogether(list);
-        foldAniSet.addListener(new Animator.AnimatorListener() {
+        checkbox_appearing_animation = new AnimatorSet();
+        checkbox_appearing_animation.playTogether(list);
+        checkbox_appearing_animation.addListener(new Animator.AnimatorListener() {
             @Override
             public void onAnimationStart(Animator animation) {
             }
@@ -444,9 +442,9 @@ public class AACGroupContainer {
             listPos++;
         }
 
-        foldAniSet_reverse = new AnimatorSet();
-        foldAniSet_reverse.playTogether(list);
-        foldAniSet_reverse.addListener(new Animator.AnimatorListener() {
+        checkbox_appearing_animation_reverse = new AnimatorSet();
+        checkbox_appearing_animation_reverse.playTogether(list);
+        checkbox_appearing_animation_reverse.addListener(new Animator.AnimatorListener() {
             @Override
             public void onAnimationStart(Animator animation) {
                 for (CheckBox cbox : checkBoxes) cbox.setVisibility(View.VISIBLE);
@@ -458,10 +456,12 @@ public class AACGroupContainer {
             }
 
             @Override
-            public void onAnimationCancel(Animator animation) {}
+            public void onAnimationCancel(Animator animation) {
+            }
 
             @Override
-            public void onAnimationRepeat(Animator animation) {}
+            public void onAnimationRepeat(Animator animation) {
+            }
         });
 
         // Setting default folded status
@@ -477,9 +477,9 @@ public class AACGroupContainer {
     }
 
     public void toggleFold() {
-        if (!(foldAniSet.isRunning() || foldAniSet_reverse.isRunning())) {
+        if (!(checkbox_appearing_animation.isRunning() || checkbox_appearing_animation_reverse.isRunning())) {
             if (isFolded) {
-                foldAniSet_reverse.start();
+                checkbox_appearing_animation_reverse.start();
 
                 for (View v : contentList) {
                     ActionItem.Button btn = (ActionItem.Button)v.findViewById(R.id.aac_item_button_id);
@@ -492,7 +492,7 @@ public class AACGroupContainer {
                     btn.onClickObj.toogleOnline();
                 }
 
-                foldAniSet.start();
+                checkbox_appearing_animation.start();
             }
 
         }
@@ -605,7 +605,7 @@ public class AACGroupContainer {
         }
 
         public void execRemoval() {
-            SQLiteDatabase db = actDBHelper.getWritableDatabase();
+            SQLiteDatabase db = actionMain.getDB();
 
             int cat_id;
 
@@ -622,12 +622,10 @@ public class AACGroupContainer {
             // 삭제 리스트 상의 모든 아이템 제거 (선택되지 않은 삭제 대상들도 모두 포함됨)
             cat_id = 0;
             for (ArrayList<Integer> i : itemVector) {
-                for (int id : i) actionMain.itemChain[cat_id].removeWithID(context, db, id);
+                for (int id : i) actionMain.itemChain[cat_id].removeWithID(context, id);
                 i.clear();
                 cat_id++;
             }
-
-            db.close();
         }
 
         public void clear() {
@@ -672,7 +670,7 @@ public class AACGroupContainer {
 
             for (int k : list) id_ary[j++] = k;
 
-            actionMain.itemChain[i++].updateWithIDs(context, actDBHelper.getWritableDatabase(), values, id_ary);
+            actionMain.itemChain[i++].updateWithIDs(context, values, id_ary);
         }
 
         return 0;

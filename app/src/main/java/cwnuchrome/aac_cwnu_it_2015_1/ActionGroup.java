@@ -126,8 +126,8 @@ public class ActionGroup extends ActionMultiWord {
     }
 
     protected void addToRemovalList(Context context, AACGroupContainer.RemovalListBundle listBundle, int id) {
-        ActionDBHelper actDBHelper = new ActionDBHelper(context);
         ActionMain actionMain = ActionMain.getInstance();
+        SQLiteDatabase db = actionMain.getDB();
         String[] projection = new String[] { ActionItem.SQL._ID };
 
         listBundle.add(ActionMain.item.ID_Group, id);
@@ -135,7 +135,6 @@ public class ActionGroup extends ActionMultiWord {
         Cursor c;
         int c_count;
         int c_col;
-        SQLiteDatabase db = actDBHelper.getWritableDatabase();
         String whereClause = ActionItem.SQL.COLUMN_NAME_PARENT_ID  + " = " + id;
 
         for (int i = 0; i < ActionMain.item.ITEM_COUNT; i++) {
@@ -161,7 +160,6 @@ public class ActionGroup extends ActionMultiWord {
             }
 
             c.close();
-            db.close();
         }
     }
 
@@ -169,7 +167,7 @@ public class ActionGroup extends ActionMultiWord {
     protected boolean verifyAndCorrectDependencyRemoval(Context context, AACGroupContainer.RemovalListBundle listBundle) {
         boolean result = true;
         ActionMain actionMain = ActionMain.getInstance();
-        SQLiteDatabase db = actionMain.db;
+        SQLiteDatabase db = actionMain.getDB();
 
         int[] endIndex = new int[ActionMain.item.ITEM_COUNT];
 
@@ -235,5 +233,38 @@ public class ActionGroup extends ActionMultiWord {
         super.printMissingDependencyList(listBundle);
     }
 
+    long add(
+            int parentID,
+            int priority,
+            String word,
+            String stem,
+            String wordChain,
+            String picture,
+            Boolean is_picture_preset
+    ) {
+        ContentValues values = new ContentValues();
+        values.put(ActionGroup.SQL.COLUMN_NAME_PARENT_ID, parentID);
+        values.put(ActionWord.SQL.COLUMN_NAME_PRIORITY, priority);
+        values.put(ActionGroup.SQL.COLUMN_NAME_WORD, word);
+        values.put(ActionGroup.SQL.COLUMN_NAME_STEM, stem);
+        values.put(ActionMacro.SQL.COLUMN_NAME_WORDCHAIN, wordChain);
+        values.put(ActionGroup.SQL.COLUMN_NAME_PICTURE, picture);
+        values.put(ActionItem.SQL.COLUMN_NAME_PICTURE_IS_PRESET, is_picture_preset ? 1 : 0);
 
+        ActionMain actionMain = ActionMain.getInstance();
+        SQLiteDatabase db = actionMain.getDB();
+        return db.insert(actionMain.itemChain[itemClassID].TABLE_NAME, null, values);
+    }
+
+    long add(
+            int parentID,
+            int priority,
+            String word,
+            String stem,
+            String wordChain,
+            int picture,
+            Boolean is_picture_preset
+    ) {
+        return add(parentID, priority, word, stem, wordChain, Integer.toString(picture), is_picture_preset);
+    }
 }

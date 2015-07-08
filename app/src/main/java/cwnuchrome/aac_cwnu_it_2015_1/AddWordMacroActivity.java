@@ -9,7 +9,6 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.sax.RootElement;
 import android.support.v7.app.AppCompatActivity;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -45,16 +44,13 @@ public class AddWordMacroActivity extends AppCompatActivity {
     ArrayList<String> suggestionList;
     ArrayAdapter<String> adapter;
 
-    ActionDBHelper mDbHelper;
-//    SQLiteDatabase db;
-
     protected ActionMain actionMain;
 
     public AddWordMacroActivity() {
         super();
         context = this;
         updater = new updateList();
-        suggestionList = new ArrayList<String>();
+        suggestionList = new ArrayList<>();
     }
 
     @Override
@@ -62,7 +58,6 @@ public class AddWordMacroActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_add_word_macro);
 
-        mDbHelper = new ActionDBHelper(this);
         actionMain = ActionMain.getInstance();
 
         textInput = (EditText)findViewById(R.id.edittext_add_word_macro);
@@ -75,7 +70,7 @@ public class AddWordMacroActivity extends AppCompatActivity {
         // Second parameter - Layout for the row
         // Third parameter - ID of the TextView to which the data is written
         // Forth - the Array of data
-        adapter = new ArrayAdapter<String>(context,
+        adapter = new ArrayAdapter<>(context,
                 android.R.layout.simple_list_item_1, android.R.id.text1, suggestionList);
         listView.setAdapter(adapter);
         // ListView Item Click Listener
@@ -114,7 +109,6 @@ public class AddWordMacroActivity extends AppCompatActivity {
 
     protected void add(String itemValue) {
         long currentGroupID = getIntent().getLongExtra("currentGroupID", 0);
-        ContentValues values = new ContentValues();
 
         itemValue = itemValue.trim();
         String[] textTokens = itemValue.split("\\s");
@@ -124,11 +118,11 @@ public class AddWordMacroActivity extends AppCompatActivity {
 
         // TODO: Consider handling adding operation fails.
         boolean madeChange = false;
-        SQLiteDatabase db = mDbHelper.getWritableDatabase();
+        SQLiteDatabase db = actionMain.getDB();
         for (int i = 0; i < textTokens.length; i++) {
             System.out.println("Adding " + textTokens[i]);
 
-            long existCheck = actionMain.itemChain[ActionMain.item.ID_Word].exists(db, textTokens[i]);
+            long existCheck = actionMain.itemChain[ActionMain.item.ID_Word].exists(textTokens[i]);
             if (existCheck == -1) madeChange = true;
             else {
                 Cursor c = db.query(
@@ -149,7 +143,7 @@ public class AddWordMacroActivity extends AppCompatActivity {
                 if (parentID == 0) {
                     ContentValues record = new ContentValues();
                     record.put(ActionWord.SQL.COLUMN_NAME_PARENT_ID, currentGroupID);
-                    actionMain.itemChain[ActionMain.item.ID_Word].updateWithIDs(context, db, record, new int[] {id});
+                    actionMain.itemChain[ActionMain.item.ID_Word].updateWithIDs(context, record, new int[] {id});
                     madeChange = true;
                     continue;
                 }
@@ -160,11 +154,11 @@ public class AddWordMacroActivity extends AppCompatActivity {
             record.put(ActionWord.SQL.COLUMN_NAME_PARENT_ID, currentGroupID);
             record.put(ActionWord.SQL.COLUMN_NAME_WORD, textTokens[i]);
 
-            wordIDs[i] = actionMain.itemChain[ActionMain.item.ID_Word].add(db, record);
+            wordIDs[i] = actionMain.itemChain[ActionMain.item.ID_Word].raw_add(record);
             record.clear();
         }
 
-        if (isMacro && actionMain.itemChain[ActionMain.item.ID_Macro].exists(db, itemValue) == -1) {
+        if (isMacro && actionMain.itemChain[ActionMain.item.ID_Macro].exists(itemValue) == -1) {
             StringBuilder wordchain = new StringBuilder("|");
             for (int i = 0; i < textTokens.length; i++) {
                 wordchain.append(":");
@@ -180,14 +174,12 @@ public class AddWordMacroActivity extends AppCompatActivity {
             record.put(ActionMacro.SQL.COLUMN_NAME_WORD, itemValue);
             record.put(ActionMacro.SQL.COLUMN_NAME_STEM, itemValue);
             record.put(ActionMacro.SQL.COLUMN_NAME_WORDCHAIN, wordChainString);
-            actionMain.itemChain[ActionMain.item.ID_Macro].add(db, record);
+            actionMain.itemChain[ActionMain.item.ID_Macro].raw_add(record);
 
             record.clear();
 
             madeChange = true;
         }
-
-        db.close();
 
         if (madeChange) {
             Intent i = new Intent();

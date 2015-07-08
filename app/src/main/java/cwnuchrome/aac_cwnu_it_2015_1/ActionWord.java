@@ -72,9 +72,9 @@ public class ActionWord extends ActionItem {
     }
 
     // 주어진 단어가 이미 DB 상에 존재하면 그 단어의 ID를 반환, 없으면 추가 후 추가된 단어의 ID를 반환.
-    public long add(SQLiteDatabase db, ContentValues values) {
+    public long raw_add(ContentValues values) {
         String word = values.getAsString(ActionWord.SQL.COLUMN_NAME_WORD);
-        long result = exists(db, word);
+        long result = exists(word);
         if (result != -1) return result;
 
         ContentValues record = new ContentValues();
@@ -84,10 +84,49 @@ public class ActionWord extends ActionItem {
         record.put(SQL.COLUMN_NAME_STEM, word);
         record.put(SQL.COLUMN_NAME_PICTURE, R.drawable.btn_default);
         record.put(SQL.COLUMN_NAME_PICTURE_IS_PRESET, 1);
-        result = db.insert(TABLE_NAME, null, record);
+        result = ActionMain.getInstance().getDB().insert(TABLE_NAME, null, record);
         record.clear();
 
         return result;
+    }
+
+    // TODO: 오로지 디버깅용. 나중에는 삭제해야 할 메소드임.
+    long add(
+            long parentID,
+            int priority,
+            String word,
+            String stem,
+            String picture,
+            boolean is_picture_preset
+    ) {
+        ContentValues values = new ContentValues();
+        values.put(ActionWord.SQL.COLUMN_NAME_PARENT_ID, parentID);
+        values.put(ActionWord.SQL.COLUMN_NAME_PRIORITY, priority);
+        values.put(ActionWord.SQL.COLUMN_NAME_WORD, word);
+        values.put(ActionWord.SQL.COLUMN_NAME_STEM, stem);
+        values.put(ActionWord.SQL.COLUMN_NAME_PICTURE, picture);
+        values.put(ActionItem.SQL.COLUMN_NAME_PICTURE_IS_PRESET, is_picture_preset ? 1 : 0);
+
+        ActionMain actionMain = ActionMain.getInstance();
+        return actionMain.getDB().insert(actionMain.itemChain[itemClassID].TABLE_NAME, null, values);
+    }
+
+    long add(
+            long parentID,
+            int priority,
+            String word,
+            String stem,
+            int picture,
+            boolean is_picture_preset
+    ) {
+        return add(
+                parentID,
+                priority,
+                word,
+                stem,
+                Integer.toString(picture),
+                is_picture_preset
+        );
     }
 
     protected void addToRemovalList(Context context, AACGroupContainer.RemovalListBundle list, int id) {
@@ -147,7 +186,7 @@ public class ActionWord extends ActionItem {
     }
 
     @Override
-    public boolean removeWithID(Context context, SQLiteDatabase db, int id) {
+    public boolean removeWithID(Context context, int id) {
         ActionMain actionMain = ActionMain.getInstance();
 
         boolean isReserved = false;
@@ -159,9 +198,9 @@ public class ActionWord extends ActionItem {
         if (actionMain.containerRef.rootGroupElement.ids.contains(id) || isReserved) {
             ContentValues values = new ContentValues();
             values.put(SQL.COLUMN_NAME_PARENT_ID, 0);
-            return updateWithIDs(context, db, values, new int[] {id}) > 0;
+            return updateWithIDs(context, values, new int[] {id}) > 0;
         }
-        else return super.removeWithID(context, db, id);
+        else return super.removeWithID(context, id);
     }
 
 }

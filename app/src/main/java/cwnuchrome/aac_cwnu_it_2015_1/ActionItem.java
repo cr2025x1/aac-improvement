@@ -23,11 +23,11 @@ import java.util.Comparator;
  */
 public abstract class ActionItem implements Serializable {
 
-    protected int itemID;
+    protected int itemClassID;
     protected int[] reservedID;
 
     protected ActionItem(int itemID) {
-        this.itemID = itemID;
+        this.itemClassID = itemID;
     }
 
     public abstract int execute(); // 버튼 클릭 시 수행되는 메소드
@@ -69,9 +69,9 @@ public abstract class ActionItem implements Serializable {
 
     public String getTableName() { return TABLE_NAME; }
 
-    protected long exists(SQLiteDatabase db, String word) {
+    protected long exists(String word) {
         // 워드 쿼리
-        Cursor c = db.query(
+        Cursor c = ActionMain.getInstance().getDB().query(
                 TABLE_NAME, // The table to query
                 new String[]{SQL._ID}, // The columns to return
                 SQL.COLUMN_NAME_WORD + " = '" + word + "'", // The columns for the WHERE clause
@@ -92,9 +92,9 @@ public abstract class ActionItem implements Serializable {
         return -1;
     }
 
-    protected long existsWithID(SQLiteDatabase db, int id) {
+    protected long existsWithID(int id) {
         // 워드 쿼리
-        Cursor c = db.query(
+        Cursor c = ActionMain.getInstance().getDB().query(
                 TABLE_NAME, // The table to query
                 new String[]{SQL._ID}, // The columns to return
                 SQL._ID + " = " + id, // The columns for the WHERE clause
@@ -111,12 +111,13 @@ public abstract class ActionItem implements Serializable {
         return -1;
     }
 
-    public long add(SQLiteDatabase db, ContentValues values) {
-        return db.insert(TABLE_NAME, null, values);
+    public long raw_add(ContentValues values) {
+        return ActionMain.getInstance().getDB().insert(TABLE_NAME, null, values);
     }
 
-    public boolean remove(SQLiteDatabase db, String word) {
-        if (exists(db, word) == -1) return false;
+    public boolean remove(String word) {
+        SQLiteDatabase db = ActionMain.getInstance().getDB();
+        if (exists(word) == -1) return false;
 
         db.delete(
                 TABLE_NAME,
@@ -126,7 +127,30 @@ public abstract class ActionItem implements Serializable {
         return true;
     }
 
-    public long updateWithIDs(Context context, SQLiteDatabase db, ContentValues values, int[] idArray) {
+    public long find_id_by_word(String word) {
+        long id;
+        SQLiteDatabase db = ActionMain.getInstance().getDB();
+
+        Cursor c = db.query(
+                TABLE_NAME,
+                new String[]{ActionWord.SQL._ID},
+                ActionWord.SQL.COLUMN_NAME_WORD + "='" + word + "'",
+                null,
+                null,
+                null,
+                null
+        );
+        c.moveToFirst();
+
+        if (c.getCount() > 0) id = c.getLong(c.getColumnIndexOrThrow(ActionWord.SQL._ID));
+        else id = -1;
+        c.close();
+
+        return id;
+    }
+
+    public long updateWithIDs(Context context, ContentValues values, int[] idArray) {
+        SQLiteDatabase db = ActionMain.getInstance().getDB();
         StringBuilder sb = new StringBuilder();
         for (int i : idArray) {
             sb.append(SQL._ID);
@@ -145,7 +169,7 @@ public abstract class ActionItem implements Serializable {
             sb.append("'");
             String pictureWhereClause = sb.toString();
 
-            removeExclusiveImage(context, db, pictureWhereClause);
+            removeExclusiveImage(context, pictureWhereClause);
         }
 
         int t = db.update(TABLE_NAME, values, whereClause, null);
@@ -153,7 +177,8 @@ public abstract class ActionItem implements Serializable {
         return t;
     }
 
-    protected int removeExclusiveImage(Context context, SQLiteDatabase db, String whereClause) {
+    protected int removeExclusiveImage(Context context, String whereClause) {
+        SQLiteDatabase db = ActionMain.getInstance().getDB();
         String pictureWhereClause = whereClause + " AND "
                 + SQL.COLUMN_NAME_PICTURE_IS_PRESET + "=0";
 
@@ -169,7 +194,7 @@ public abstract class ActionItem implements Serializable {
             sb.append(SQL.COLUMN_NAME_PICTURE);
             sb.append(" FROM ");
             sb.append(actionMain.itemChain[i].TABLE_NAME);
-            if (i == itemID) {
+            if (i == itemClassID) {
                 sb.append(" WHERE NOT (");
                 sb.append(pictureWhereClause);
                 sb.append(")");
@@ -191,7 +216,7 @@ public abstract class ActionItem implements Serializable {
             }
             System.out.println("*** End of the list ***");
 
-            String path = context.getFilesDir() + "/" + AACGroupContainerPreferences.USER_IMAGE_DIRECTORY + "/";
+            String path = context.getFilesDir() + "/" + AACGroupContainerPreferences.USER_IMAGE_DIRECTORY_NAME + "/";
             for (int i = 0; i < count; i++) {
 
                 String fileName = c.getString(d_col_i);
@@ -209,12 +234,12 @@ public abstract class ActionItem implements Serializable {
         return count;
     }
 
-    public boolean removeWithID(Context context, SQLiteDatabase db, int id) {
-        if (existsWithID(db, id) == -1) return false;
+    public boolean removeWithID(Context context, int id) {
+        if (existsWithID(id) == -1) return false;
 
-        removeExclusiveImage(context, db, SQL._ID + "=" + id);
+        removeExclusiveImage(context, SQL._ID + "=" + id);
 
-        db.delete(
+        ActionMain.getInstance().getDB().delete(
                 TABLE_NAME,
                 SQL._ID + " = " + id,
                 null
@@ -227,11 +252,11 @@ public abstract class ActionItem implements Serializable {
     abstract protected boolean verifyAndCorrectDependencyRemoval(Context context, AACGroupContainer.RemovalListBundle listBundle);
 
     protected void printRemovalList(AACGroupContainer.RemovalListBundle listBundle) {
-        for (int i : listBundle.itemVector.get(itemID)) System.out.println(i);
+        for (int i : listBundle.itemVector.get(itemClassID)) System.out.println(i);
     }
 
     protected void printMissingDependencyList(AACGroupContainer.RemovalListBundle listBundle) {
-        for (ContentValues v : listBundle.missingDependencyPrintVector.get(itemID)) {
+        for (ContentValues v : listBundle.missingDependencyPrintVector.get(itemClassID)) {
             System.out.println(v.getAsString(SQL.COLUMN_NAME_WORD) + "(" + v.getAsInteger(SQL._ID) + ")");
         }
     }

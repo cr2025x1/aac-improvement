@@ -5,7 +5,6 @@ import android.content.ContentValues;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.res.Resources;
-import android.database.sqlite.SQLiteDatabase;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.Menu;
@@ -17,8 +16,8 @@ import android.widget.Toast;
 
 public class MainActivity extends AppCompatActivity {
     protected AACGroupContainer container;
-    protected ActionDBHelper mDbHelper;
-    protected SQLiteDatabase db;
+
+    ActionMain actionMain;
 
     protected boolean isInited;
 
@@ -36,12 +35,9 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        ActionMain holder = ActionMain.getInstance();
-        holder.initDBHelper(getApplicationContext());
-        holder.initTables();
-
-        mDbHelper = holder.actDBHelper;
-        db = holder.db;
+        actionMain = ActionMain.getInstance();
+        actionMain.initDBHelper(getApplicationContext());
+        actionMain.initTables();
 
         LinearLayout baseLayout = (LinearLayout)findViewById(R.id.groupLayout);
         container = new AACGroupContainer(baseLayout);
@@ -183,12 +179,9 @@ public class MainActivity extends AppCompatActivity {
         }
 
         if (id == R.id.action_set_debug_db) {
-            ActionMain actionMain = ActionMain.getInstance();
-            actionMain.actDBHelper.deleteTable(db);
-            actionMain.actDBHelper.onCreate(db);
-            actionMain.actDBHelper.initTable(db);
-            ActionDebug.getInstance().deleteFlag(db);
-            ActionDebug.getInstance().insertTestRecords(db, this);
+            actionMain.resetTables();
+            ActionDebug.getInstance().deleteFlag();
+            ActionDebug.getInstance().insertTestRecords(this);
 
             isInited = false;
             container.exploreGroup(1);
@@ -197,12 +190,8 @@ public class MainActivity extends AppCompatActivity {
         }
 
         if (id == R.id.action_set_default_db) {
-            ActionMain actionMain = ActionMain.getInstance();
-            actionMain.actDBHelper.deleteTable(db);
-            actionMain.actDBHelper.onCreate(db);
-            actionMain.actDBHelper.initTable(db);
-            ActionPreset.getInstance().deleteFlag(db);
-            ActionPreset.getInstance().insertDefaultRecords(db, this);
+            actionMain.resetTables();
+            ActionPreset.getInstance().revert_to_default(this);
 
             isInited = false;
             container.exploreGroup(1);
@@ -272,6 +261,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         container.onDestroy();
+        actionMain.getDB().close();
         super.onDestroy();
     }
 

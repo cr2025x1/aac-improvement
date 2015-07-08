@@ -24,7 +24,7 @@ public class ExternalImageProcessor {
         File imageFile = new File(filepath);
 
         // String picturePath = Environment.getExternalStorageDirectory() + "/pictures"; // 외부 저장소 이용
-        String picturePath = context.getFilesDir() + "/" + AACGroupContainerPreferences.USER_IMAGE_DIRECTORY; // 내부 저장소 이용
+        String picturePath = context.getFilesDir() + "/" + AACGroupContainerPreferences.USER_IMAGE_DIRECTORY_NAME; // 내부 저장소 이용
         File picturePathFO = new File(picturePath);
         if (picturePathFO.mkdirs()) System.out.println("Created 'pictures' directory.");
         else System.out.println("'pictures' directory already exists.");
@@ -85,7 +85,7 @@ public class ExternalImageProcessor {
         }
     }
 
-    protected static String getRealPathFromURI_API19(Context context, Uri uri){
+    public static String getRealPathFromURI_API19(Context context, Uri uri){
         String filePath = "";
         String wholeID = DocumentsContract.getDocumentId(uri);
 
@@ -108,4 +108,29 @@ public class ExternalImageProcessor {
         cursor.close();
         return filePath;
     }
+
+    public static int remove_all_images (Context context) {
+        System.out.println("*** Method: remove_all_images ***");
+        int fail_count = 0;
+        File dir = new File(context.getFilesDir() + "/" + AACGroupContainerPreferences.USER_IMAGE_DIRECTORY_NAME);
+
+        String[] children = dir.list();
+        if (children.length == 0) {
+            System.out.println("The directory is empty.");
+            return 0;
+        }
+
+        for (String f : children) {
+            System.out.print(f + " --> ");
+            if (new File(dir, f).delete()) System.out.println("Deleted");
+            else {
+                System.out.println("FAILED!!!");
+                fail_count++;
+            }
+        }
+
+        System.out.println("*** End of the method: remove_all_images ***");
+        return fail_count;
+    }
+
 }

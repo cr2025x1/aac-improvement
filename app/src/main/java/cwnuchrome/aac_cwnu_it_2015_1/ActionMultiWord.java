@@ -26,18 +26,17 @@ public abstract class ActionMultiWord extends ActionItem {
     }
 
     @Override
-    public long add(SQLiteDatabase db, ContentValues values) {
-        return super.add(db, values);
+    public long raw_add(ContentValues values) {
+        return super.raw_add(values);
     }
 
     // 의존성 검사... 이것 때문에 단순하게 생각했던 아이템 제거에서 지옥문이 열렸다.
     protected boolean verifyAndCorrectDependencyRemoval(Context context, AACGroupContainer.RemovalListBundle listBundle) {
         ActionMain actionMain = ActionMain.getInstance();
         ArrayList<Integer> wordList = listBundle.itemVector.get(ActionMain.item.ID_Word);
-        ArrayList<Integer> itemList = listBundle.itemVector.get(itemID);
-        ArrayList<ContentValues> itemMissingPrintList = listBundle.missingDependencyPrintVector.get(itemID);
-        ArrayList<Integer> itemMissingList = listBundle.missingDependencyVector.get(itemID);
-        ActionDBHelper actDBHelper = new ActionDBHelper(context);
+        ArrayList<Integer> itemList = listBundle.itemVector.get(itemClassID);
+        ArrayList<ContentValues> itemMissingPrintList = listBundle.missingDependencyPrintVector.get(itemClassID);
+        ArrayList<Integer> itemMissingList = listBundle.missingDependencyVector.get(itemClassID);
 
         if (wordList.size() == 0) return true;
 
@@ -87,9 +86,9 @@ public abstract class ActionMultiWord extends ActionItem {
         Cursor c;
         int c_count;
         int c_id_col;
-        SQLiteDatabase db = actDBHelper.getWritableDatabase();
+        SQLiteDatabase db = actionMain.getDB();
         c = db.query( // 삭제 대상 워드에 대한 의존성이 있는 모든 이 카테고리 아이템이 이 커서에 담김
-                actionMain.itemChain[itemID].TABLE_NAME, // The table to query
+                actionMain.itemChain[itemClassID].TABLE_NAME, // The table to query
                 projection, // The columns to return
                 whereClause, // The columns for the WHERE clause
                 null, // The values for the WHERE clause

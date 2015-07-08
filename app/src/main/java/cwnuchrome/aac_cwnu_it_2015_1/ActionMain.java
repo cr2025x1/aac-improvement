@@ -29,7 +29,7 @@ public class ActionMain {
 
     Random rand;
     ActionItem itemChain[];
-    ActionDBHelper actDBHelper;
+    ActionDBHelper actionDBHelper;
     SQLiteDatabase db;
     AACGroupContainer containerRef;
 
@@ -42,13 +42,21 @@ public class ActionMain {
     }
 
     public void initDBHelper (Context context) {
-        actDBHelper = new ActionDBHelper(context);
-        db = actDBHelper.getWritableDatabase();
+        actionDBHelper = new ActionDBHelper(context);
+        db = actionDBHelper.getWritableDatabase();
     }
 
     public void initTables() {
-        actDBHelper.onCreate(db);
-        actDBHelper.initTable(db);
+        actionDBHelper.onCreate(db);
+        actionDBHelper.initTable(db);
     }
 
+    public void resetTables() {
+        actionDBHelper.deleteTable(db);
+        actionDBHelper.onCreate(db);
+        actionDBHelper.initTable(db);
+    }
+
+//    public ActionDBHelper getActionDBHelper() { return actionDBHelper; }
+    public SQLiteDatabase getDB() { return db; }
 }

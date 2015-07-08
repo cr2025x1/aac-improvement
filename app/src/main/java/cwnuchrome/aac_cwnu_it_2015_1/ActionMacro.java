@@ -41,9 +41,9 @@ public class ActionMacro extends ActionMultiWord {
         return 0;
     }
 
-    public long add(SQLiteDatabase db, ContentValues values) {
+    public long raw_add(SQLiteDatabase db, ContentValues values) {
         String word = values.getAsString(ActionWord.SQL.COLUMN_NAME_WORD);
-        long result = exists(db, word);
+        long result = exists(word);
         if (result != -1) return result;
 
         ContentValues record = new ContentValues();
@@ -84,7 +84,8 @@ public class ActionMacro extends ActionMultiWord {
                 if (!isOnline) return;
 
                 Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
-                container.getTTS().speak(phonetic, TextToSpeech.QUEUE_FLUSH, null, null);
+                container.getTTS().speak(phonetic, TextToSpeech.QUEUE_FLUSH, null);
+//                container.getTTS().speak(phonetic, TextToSpeech.QUEUE_FLUSH, null, null); // API 21 이상 필요
             }
 
             public void init(ContentValues values) {
@@ -100,7 +101,7 @@ public class ActionMacro extends ActionMultiWord {
                             public void onParse(int itemID) {
                                 // 쿼리 옵션 설정
                                 Cursor c;
-                                SQLiteDatabase db = new ActionDBHelper(context).getWritableDatabase();
+                                SQLiteDatabase db = actionMain.getDB();
                                 String[] projection = {
                                         ActionWord.SQL._ID,
                                         ActionWord.SQL.COLUMN_NAME_WORD,
@@ -149,6 +150,40 @@ public class ActionMacro extends ActionMultiWord {
     protected void printMissingDependencyList(AACGroupContainer.RemovalListBundle listBundle) {
         System.out.println("Macros -");
         super.printMissingDependencyList(listBundle);
+    }
+
+    long add(
+            long parentID,
+            int priority,
+            String word,
+            String stem,
+            String wordChain,
+            String picture,
+            Boolean is_picture_preset
+    ) {
+        ContentValues values = new ContentValues();
+        values.put(ActionMacro.SQL.COLUMN_NAME_PARENT_ID, parentID);
+        values.put(ActionMacro.SQL.COLUMN_NAME_PRIORITY, priority);
+        values.put(ActionMacro.SQL.COLUMN_NAME_WORD, word);
+        values.put(ActionMacro.SQL.COLUMN_NAME_STEM, stem);
+        values.put(ActionMacro.SQL.COLUMN_NAME_WORDCHAIN, wordChain);
+        values.put(ActionMacro.SQL.COLUMN_NAME_PICTURE, picture);
+        values.put(ActionItem.SQL.COLUMN_NAME_PICTURE_IS_PRESET, is_picture_preset ? 1 : 0);
+
+        ActionMain actionMain = ActionMain.getInstance();
+        return actionMain.getDB().insert(actionMain.itemChain[itemClassID].TABLE_NAME, null, values);
+    }
+
+    long add(
+            long parentID,
+            int priority,
+            String word,
+            String stem,
+            String wordChain,
+            int picture,
+            Boolean is_picture_preset
+    ) {
+        return add(parentID, priority, word, stem, wordChain, Integer.toString(picture), is_picture_preset);
     }
 
 }

@@ -43,15 +43,13 @@ public class SearchActivity extends AppCompatActivity {
     ArrayList<String> suggestionList;
     ArrayAdapter<String> adapter;
 
-    ActionDBHelper mDbHelper;
-
     protected ActionMain actionMain;
 
     public SearchActivity() {
         super();
         context = this;
         updater = new updateList();
-        suggestionList = new ArrayList<String>();
+        suggestionList = new ArrayList<>();
     }
 
     @Override
@@ -59,7 +57,6 @@ public class SearchActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_search);
 
-        mDbHelper = new ActionDBHelper(this);
         actionMain = ActionMain.getInstance();
 
         textInput = (EditText)findViewById(R.id.edittext_add_word_macro);
@@ -72,7 +69,7 @@ public class SearchActivity extends AppCompatActivity {
         // Second parameter - Layout for the row
         // Third parameter - ID of the TextView to which the data is written
         // Forth - the Array of data
-        adapter = new ArrayAdapter<String>(context,
+        adapter = new ArrayAdapter<>(context,
                 android.R.layout.simple_list_item_1, android.R.id.text1, suggestionList);
         listView.setAdapter(adapter);
         // ListView Item Click Listener
@@ -111,7 +108,6 @@ public class SearchActivity extends AppCompatActivity {
 
     protected void add(String itemValue) {
         long currentGroupID = getIntent().getLongExtra("currentGroupID", 0);
-        ContentValues values = new ContentValues();
 
         itemValue = itemValue.trim();
         String[] textTokens = itemValue.split("\\s");
@@ -121,21 +117,21 @@ public class SearchActivity extends AppCompatActivity {
 
         // TODO: Consider handling adding operation fails.
         boolean madeChange = false;
-        SQLiteDatabase db = mDbHelper.getWritableDatabase();
+        SQLiteDatabase db = actionMain.getDB();
         for (int i = 0; i < textTokens.length; i++) {
             System.out.println("Adding " + textTokens[i]);
 
-            if (actionMain.itemChain[ActionMain.item.ID_Word].exists(db, textTokens[i]) == -1) madeChange = true;
+            if (actionMain.itemChain[ActionMain.item.ID_Word].exists(textTokens[i]) == -1) madeChange = true;
 
             ContentValues record = new ContentValues();
             record.put(ActionWord.SQL.COLUMN_NAME_PARENT_ID, currentGroupID);
             record.put(ActionWord.SQL.COLUMN_NAME_WORD, textTokens[i]);
 
-            wordIDs[i] = ((ActionWord)actionMain.itemChain[ActionMain.item.ID_Word]).add(db, record);
+            wordIDs[i] = actionMain.itemChain[ActionMain.item.ID_Word].raw_add(record);
             record.clear();
         }
 
-        if (isMacro && actionMain.itemChain[ActionMain.item.ID_Macro].exists(db, itemValue) == -1) {
+        if (isMacro && actionMain.itemChain[ActionMain.item.ID_Macro].exists(itemValue) == -1) {
             StringBuilder wordchain = new StringBuilder("|");
             for (int i = 0; i < textTokens.length; i++) {
                 wordchain.append(":");
@@ -152,14 +148,12 @@ public class SearchActivity extends AppCompatActivity {
             record.put(ActionMacro.SQL.COLUMN_NAME_WORD, itemValue);
             record.put(ActionMacro.SQL.COLUMN_NAME_STEM, itemValue);
             record.put(ActionMacro.SQL.COLUMN_NAME_WORDCHAIN, wordChainString);
-            actionMain.itemChain[ActionMain.item.ID_Macro].add(db, record);
+            actionMain.itemChain[ActionMain.item.ID_Macro].raw_add(record);
 
             record.clear();
 
             madeChange = true;
         }
-
-        db.close();
 
         if (madeChange) {
             Intent i = new Intent();

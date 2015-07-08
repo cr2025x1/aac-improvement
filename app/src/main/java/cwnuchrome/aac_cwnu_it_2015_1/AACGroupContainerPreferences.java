@@ -1,12 +1,5 @@
 package cwnuchrome.aac_cwnu_it_2015_1;
 
-import android.content.Context;
-import android.graphics.Point;
-import android.view.Display;
-import android.view.Gravity;
-import android.widget.GridView;
-import android.widget.ImageView;
-
 /**
  * Created by Chrome on 5/9/15.
  *
@@ -50,7 +43,7 @@ public class AACGroupContainerPreferences {
     public static final int PRESET_IMAGE_SELECTION_GRIDVIEW_COLUMNS = 3; // 그리드뷰 열 개수
 
     // 외부 이미지 보관 디렉토리
-    public static final String USER_IMAGE_DIRECTORY = "pictures";
+    public static final String USER_IMAGE_DIRECTORY_NAME = "pictures";
 
     // 최상위 그룹 이름
     public static final String ROOT_GROUP_NAME = "최상위";
