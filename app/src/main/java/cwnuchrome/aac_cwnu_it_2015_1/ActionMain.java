@@ -2,6 +2,8 @@ package cwnuchrome.aac_cwnu_it_2015_1;
 
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteOpenHelper;
+import android.provider.BaseColumns;
 
 import java.util.Random;
 
@@ -29,8 +31,8 @@ public class ActionMain {
 
     Random rand;
     ActionItem itemChain[];
-    ActionDBHelper actionDBHelper;
-    SQLiteDatabase db;
+    private ActionDBHelper actionDBHelper;
+    private SQLiteDatabase db;
     AACGroupContainer containerRef;
 
     public interface item {
@@ -43,7 +45,7 @@ public class ActionMain {
 
     public void initDBHelper (Context context) {
         actionDBHelper = new ActionDBHelper(context);
-        db = actionDBHelper.getWritableDatabase();
+        db = actionDBHelper.getWritableDatabase(); // TODO: 언젠가는 멀티스레딩 형식으로 바꾸기.
     }
 
     public void initTables() {
@@ -53,10 +55,110 @@ public class ActionMain {
 
     public void resetTables() {
         actionDBHelper.deleteTable(db);
-        actionDBHelper.onCreate(db);
-        actionDBHelper.initTable(db);
+        initTables();
     }
 
-//    public ActionDBHelper getActionDBHelper() { return actionDBHelper; }
     public SQLiteDatabase getDB() { return db; }
+
+    public void update_db_collection_count(long diff) {
+        db.execSQL("UPDATE " + SQL.TABLE_NAME +
+                " SET " + SQL.COLUMN_NAME_COLLECTION_COUNT + "=" + SQL.COLUMN_NAME_COLLECTION_COUNT + "+(" + diff + ")");
+    }
+
+    public static void update_db_collection_count(SQLiteDatabase db, long diff) {
+        db.execSQL("UPDATE " + SQL.TABLE_NAME +
+                " SET " + SQL.COLUMN_NAME_COLLECTION_COUNT + "=" + SQL.COLUMN_NAME_COLLECTION_COUNT + "+(" + diff + ")");
+    }
+
+    private class ActionDBHelper extends SQLiteOpenHelper {
+        // If you change the database schema, you must increment the database version.
+        public static final int DATABASE_VERSION = 1;
+        public static final String DATABASE_NAME = "Action.db";
+
+        private ActionDBHelper(Context context) {
+            super(context, DATABASE_NAME, null, DATABASE_VERSION);
+        }
+
+        public void onCreate(SQLiteDatabase db) {
+            create_central_table(db);
+            init_central_table(db);
+            createTable(db);
+        }
+
+        public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+            // This database is only a cache for online data, so its upgrade policy is
+            // to simply to discard the data and fetchSuggestion over
+            // TODO: 수정 필요
+            delete_central_table(db);
+            for (ActionItem i : itemChain) i.clearTable(db);
+            onCreate(db);
+        }
+
+        @Override
+        public void onDowngrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+            onUpgrade(db, oldVersion, newVersion);
+        }
+
+        public void createTable(SQLiteDatabase db) {
+            for (ActionItem i : itemChain) i.createTable(db);
+        }
+
+        public void initTable(SQLiteDatabase db) {
+            for (ActionItem i : itemChain) i.initTable(db);
+        }
+
+        public void deleteTable(SQLiteDatabase db) {
+            reset_central_table(db);
+            for (ActionItem i : itemChain) i.deleteTable(db);
+        }
+
+        private void create_central_table(SQLiteDatabase db) {
+            db.execSQL(SQL.QUERY_CREATE_ENTRIES);
+        }
+
+        private void init_central_table(SQLiteDatabase db) {
+            db.execSQL(SQL.QUERY_INIT_ENTRIES);
+        }
+
+        private void reset_central_table(SQLiteDatabase db) {
+            db.execSQL(SQL.QUERY_RESET_ENTRIES);
+        }
+
+        private void delete_central_table(SQLiteDatabase db) {
+            db.execSQL(SQL.QUERY_DELETE_ENTRIES);
+        }
+    }
+
+    private interface SQL extends BaseColumns {
+        String INTEGER_TYPE = " INTEGER";
+        String COMMA_SEP = ",";
+        String COLUMN_NAME_COLLECTION_COUNT = "collection_count";
+
+        String TABLE_NAME = "Central";
+        String QUERY_DELETE_ENTRIES = "DROP TABLE IF EXISTS " + TABLE_NAME;
+        String QUERY_CREATE_ENTRIES =
+                "CREATE TABLE IF NOT EXISTS " + TABLE_NAME + " (" +
+                        _ID + " INTEGER PRIMARY KEY, "
+                        + COLUMN_NAME_COLLECTION_COUNT + INTEGER_TYPE +
+                        ");";
+        String QUERY_INIT_ENTRIES =
+                "INSERT INTO "
+                + TABLE_NAME
+                + " ("
+                + _ID + COMMA_SEP
+                + COLUMN_NAME_COLLECTION_COUNT
+                + ") SELECT "
+                + 1 + COMMA_SEP
+                + 0
+                + " WHERE NOT EXISTS (SELECT "
+                + _ID
+                + " FROM "
+                + TABLE_NAME
+                + ");";
+        String QUERY_RESET_ENTRIES =
+                "UPDATE "
+                + TABLE_NAME
+                + " SET "
+                + COLUMN_NAME_COLLECTION_COUNT + "=" + 0 + ";";
+    }
 }

@@ -128,7 +128,7 @@ public class AddWordMacroActivity extends AppCompatActivity {
                 Cursor c = db.query(
                         actionMain.itemChain[ActionMain.item.ID_Word].TABLE_NAME,
                         new String[] {ActionWord.SQL._ID, ActionWord.SQL.COLUMN_NAME_PARENT_ID},
-                        ActionWord.SQL.COLUMN_NAME_WORD + "='" + textTokens[i] + "'",
+                        ActionWord.SQL._ID + "=" + existCheck,
                         null,
                         null,
                         null,
@@ -136,18 +136,9 @@ public class AddWordMacroActivity extends AppCompatActivity {
                 );
                 c.moveToFirst();
                 int parentID = c.getInt(c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_PARENT_ID));
-                int id = c.getInt(c.getColumnIndexOrThrow(ActionWord.SQL._ID));
                 c.close();
 
-//                if (parentID == 0 && actionMain.containerRef.rootGroupElement.ids.contains(id)) {
-                if (parentID == 0) {
-                    ContentValues record = new ContentValues();
-                    record.put(ActionWord.SQL.COLUMN_NAME_PARENT_ID, currentGroupID);
-                    actionMain.itemChain[ActionMain.item.ID_Word].updateWithIDs(context, record, new int[] {id});
-                    madeChange = true;
-                    continue;
-                }
-
+                if (parentID == 0) madeChange = true;
             }
 
             ContentValues record = new ContentValues();
@@ -159,14 +150,7 @@ public class AddWordMacroActivity extends AppCompatActivity {
         }
 
         if (isMacro && actionMain.itemChain[ActionMain.item.ID_Macro].exists(itemValue) == -1) {
-            StringBuilder wordchain = new StringBuilder("|");
-            for (int i = 0; i < textTokens.length; i++) {
-                wordchain.append(":");
-                wordchain.append(wordIDs[i]);
-                wordchain.append(":");
-            }
-            wordchain.append("|");
-            String wordChainString = wordchain.toString();
+            String wordChainString = ActionMacro.create_wordchain(wordIDs);
 
             ContentValues record = new ContentValues();
             record.put(ActionMacro.SQL.COLUMN_NAME_PARENT_ID, currentGroupID);

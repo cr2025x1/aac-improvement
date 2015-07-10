@@ -605,8 +605,6 @@ public class AACGroupContainer {
         }
 
         public void execRemoval() {
-            SQLiteDatabase db = actionMain.getDB();
-
             int cat_id;
 
             // 선택 리스트에는 없으나 삭제 대상에 의존성을 가지는 아이템들을 모두 삭제 대상 리스트에 포함

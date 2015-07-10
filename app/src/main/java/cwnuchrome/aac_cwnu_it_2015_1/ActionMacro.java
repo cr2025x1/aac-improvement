@@ -41,7 +41,9 @@ public class ActionMacro extends ActionMultiWord {
         return 0;
     }
 
-    public long raw_add(SQLiteDatabase db, ContentValues values) {
+    @Override
+    // TODO: 객체 리패킹 제거
+    public long raw_add(ContentValues values) {
         String word = values.getAsString(ActionWord.SQL.COLUMN_NAME_WORD);
         long result = exists(word);
         if (result != -1) return result;
@@ -54,7 +56,7 @@ public class ActionMacro extends ActionMultiWord {
         record.put(SQL.COLUMN_NAME_WORDCHAIN, values.getAsString(SQL.COLUMN_NAME_WORDCHAIN));
         record.put(SQL.COLUMN_NAME_PICTURE, R.drawable.btn_default);
         record.put(SQL.COLUMN_NAME_PICTURE_IS_PRESET, 1);
-        result = db.insert(TABLE_NAME, null, record);
+        result = super.raw_add(record);
         record.clear();
 
         return result;
@@ -170,8 +172,12 @@ public class ActionMacro extends ActionMultiWord {
         values.put(ActionMacro.SQL.COLUMN_NAME_PICTURE, picture);
         values.put(ActionItem.SQL.COLUMN_NAME_PICTURE_IS_PRESET, is_picture_preset ? 1 : 0);
 
-        ActionMain actionMain = ActionMain.getInstance();
-        return actionMain.getDB().insert(actionMain.itemChain[itemClassID].TABLE_NAME, null, values);
+//        ActionMain actionMain = ActionMain.getInstance();
+//        long id = actionMain.getDB().insert(actionMain.itemChain[itemClassID].TABLE_NAME, null, values);
+//        if (id != -1) actionMain.update_db_collection_count(1);
+        return raw_add(values);
+
+//        return id;
     }
 
     long add(

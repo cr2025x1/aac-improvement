@@ -112,8 +112,15 @@ public abstract class ActionItem implements Serializable {
     }
 
     public long raw_add(ContentValues values) {
-        return ActionMain.getInstance().getDB().insert(TABLE_NAME, null, values);
-    }
+        ActionMain actionMain = ActionMain.getInstance();
+        long id = actionMain.getDB().insert(TABLE_NAME, null, values);
+
+        if (id != -1) actionMain.update_db_collection_count(1);
+
+        return id;
+   }
+
+
 
     public boolean remove(String word) {
         SQLiteDatabase db = ActionMain.getInstance().getDB();
@@ -239,11 +246,14 @@ public abstract class ActionItem implements Serializable {
 
         removeExclusiveImage(context, SQL._ID + "=" + id);
 
-        ActionMain.getInstance().getDB().delete(
+        ActionMain actionMain = ActionMain.getInstance();
+        actionMain.getDB().delete(
                 TABLE_NAME,
                 SQL._ID + " = " + id,
                 null
         );
+
+        actionMain.update_db_collection_count(-1);
 
         return true;
     }
@@ -355,6 +365,7 @@ public abstract class ActionItem implements Serializable {
             this.setLayoutParams(makeLayoutParam());
 
             // 패딩 설정
+            // TODO: 여기 상수가 왜 남아 있지?!?!?!?!?!?!?!?!?!?!?
             int paddingX = (369 - d.getIntrinsicWidth()) / 2 + padding;
             int paddingY = (369 - d.getIntrinsicHeight()) / 2;
             this.setPadding(paddingX, paddingY, paddingX, paddingY);

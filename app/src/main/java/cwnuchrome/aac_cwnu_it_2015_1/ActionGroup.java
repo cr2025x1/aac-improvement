@@ -73,6 +73,7 @@ public class ActionGroup extends ActionMultiWord {
                         SQL.COLUMN_NAME_PARENT_ID + " = 1" +
                         ");"
         );
+        ActionMain.update_db_collection_count(db, 1);
     }
 
     // TODO: 그룹 추가 기능 넣기... 아직도 안 넣고 있었다니!
@@ -251,9 +252,11 @@ public class ActionGroup extends ActionMultiWord {
         values.put(ActionGroup.SQL.COLUMN_NAME_PICTURE, picture);
         values.put(ActionItem.SQL.COLUMN_NAME_PICTURE_IS_PRESET, is_picture_preset ? 1 : 0);
 
-        ActionMain actionMain = ActionMain.getInstance();
-        SQLiteDatabase db = actionMain.getDB();
-        return db.insert(actionMain.itemChain[itemClassID].TABLE_NAME, null, values);
+//        ActionMain actionMain = ActionMain.getInstance();
+//        long id = actionMain.getDB().insert(actionMain.itemChain[itemClassID].TABLE_NAME, null, values);
+//        if (id != -1) actionMain.update_db_collection_count(1);
+//        return id;
+        return raw_add(values);
     }
 
     long add(

@@ -27,7 +27,18 @@ public abstract class ActionMultiWord extends ActionItem {
 
     @Override
     public long raw_add(ContentValues values) {
-        return super.raw_add(values);
+        long id = super.raw_add(values);
+        final ActionWord actionWord = (ActionWord)ActionMain.getInstance().itemChain[ActionMain.item.ID_Word];
+        if (id != -1) {
+            parseWordChain(values.getAsString(SQL.COLUMN_NAME_WORDCHAIN), new onParseCommand() {
+                @Override
+                public void onParse(int itemID) {
+                    actionWord.update_reference_count(itemID, 1);
+                }
+            });
+        }
+
+        return id;
     }
 
     // 의존성 검사... 이것 때문에 단순하게 생각했던 아이템 제거에서 지옥문이 열렸다.
@@ -192,6 +203,22 @@ public abstract class ActionMultiWord extends ActionItem {
             }
             buffer.append(wordChain.charAt(pos));
         }
+    }
+
+    protected static String create_wordchain(long wordIDs[]) {
+        if (wordIDs == null || wordIDs.length == 0) return null;
+
+        StringBuilder wordchain = new StringBuilder("|");
+
+        for (long l : wordIDs) {
+            wordchain.append(":");
+            wordchain.append(l);
+            wordchain.append(":");
+        }
+
+        wordchain.append("|");
+
+        return wordchain.toString();
     }
 
     public interface onParseCommand {

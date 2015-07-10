@@ -2,6 +2,7 @@ package cwnuchrome.aac_cwnu_it_2015_1;
 
 import android.content.ContentValues;
 import android.content.Context;
+import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.provider.BaseColumns;
 import android.speech.tts.TextToSpeech;
@@ -29,7 +30,8 @@ public class ActionWord extends ActionItem {
                         SQL.COLUMN_NAME_WORD + SQL.TEXT_TYPE + SQL.COMMA_SEP +
                         SQL.COLUMN_NAME_STEM + SQL.TEXT_TYPE + SQL.COMMA_SEP +
                         SQL.COLUMN_NAME_PICTURE + SQL.TEXT_TYPE + SQL.COMMA_SEP +
-                        SQL.COLUMN_NAME_PICTURE_IS_PRESET + SQL.INTEGER_TYPE +
+                        SQL.COLUMN_NAME_PICTURE_IS_PRESET + SQL.INTEGER_TYPE + SQL.COMMA_SEP +
+                        SQL.COLUMN_NAME_REFERENCE_COUNT + SQL.INTEGER_TYPE +
                         " )";
     }
 
@@ -41,7 +43,7 @@ public class ActionWord extends ActionItem {
     }
 
     interface SQL extends ActionItem.SQL {
-        // 필요한 고정 스트링 추가
+         String COLUMN_NAME_REFERENCE_COUNT = "ref_count";
     }
 
     @Override
@@ -54,7 +56,8 @@ public class ActionWord extends ActionItem {
                         SQL.COLUMN_NAME_WORD + SQL.COMMA_SEP +
                         SQL.COLUMN_NAME_STEM + SQL.COMMA_SEP +
                         SQL.COLUMN_NAME_PICTURE + SQL.COMMA_SEP +
-                        SQL.COLUMN_NAME_PICTURE_IS_PRESET +
+                        SQL.COLUMN_NAME_PICTURE_IS_PRESET + SQL.COMMA_SEP +
+                        SQL.COLUMN_NAME_REFERENCE_COUNT +
                         ") " +
                         "SELECT " +
                         "1" + SQL.COMMA_SEP +
@@ -63,19 +66,51 @@ public class ActionWord extends ActionItem {
                         "'" + AACGroupContainerPreferences.ROOT_GROUP_NAME + "'" + SQL.COMMA_SEP +
                         "'" + AACGroupContainerPreferences.ROOT_GROUP_NAME + "'" + SQL.COMMA_SEP +
                         R.drawable.btn_default + SQL.COMMA_SEP +
-                        "1" +
+                        "1" + SQL.COMMA_SEP +
+                        "1" + // 루트 그룹이 이 단어를 쓰기 때문에 참조 카운트값에 0 대신 1이 들어감. 만일 이 조건이 달라진다면 이 또한 바뀌어야 한다.
                         " WHERE NOT EXISTS (SELECT 1 FROM " +
                         TABLE_NAME + " WHERE " +
                         SQL._ID + " = 1" +
                         ");"
         );
+        // ActionMain.update_db_collection_count(db, 1); // 기본 키워드의 parent_id가 0이 아니게 세팅될 경우에 주석처리를 지울 것
     }
 
     // 주어진 단어가 이미 DB 상에 존재하면 그 단어의 ID를 반환, 없으면 추가 후 추가된 단어의 ID를 반환.
+    // TODO: ContentValues 리패킹 제거
     public long raw_add(ContentValues values) {
         String word = values.getAsString(ActionWord.SQL.COLUMN_NAME_WORD);
         long result = exists(word);
-        if (result != -1) return result;
+        if (result != -1) {
+            ActionMain actionMain = ActionMain.getInstance();
+            SQLiteDatabase db = actionMain.getDB();
+
+            Cursor c = db.query(
+                    actionMain.itemChain[ActionMain.item.ID_Word].TABLE_NAME,
+                    new String[] {ActionWord.SQL._ID, ActionWord.SQL.COLUMN_NAME_PARENT_ID},
+                    ActionWord.SQL.COLUMN_NAME_WORD + "='" + word + "'",
+                    null,
+                    null,
+                    null,
+                    null
+            );
+            c.moveToFirst();
+            int parentID = c.getInt(c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_PARENT_ID));
+            int id = c.getInt(c.getColumnIndexOrThrow(ActionWord.SQL._ID));
+            c.close();
+
+//                if (parentID == 0 && actionMain.containerRef.rootGroupElement.ids.contains(id)) {
+            if (parentID == 0) {
+                ContentValues record = new ContentValues();
+                record.put(ActionWord.SQL.COLUMN_NAME_PARENT_ID, values.getAsLong(SQL.COLUMN_NAME_PARENT_ID));
+                if (actionMain.itemChain[ActionMain.item.ID_Word].updateWithIDs(actionMain.containerRef.context, record, new int[] {id}) > 0) {
+                    update_reference_count(id, 1);
+                    actionMain.update_db_collection_count(1);
+                }
+            }
+
+            return result;
+        }
 
         ContentValues record = new ContentValues();
         record.put(SQL.COLUMN_NAME_PARENT_ID, values.getAsString(SQL.COLUMN_NAME_PARENT_ID));
@@ -84,10 +119,15 @@ public class ActionWord extends ActionItem {
         record.put(SQL.COLUMN_NAME_STEM, word);
         record.put(SQL.COLUMN_NAME_PICTURE, R.drawable.btn_default);
         record.put(SQL.COLUMN_NAME_PICTURE_IS_PRESET, 1);
-        result = ActionMain.getInstance().getDB().insert(TABLE_NAME, null, record);
-        record.clear();
+        record.put(SQL.COLUMN_NAME_REFERENCE_COUNT, 1);
 
-        return result;
+//        ActionMain actionMain = ActionMain.getInstance();
+        return super.raw_add(record);
+//        record.clear();
+
+//        if (result != -1) actionMain.update_db_collection_count(1);
+
+//        return result;
     }
 
     // TODO: 오로지 디버깅용. 나중에는 삭제해야 할 메소드임.
@@ -106,9 +146,14 @@ public class ActionWord extends ActionItem {
         values.put(ActionWord.SQL.COLUMN_NAME_STEM, stem);
         values.put(ActionWord.SQL.COLUMN_NAME_PICTURE, picture);
         values.put(ActionItem.SQL.COLUMN_NAME_PICTURE_IS_PRESET, is_picture_preset ? 1 : 0);
+        values.put(SQL.COLUMN_NAME_REFERENCE_COUNT, 1);
 
-        ActionMain actionMain = ActionMain.getInstance();
-        return actionMain.getDB().insert(actionMain.itemChain[itemClassID].TABLE_NAME, null, values);
+//        ActionMain actionMain = ActionMain.getInstance();
+//        long id = actionMain.getDB().insert(actionMain.itemChain[itemClassID].TABLE_NAME, null, values);
+//        if (id != -1) actionMain.update_db_collection_count(1);
+        return raw_add(values);
+
+//        return id;
     }
 
     long add(
@@ -198,9 +243,22 @@ public class ActionWord extends ActionItem {
         if (actionMain.containerRef.rootGroupElement.ids.contains(id) || isReserved) {
             ContentValues values = new ContentValues();
             values.put(SQL.COLUMN_NAME_PARENT_ID, 0);
-            return updateWithIDs(context, values, new int[] {id}) > 0;
+            boolean effected = updateWithIDs(context, values, new int[] {id}) > 0;
+            update_reference_count(id, -1);
+            actionMain.update_db_collection_count(-1);
+
+            return effected;
         }
         else return super.removeWithID(context, id);
+    }
+
+    // 단어의 참조 카운트 업데이트 메소드
+    public void update_reference_count(long id, long diff) {
+        ActionMain actionMain = ActionMain.getInstance();
+        actionMain.getDB().execSQL("UPDATE " + TABLE_NAME +
+                " SET " + SQL.COLUMN_NAME_REFERENCE_COUNT + "=" + SQL.COLUMN_NAME_REFERENCE_COUNT + "+(" + diff + ")"
+                + " WHERE " + SQL._ID + "=" + id
+        );
     }
 
 }
