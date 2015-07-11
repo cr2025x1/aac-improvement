@@ -5,6 +5,10 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.provider.BaseColumns;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.nio.ByteBuffer;
+import java.util.HashMap;
 import java.util.Random;
 
 /**
@@ -26,7 +30,6 @@ public class ActionMain {
         itemChain[item.ID_Group] = new ActionGroup();
         itemChain[item.ID_Word] = new ActionWord();
         itemChain[item.ID_Macro] = new ActionMacro();
-
     }
 
     Random rand;

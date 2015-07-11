@@ -197,7 +197,8 @@ public class AACGroupContainer {
                 ActionMacro.SQL.COLUMN_NAME_WORD,
                 ActionMacro.SQL.COLUMN_NAME_WORDCHAIN,
                 ActionMacro.SQL.COLUMN_NAME_PICTURE,
-                ActionMacro.SQL.COLUMN_NAME_PICTURE_IS_PRESET
+                ActionMacro.SQL.COLUMN_NAME_PICTURE_IS_PRESET,
+                ActionMacro.SQL.COLUMN_NAME_ELEMENT_ID_TAG
         };
 
         c = db.query(
@@ -214,15 +215,19 @@ public class AACGroupContainer {
         // 매크로 쿼리 처리
         cursorCount = c.getCount();
 
+        System.out.println("*** ActionMacro Querying ***");
         for (int i = 0; i < cursorCount; i++) {
             long itemId = c.getLong(
                     c.getColumnIndexOrThrow(ActionMacro.SQL._ID)
             );
-            System.out.println("DB Query Result " + i + " = " +
-                            itemId + ", " +
-                            c.getString(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_PRIORITY)) + ", " +
-                            c.getString(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_WORD))
+            System.out.println("No. " + i + " : " +
+                            "Word \"" + c.getString(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_WORD)) + "\", " +
+                            "ID=" + itemId + ", " +
+                            "Priority=" + c.getString(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_PRIORITY))
             );
+
+            System.out.print("HashMap regenerated --> ");
+            ActionMacro.print_hashmap(ActionMultiWord.parse_element_id_count_tag(c.getString(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_ELEMENT_ID_TAG))));
 
             values.put(ActionItem.SQL._ID, itemId);
             values.put(ActionMacro.SQL.COLUMN_NAME_WORD, c.getString(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_WORD)));
@@ -238,15 +243,28 @@ public class AACGroupContainer {
             values.clear();
             c.moveToNext();
         }
+        System.out.println("*** ActionMacro Query Complete ***");
+
 
         // 그룹 쿼리
+
+        String[] projectionGroup = {
+                ActionMacro.SQL._ID,
+                ActionMacro.SQL.COLUMN_NAME_PRIORITY,
+                ActionMacro.SQL.COLUMN_NAME_WORD,
+                ActionMacro.SQL.COLUMN_NAME_WORDCHAIN,
+                ActionMacro.SQL.COLUMN_NAME_PICTURE,
+                ActionMacro.SQL.COLUMN_NAME_PICTURE_IS_PRESET,
+                ActionMacro.SQL.COLUMN_NAME_ELEMENT_ID_TAG
+        };
+
         String queryClauseGroup =
                 ActionGroup.SQL.COLUMN_NAME_PARENT_ID  + " = " + id +
                 " AND " + ActionGroup.SQL._ID + " != " + id
                 ; // 검색 조건
         c = db.query(
                 actionMain.itemChain[ActionMain.item.ID_Group].TABLE_NAME, // The table to query
-                projection, // The columns to return
+                projectionGroup, // The columns to return
                 queryClauseGroup, // The columns for the WHERE clause
                 null, // The values for the WHERE clause
                 null, // don't group the rows
@@ -267,6 +285,9 @@ public class AACGroupContainer {
                             c.getString(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_PRIORITY)) + ", " +
                             c.getString(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_WORD))
             );
+
+            System.out.print("HashMap regenerated --> ");
+            ActionMacro.print_hashmap(ActionMultiWord.parse_element_id_count_tag(c.getString(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_ELEMENT_ID_TAG))));
 
             values.put(ActionGroup.SQL.COLUMN_NAME_WORD, c.getString(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_WORD)));
             values.put(ActionGroup.SQL.COLUMN_NAME_PRIORITY, c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_PRIORITY));
@@ -296,6 +317,9 @@ public class AACGroupContainer {
             c.moveToFirst();
 
             ActionGroup.Button parentGroupButton = new ActionGroup.Button(context, new ActionGroup.Button.onClickClass(context), this);
+
+            System.out.print("HashMap regenerated --> ");
+            ActionMacro.print_hashmap(ActionMultiWord.parse_element_id_count_tag(c.getString(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_ELEMENT_ID_TAG))));
 
             values.put(ActionGroup.SQL.COLUMN_NAME_WORD, c.getString(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_WORD)));
             values.put(ActionGroup.SQL.COLUMN_NAME_PRIORITY, c.getLong(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_PRIORITY)));
@@ -477,6 +501,8 @@ public class AACGroupContainer {
     }
 
     public void toggleFold() {
+        if (checkbox_appearing_animation == null || checkbox_appearing_animation_reverse == null) return;
+
         if (!(checkbox_appearing_animation.isRunning() || checkbox_appearing_animation_reverse.isRunning())) {
             if (isFolded) {
                 checkbox_appearing_animation_reverse.start();

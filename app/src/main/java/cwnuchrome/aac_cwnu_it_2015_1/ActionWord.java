@@ -117,7 +117,7 @@ public class ActionWord extends ActionItem {
         record.put(SQL.COLUMN_NAME_PRIORITY, ActionMain.getInstance().rand.nextInt(100)); // 이것도 임시
         record.put(SQL.COLUMN_NAME_WORD, word);
         record.put(SQL.COLUMN_NAME_STEM, word);
-        record.put(SQL.COLUMN_NAME_PICTURE, R.drawable.btn_default);
+        record.put(SQL.COLUMN_NAME_PICTURE, values.getAsString(SQL.COLUMN_NAME_PICTURE));
         record.put(SQL.COLUMN_NAME_PICTURE_IS_PRESET, 1);
         record.put(SQL.COLUMN_NAME_REFERENCE_COUNT, 1);
 

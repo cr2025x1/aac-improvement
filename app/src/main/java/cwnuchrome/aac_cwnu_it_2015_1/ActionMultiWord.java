@@ -4,10 +4,13 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.support.annotation.NonNull;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 
 /**
  * Created by Chrome on 7/7/15.
@@ -23,6 +26,7 @@ public abstract class ActionMultiWord extends ActionItem {
 
     interface SQL extends ActionItem.SQL {
         String COLUMN_NAME_WORDCHAIN = "wordchain";
+        String COLUMN_NAME_ELEMENT_ID_TAG = "element_id_tag";
     }
 
     @Override
@@ -219,6 +223,98 @@ public abstract class ActionMultiWord extends ActionItem {
         wordchain.append("|");
 
         return wordchain.toString();
+    }
+
+    protected static HashMap<Long, Long> create_element_id_count_map(long wordIDs[]) {
+        HashMap<Long, Long> map = new HashMap<>();
+
+        for (long l : wordIDs) {
+            if (map.containsKey(l)) map.put(l, map.get(l) + 1);
+            else map.put(l, 1l);
+        }
+
+        return map;
+    }
+
+    protected static String create_element_id_count_tag(HashMap<Long, Long> map) {
+        StringBuilder s = new StringBuilder("|");
+
+        for (Map.Entry<Long, Long> e : map.entrySet()) {
+            s.append(":");
+            s.append(e.getKey());
+            s.append(",");
+            s.append(e.getValue());
+            s.append(":");
+        }
+
+        s.append("|");
+        return s.toString();
+    }
+
+    @NonNull public static HashMap<Long, Long> parse_element_id_count_tag(String id_tag) {
+        HashMap<Long, Long> map = new HashMap<>();
+        final String syntax_error = "ID Tag syntax error.";
+
+        StringBuilder buffer = new StringBuilder();
+        boolean inChain = true;
+        boolean inEntry = false;
+        int pos = 0;
+        long key = 0;
+        if (id_tag.charAt(pos++) != '|') throw new IllegalArgumentException(syntax_error);
+        while (id_tag.length() > pos) {
+            char posChar = id_tag.charAt(pos);
+            if (posChar == '|') {inChain = false; break;}
+            if (posChar == ':') {
+                inEntry = !inEntry;
+
+                if (!inEntry) {
+                    // 값 파싱
+                    try {
+                        map.put(key, Long.parseLong(buffer.toString()));
+                    } catch (NumberFormatException e) {
+                        throw new IllegalArgumentException(syntax_error);
+                    }
+
+                    buffer.setLength(0);
+                }
+
+                pos++;
+                continue;
+            }
+            if (posChar == ',') {
+                // 키 파싱
+                try {
+                    key = Long.parseLong(buffer.toString());
+                } catch (NumberFormatException e) {
+                    throw new IllegalArgumentException(syntax_error);
+                }
+
+                buffer.setLength(0);
+
+                pos++;
+                continue;
+            }
+
+            buffer.append(posChar);
+            pos++;
+        }
+        if (inChain) throw new IllegalArgumentException(syntax_error);
+
+        return map;
+    }
+
+    public static void print_hashmap(@NonNull HashMap<Long, Long> map) {
+        StringBuilder sb = new StringBuilder();
+        for (Map.Entry<Long, Long> e : map.entrySet()) {
+            sb.append('(');
+            sb.append(e.getKey());
+            sb.append(',');
+            sb.append(e.getValue());
+            sb.append(") ");
+            System.out.print(sb.toString());
+            sb.setLength(0);
+        }
+        System.out.println();
     }
 
     public interface onParseCommand {

@@ -54,7 +54,7 @@ public final class ActionPreset {
                 1,
                 "테스트",
                 "테스트",
-                "|:" + id + ":|",
+                new long[] {id},
                 R.drawable.color,
                 true
         );
@@ -96,7 +96,7 @@ public final class ActionPreset {
                 5,
                 "나는 당신을 사랑합니다",
                 "나는 당신을 사랑합니다",
-                "|:" + chain[0] + "::" + chain[1] + "::" + chain[2] + ":|",
+                chain,
                 R.drawable.bookmark,
                 true
         );

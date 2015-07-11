@@ -51,6 +51,7 @@ public abstract class ActionItem implements Serializable {
         String TEXT_TYPE = " TEXT";
         String INTEGER_TYPE = " INTEGER";
         String REAL_TYPE = " REAL";
+        String BLOB_TYPE = " BLOB";
         String COMMA_SEP = ",";
 
         String COLUMN_NAME_PARENT_ID = "parent_id";

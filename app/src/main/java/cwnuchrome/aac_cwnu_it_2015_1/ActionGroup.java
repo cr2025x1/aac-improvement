@@ -7,8 +7,8 @@ import android.database.sqlite.SQLiteDatabase;
 import android.provider.BaseColumns;
 import android.view.View;
 import android.widget.Toast;
-
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.ListIterator;
 
 /**
@@ -34,7 +34,8 @@ public class ActionGroup extends ActionMultiWord {
                         SQL.COLUMN_NAME_STEM + SQL.TEXT_TYPE + SQL.COMMA_SEP +
                         SQL.COLUMN_NAME_WORDCHAIN + SQL.TEXT_TYPE + SQL.COMMA_SEP +
                         SQL.COLUMN_NAME_PICTURE + SQL.TEXT_TYPE + SQL.COMMA_SEP +
-                        SQL.COLUMN_NAME_PICTURE_IS_PRESET + SQL.INTEGER_TYPE +
+                        SQL.COLUMN_NAME_PICTURE_IS_PRESET + SQL.INTEGER_TYPE + SQL.COMMA_SEP +
+                        SQL.COLUMN_NAME_ELEMENT_ID_TAG + SQL.TEXT_TYPE +
                         " )";
     }
 
@@ -47,32 +48,32 @@ public class ActionGroup extends ActionMultiWord {
 
     @Override
     public void initTable(SQLiteDatabase db) {
-        db.execSQL("INSERT INTO " +
-                        TABLE_NAME + " (" +
-                        SQL._ID + SQL.COMMA_SEP +
-                        SQL.COLUMN_NAME_PARENT_ID + SQL.COMMA_SEP +
-                        SQL.COLUMN_NAME_PRIORITY + SQL.COMMA_SEP +
-                        SQL.COLUMN_NAME_WORD + SQL.COMMA_SEP +
-                        SQL.COLUMN_NAME_STEM + SQL.COMMA_SEP +
-                        SQL.COLUMN_NAME_WORDCHAIN + SQL.COMMA_SEP +
-                        SQL.COLUMN_NAME_PICTURE + SQL.COMMA_SEP +
-                        SQL.COLUMN_NAME_PICTURE_IS_PRESET +
-                        ") " +
-                        "SELECT " +
-                        "1" + SQL.COMMA_SEP +
-                        "1" + SQL.COMMA_SEP +
-                        "0" + SQL.COMMA_SEP +
-                        "'" + AACGroupContainerPreferences.ROOT_GROUP_NAME + "'" + SQL.COMMA_SEP +
-                        "'" + AACGroupContainerPreferences.ROOT_GROUP_NAME + "'" + SQL.COMMA_SEP +
-                        "'|:1:|'" + SQL.COMMA_SEP +
-                        R.drawable.btn_default + SQL.COMMA_SEP +
-                        "1" +
-                        " WHERE NOT EXISTS (SELECT 1 FROM " +
-                        TABLE_NAME + " WHERE " +
-                        SQL._ID + " = 1 AND " +
-                        SQL.COLUMN_NAME_PARENT_ID + " = 1" +
-                        ");"
-        );
+        HashMap<Long, Long> map = new HashMap<>();
+        map.put(1l, 1l);
+
+        Cursor c = db.rawQuery("SELECT " + SQL._ID + " FROM " + TABLE_NAME +
+                " WHERE " + SQL._ID + "=1 AND " +
+                SQL.COLUMN_NAME_PARENT_ID + "=1",
+                null);
+        c.moveToFirst();
+        if (c.getCount() > 0) {
+            c.close();
+            return;
+        }
+        c.close();
+
+        ContentValues values = new ContentValues();
+        values.put(SQL._ID, 1);
+        values.put(SQL.COLUMN_NAME_PARENT_ID, 1);
+        values.put(SQL.COLUMN_NAME_PRIORITY, 0);
+        values.put(SQL.COLUMN_NAME_WORD, AACGroupContainerPreferences.ROOT_GROUP_NAME);
+        values.put(SQL.COLUMN_NAME_STEM, AACGroupContainerPreferences.ROOT_GROUP_NAME);
+        values.put(SQL.COLUMN_NAME_WORDCHAIN, "|:1:|");
+        values.put(SQL.COLUMN_NAME_PICTURE, R.drawable.btn_default);
+        values.put(SQL.COLUMN_NAME_PICTURE_IS_PRESET, 1);
+        values.put(SQL.COLUMN_NAME_ELEMENT_ID_TAG, create_element_id_count_tag(map));
+        db.insert(TABLE_NAME, null, values);
+
         ActionMain.update_db_collection_count(db, 1);
     }
 
@@ -239,23 +240,22 @@ public class ActionGroup extends ActionMultiWord {
             int priority,
             String word,
             String stem,
-            String wordChain,
+            long[] wordIDs,
             String picture,
             Boolean is_picture_preset
     ) {
+        HashMap<Long, Long> map = create_element_id_count_map(wordIDs);
+
         ContentValues values = new ContentValues();
         values.put(ActionGroup.SQL.COLUMN_NAME_PARENT_ID, parentID);
         values.put(ActionWord.SQL.COLUMN_NAME_PRIORITY, priority);
         values.put(ActionGroup.SQL.COLUMN_NAME_WORD, word);
         values.put(ActionGroup.SQL.COLUMN_NAME_STEM, stem);
-        values.put(ActionMacro.SQL.COLUMN_NAME_WORDCHAIN, wordChain);
+        values.put(ActionMacro.SQL.COLUMN_NAME_WORDCHAIN, create_wordchain(wordIDs));
         values.put(ActionGroup.SQL.COLUMN_NAME_PICTURE, picture);
         values.put(ActionItem.SQL.COLUMN_NAME_PICTURE_IS_PRESET, is_picture_preset ? 1 : 0);
+        values.put(SQL.COLUMN_NAME_ELEMENT_ID_TAG, create_element_id_count_tag(map));
 
-//        ActionMain actionMain = ActionMain.getInstance();
-//        long id = actionMain.getDB().insert(actionMain.itemChain[itemClassID].TABLE_NAME, null, values);
-//        if (id != -1) actionMain.update_db_collection_count(1);
-//        return id;
         return raw_add(values);
     }
 
@@ -264,10 +264,10 @@ public class ActionGroup extends ActionMultiWord {
             int priority,
             String word,
             String stem,
-            String wordChain,
+            long[] wordIDs,
             int picture,
             Boolean is_picture_preset
     ) {
-        return add(parentID, priority, word, stem, wordChain, Integer.toString(picture), is_picture_preset);
+        return add(parentID, priority, word, stem, wordIDs, Integer.toString(picture), is_picture_preset);
     }
 }

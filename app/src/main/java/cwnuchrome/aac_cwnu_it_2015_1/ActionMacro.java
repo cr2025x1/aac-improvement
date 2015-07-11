@@ -9,6 +9,8 @@ import android.speech.tts.TextToSpeech;
 import android.view.View;
 import android.widget.Toast;
 
+import java.util.HashMap;
+
 /**
  * Created by Chrome on 5/5/15.
  *
@@ -30,7 +32,8 @@ public class ActionMacro extends ActionMultiWord {
                         SQL.COLUMN_NAME_STEM + SQL.TEXT_TYPE + SQL.COMMA_SEP +
                         SQL.COLUMN_NAME_WORDCHAIN + SQL.TEXT_TYPE + SQL.COMMA_SEP +
                         SQL.COLUMN_NAME_PICTURE + SQL.TEXT_TYPE + SQL.COMMA_SEP +
-                        SQL.COLUMN_NAME_PICTURE_IS_PRESET + SQL.INTEGER_TYPE +
+                        SQL.COLUMN_NAME_PICTURE_IS_PRESET + SQL.INTEGER_TYPE + SQL.COMMA_SEP +
+                        SQL.COLUMN_NAME_ELEMENT_ID_TAG + SQL.TEXT_TYPE +
                         " )";
     }
 
@@ -54,8 +57,11 @@ public class ActionMacro extends ActionMultiWord {
         record.put(SQL.COLUMN_NAME_WORD, word);
         record.put(SQL.COLUMN_NAME_STEM, word);
         record.put(SQL.COLUMN_NAME_WORDCHAIN, values.getAsString(SQL.COLUMN_NAME_WORDCHAIN));
-        record.put(SQL.COLUMN_NAME_PICTURE, R.drawable.btn_default);
+        record.put(SQL.COLUMN_NAME_PICTURE, values.getAsString(SQL.COLUMN_NAME_PICTURE));
         record.put(SQL.COLUMN_NAME_PICTURE_IS_PRESET, 1);
+
+        record.put(SQL.COLUMN_NAME_ELEMENT_ID_TAG, values.getAsString(SQL.COLUMN_NAME_ELEMENT_ID_TAG));
+
         result = super.raw_add(record);
         record.clear();
 
@@ -159,18 +165,22 @@ public class ActionMacro extends ActionMultiWord {
             int priority,
             String word,
             String stem,
-            String wordChain,
+            long[] wordIDs,
             String picture,
             Boolean is_picture_preset
     ) {
+        HashMap<Long, Long> map = create_element_id_count_map(wordIDs);
+
         ContentValues values = new ContentValues();
         values.put(ActionMacro.SQL.COLUMN_NAME_PARENT_ID, parentID);
         values.put(ActionMacro.SQL.COLUMN_NAME_PRIORITY, priority);
         values.put(ActionMacro.SQL.COLUMN_NAME_WORD, word);
         values.put(ActionMacro.SQL.COLUMN_NAME_STEM, stem);
-        values.put(ActionMacro.SQL.COLUMN_NAME_WORDCHAIN, wordChain);
+        values.put(ActionMacro.SQL.COLUMN_NAME_WORDCHAIN, create_wordchain(wordIDs));
         values.put(ActionMacro.SQL.COLUMN_NAME_PICTURE, picture);
         values.put(ActionItem.SQL.COLUMN_NAME_PICTURE_IS_PRESET, is_picture_preset ? 1 : 0);
+
+        values.put(SQL.COLUMN_NAME_ELEMENT_ID_TAG, create_element_id_count_tag(map));
 
 //        ActionMain actionMain = ActionMain.getInstance();
 //        long id = actionMain.getDB().insert(actionMain.itemChain[itemClassID].TABLE_NAME, null, values);
@@ -185,11 +195,11 @@ public class ActionMacro extends ActionMultiWord {
             int priority,
             String word,
             String stem,
-            String wordChain,
+            long[] wordIDs,
             int picture,
             Boolean is_picture_preset
     ) {
-        return add(parentID, priority, word, stem, wordChain, Integer.toString(picture), is_picture_preset);
+        return add(parentID, priority, word, stem, wordIDs, Integer.toString(picture), is_picture_preset);
     }
 
 }
