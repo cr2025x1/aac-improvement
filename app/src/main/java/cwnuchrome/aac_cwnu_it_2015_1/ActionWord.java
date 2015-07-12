@@ -261,4 +261,26 @@ public class ActionWord extends ActionItem {
         );
     }
 
+    public boolean is_hidden_word(String s) {
+        ActionMain actionMain = ActionMain.getInstance();
+        long existCheck = exists(s);
+        if (existCheck == -1) return false;
+        else {
+            Cursor c = actionMain.getDB().query(
+                    actionMain.itemChain[ActionMain.item.ID_Word].TABLE_NAME,
+                    new String[] {ActionWord.SQL._ID, ActionWord.SQL.COLUMN_NAME_PARENT_ID},
+                    ActionWord.SQL._ID + "=" + existCheck,
+                    null,
+                    null,
+                    null,
+                    null
+            );
+            c.moveToFirst();
+            int parentID = c.getInt(c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_PARENT_ID));
+            c.close();
+
+            if (parentID == 0) return true;
+        }
+        return false;
+    }
 }

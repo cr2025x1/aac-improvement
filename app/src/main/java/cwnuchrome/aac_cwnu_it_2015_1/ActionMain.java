@@ -4,11 +4,9 @@ import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.provider.BaseColumns;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.nio.ByteBuffer;
-import java.util.HashMap;
 import java.util.Random;
 
 /**
@@ -18,7 +16,7 @@ import java.util.Random;
  * 많은 클래스가 이 클래스에 대한 의존성을 가지므로 조심히 다룰 것.
  *
  */
-public class ActionMain {
+public final class ActionMain {
     private static ActionMain ourInstance = new ActionMain();
     public static ActionMain getInstance() {
         return ourInstance;
@@ -163,5 +161,15 @@ public class ActionMain {
                 + TABLE_NAME
                 + " SET "
                 + COLUMN_NAME_COLLECTION_COUNT + "=" + 0 + ";";
+    }
+
+    // 참조: http://stackoverflow.com/questions/4065518/java-how-to-get-the-caller-function-name
+    public static void log(@Nullable String prefix, @NonNull String text) {
+        StackTraceElement[] stacktrace = Thread.currentThread().getStackTrace();
+        StackTraceElement e = stacktrace[3];
+        String className = e.getClassName();
+
+        if (prefix == null) System.out.println(className.substring(className.lastIndexOf('.') + 1) + "." + e.getMethodName() + ": " + text);
+        else System.out.println(prefix + className.substring(className.lastIndexOf('.') + 1) + "." + e.getMethodName() + ": " + text);
     }
 }

@@ -1,10 +1,7 @@
 package cwnuchrome.aac_cwnu_it_2015_1;
 
-import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
-import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.AsyncTask;
@@ -108,61 +105,55 @@ public class AddWordMacroActivity extends AppCompatActivity {
     }
 
     protected void add(String itemValue) {
+        ActionMain.log("*** ", "started ***");
         long currentGroupID = getIntent().getLongExtra("currentGroupID", 0);
 
         itemValue = itemValue.trim();
+        ActionMain.log(null, "adding word \"" + itemValue + "\"");
         String[] textTokens = itemValue.split("\\s");
         boolean isMacro = textTokens.length > 1;
+        ActionMain.log(null, "identified as a macro needed\"");
 
         long wordIDs[] = new long[textTokens.length];
+        int wordPos = 0;
 
-        // TODO: Consider handling adding operation fails.
         boolean madeChange = false;
-        SQLiteDatabase db = actionMain.getDB();
-        for (int i = 0; i < textTokens.length; i++) {
-            System.out.println("Adding " + textTokens[i]);
-
-            long existCheck = actionMain.itemChain[ActionMain.item.ID_Word].exists(textTokens[i]);
-            if (existCheck == -1) madeChange = true;
-            else {
-                Cursor c = db.query(
-                        actionMain.itemChain[ActionMain.item.ID_Word].TABLE_NAME,
-                        new String[] {ActionWord.SQL._ID, ActionWord.SQL.COLUMN_NAME_PARENT_ID},
-                        ActionWord.SQL._ID + "=" + existCheck,
-                        null,
-                        null,
-                        null,
-                        null
+        ActionWord actionWord = (ActionWord)actionMain.itemChain[ActionMain.item.ID_Word];
+        for (String s : textTokens) {
+            long id = actionWord.exists(s);
+            if (actionWord.is_hidden_word(s) || id == -1) {
+                madeChange = true;
+                ActionMain.log(null, "adding word \"" + s + "\"");
+                id = actionWord.add(
+                        currentGroupID,
+                        0,
+                        s,
+                        s,
+                        R.drawable.btn_default,
+                        true
                 );
-                c.moveToFirst();
-                int parentID = c.getInt(c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_PARENT_ID));
-                c.close();
-
-                if (parentID == 0) madeChange = true;
+            }
+            else {
+                madeChange = false;
+                ActionMain.log(null, "word \"" + s + "\" already exists");
             }
 
-            ContentValues record = new ContentValues();
-            record.put(ActionWord.SQL.COLUMN_NAME_PARENT_ID, currentGroupID);
-            record.put(ActionWord.SQL.COLUMN_NAME_WORD, textTokens[i]);
-
-            wordIDs[i] = actionMain.itemChain[ActionMain.item.ID_Word].raw_add(record);
-            record.clear();
+            wordIDs[wordPos++] = id;
         }
 
-        if (isMacro && actionMain.itemChain[ActionMain.item.ID_Macro].exists(itemValue) == -1) {
-            String wordChainString = ActionMacro.create_wordchain(wordIDs);
-
-            ContentValues record = new ContentValues();
-            record.put(ActionMacro.SQL.COLUMN_NAME_PARENT_ID, currentGroupID);
-            record.put(ActionMacro.SQL.COLUMN_NAME_PRIORITY, ActionMain.getInstance().rand.nextInt(100)); // 이것도 임시
-            record.put(ActionMacro.SQL.COLUMN_NAME_WORD, itemValue);
-            record.put(ActionMacro.SQL.COLUMN_NAME_STEM, itemValue);
-            record.put(ActionMacro.SQL.COLUMN_NAME_WORDCHAIN, wordChainString);
-            actionMain.itemChain[ActionMain.item.ID_Macro].raw_add(record);
-
-            record.clear();
-
+        ActionMacro actionMacro = (ActionMacro)actionMain.itemChain[ActionMain.item.ID_Macro];
+        if (isMacro && actionMacro.exists(itemValue) == -1) {
             madeChange = true;
+
+            actionMacro.add(
+                    currentGroupID,
+                    0,
+                    itemValue,
+                    itemValue,
+                    wordIDs,
+                    R.drawable.btn_default,
+                    true
+            );
         }
 
         if (madeChange) {
@@ -177,7 +168,7 @@ public class AddWordMacroActivity extends AppCompatActivity {
             Toast.makeText(this, "Already Exists", Toast.LENGTH_SHORT)
                     .show();
         }
-
+        ActionMain.log("*** ", "ended ***");
     }
 
     @Override

@@ -93,7 +93,7 @@ public abstract class ActionItem implements Serializable {
         return -1;
     }
 
-    protected long existsWithID(int id) {
+    protected long exists(long id) {
         // 워드 쿼리
         Cursor c = ActionMain.getInstance().getDB().query(
                 TABLE_NAME, // The table to query
@@ -243,7 +243,7 @@ public abstract class ActionItem implements Serializable {
     }
 
     public boolean removeWithID(Context context, int id) {
-        if (existsWithID(id) == -1) return false;
+        if (exists(id) == -1) return false;
 
         removeExclusiveImage(context, SQL._ID + "=" + id);
 
