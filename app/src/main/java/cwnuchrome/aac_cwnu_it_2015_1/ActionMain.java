@@ -1,13 +1,16 @@
 package cwnuchrome.aac_cwnu_it_2015_1;
 
 import android.content.Context;
+import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.provider.BaseColumns;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
+import java.util.HashMap;
 import java.util.Random;
+import java.util.Vector;
 
 /**
  * Created by Chrome on 5/5/15.
@@ -23,6 +26,7 @@ public final class ActionMain {
     }
     private ActionMain() {
         rand = new Random();
+        referrer = new InterActivityReferrer<>();
 
         itemChain = new ActionItem[item.ITEM_COUNT];
         itemChain[item.ID_Group] = new ActionGroup();
@@ -35,6 +39,7 @@ public final class ActionMain {
     private ActionDBHelper actionDBHelper;
     private SQLiteDatabase db;
     AACGroupContainer containerRef;
+    private InterActivityReferrer<AACGroupContainer> referrer;
 
     public interface item {
         int ITEM_COUNT = 3;
@@ -69,6 +74,23 @@ public final class ActionMain {
     public static void update_db_collection_count(SQLiteDatabase db, long diff) {
         db.execSQL("UPDATE " + SQL.TABLE_NAME +
                 " SET " + SQL.COLUMN_NAME_COLLECTION_COUNT + "=" + SQL.COLUMN_NAME_COLLECTION_COUNT + "+(" + diff + ")");
+    }
+
+    public long get_db_collection_count() {
+        Cursor c = db.query(
+                SQL.TABLE_NAME,
+                new String[] {SQL.COLUMN_NAME_COLLECTION_COUNT},
+                null,
+                null,
+                null,
+                null,
+                null
+        );
+        c.moveToFirst();
+
+        Long count = c.getLong(c.getColumnIndexOrThrow(SQL.COLUMN_NAME_COLLECTION_COUNT));
+        c.close();
+        return count;
     }
 
     private class ActionDBHelper extends SQLiteOpenHelper {
@@ -172,4 +194,63 @@ public final class ActionMain {
         if (prefix == null) System.out.println(className.substring(className.lastIndexOf('.') + 1) + "." + e.getMethodName() + ": " + text);
         else System.out.println(prefix + className.substring(className.lastIndexOf('.') + 1) + "." + e.getMethodName() + ": " + text);
     }
+
+    public InterActivityReferrer<AACGroupContainer> getReferrer() {
+        return referrer;
+    }
+
+    // 주어진 문장을 받아 해쉬맵으로 만들어 반환함.
+    // TODO: 형태소 분석기 도입시 반드시 업데이트되어야 할 부분.
+    @NonNull public static HashMap<String, Long> reduce_to_map(@NonNull String text) {
+        HashMap<String, Long> map = new HashMap<>();
+
+        String wordSequence = text.trim();
+        if (wordSequence.length() == 0) return map;
+        String[] textTokens = wordSequence.trim().split("\\s");
+        if (textTokens.length == 0) return map;
+
+        for (String s : textTokens) {
+            if (map.containsKey(s)) map.put(s, map.get(s) + 1l);
+            else map.put(s, 1l);
+        }
+
+        return map;
+    }
+
+    @NonNull public Evaluation allocEvaluation() { return new Evaluation(); }
+    class Evaluation {
+        long entire_collection_count;
+
+        public Evaluation() {
+            entire_collection_count = get_db_collection_count();
+        }
+
+        @NonNull private Vector<HashMap<Long, Double>> alloc_eval_map_vector() {
+            Vector<HashMap<Long, Double>> eval_map_vector = new Vector<>();
+            for (ActionItem item : itemChain) eval_map_vector.add(item.alloc_evaluation_map(db));
+            return eval_map_vector;
+        }
+
+        @NonNull public Vector<HashMap<Long, Double>> evaluate_by_query_map(@NonNull HashMap<String, Long> queryMap) {
+            Vector<HashMap<Long, Double>> eval_map_vector = alloc_eval_map_vector();
+            HashMap<Long, QueryWordInfo> id_ref_map =
+                    ((ActionWord)itemChain[item.ID_Word]).convert_to_id_ref_map(db, queryMap);
+            Vector<HashMap<Long, Double>> rank_vector = new Vector<>();
+            int i = 0;
+            for (ActionItem item : itemChain) {
+                rank_vector.add(item.evaluate_by_query_map(
+                        db,
+                        id_ref_map,
+                        eval_map_vector.get(i),
+                        entire_collection_count
+                ));
+                i++;
+            }
+
+            return rank_vector;
+        }
+
+
+    }
+
 }

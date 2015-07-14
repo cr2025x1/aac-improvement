@@ -1,11 +1,7 @@
 package cwnuchrome.aac_cwnu_it_2015_1;
 
-import android.content.ContentValues;
 import android.content.Context;
-import android.content.Intent;
-import android.database.sqlite.SQLiteDatabase;
-import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
+import android.database.Cursor;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
@@ -19,21 +15,13 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.ListView;
-import android.widget.Toast;
 
-import org.w3c.dom.Document;
-import org.w3c.dom.NodeList;
-
-import java.io.BufferedInputStream;
-import java.io.InputStream;
-import java.net.URL;
-import java.net.URLConnection;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
-
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Vector;
 
 public class SearchActivity extends AppCompatActivity {
     ListView listView;
@@ -43,19 +31,23 @@ public class SearchActivity extends AppCompatActivity {
     ArrayList<String> suggestionList;
     ArrayAdapter<String> adapter;
 
+    ArrayList<ActionItem.onClickClass> suggestionOCCList;
+
     protected ActionMain actionMain;
 
     public SearchActivity() {
         super();
         context = this;
         updater = new updateList();
+
         suggestionList = new ArrayList<>();
+        suggestionOCCList = new ArrayList<>(ActionMain.item.ITEM_COUNT);
     }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_search);
+        setContentView(R.layout.activity_add_word_macro);
 
         actionMain = ActionMain.getInstance();
 
@@ -78,11 +70,9 @@ public class SearchActivity extends AppCompatActivity {
             public void onItemClick(AdapterView<?> parent, View view,
                                     int position, long id) {
 
-                String itemValue = (String) listView.getItemAtPosition(position);
+//                String itemValue = (String) listView.getItemAtPosition(position);
+                suggestionOCCList.get(position).onClick(view);
 
-                textInput.setText(itemValue);
-
-                add(itemValue);
             }
         });
         /* End of ListView initialization */
@@ -106,70 +96,6 @@ public class SearchActivity extends AppCompatActivity {
         updater.execute(); // Initializing Updater thread
     }
 
-    protected void add(String itemValue) {
-        long currentGroupID = getIntent().getLongExtra("currentGroupID", 0);
-
-        itemValue = itemValue.trim();
-        String[] textTokens = itemValue.split("\\s");
-        boolean isMacro = textTokens.length > 1;
-
-        long wordIDs[] = new long[textTokens.length];
-
-        // TODO: Consider handling adding operation fails.
-        boolean madeChange = false;
-        SQLiteDatabase db = actionMain.getDB();
-        for (int i = 0; i < textTokens.length; i++) {
-            System.out.println("Adding " + textTokens[i]);
-
-            if (actionMain.itemChain[ActionMain.item.ID_Word].exists(textTokens[i]) == -1) madeChange = true;
-
-            ContentValues record = new ContentValues();
-            record.put(ActionWord.SQL.COLUMN_NAME_PARENT_ID, currentGroupID);
-            record.put(ActionWord.SQL.COLUMN_NAME_WORD, textTokens[i]);
-
-            wordIDs[i] = actionMain.itemChain[ActionMain.item.ID_Word].raw_add(record);
-            record.clear();
-        }
-
-        if (isMacro && actionMain.itemChain[ActionMain.item.ID_Macro].exists(itemValue) == -1) {
-            StringBuilder wordchain = new StringBuilder("|");
-            for (int i = 0; i < textTokens.length; i++) {
-                wordchain.append(":");
-                wordchain.append(wordIDs[i]);
-                wordchain.append(":");
-            }
-            wordchain.append("|");
-            String wordChainString = wordchain.toString();
-
-            ContentValues record = new ContentValues();
-//        record.put(SQL.COLUMN_NAME_ENTRY_ID, 999); // 임시! 아마도 삭제될 것 같음.
-            record.put(ActionMacro.SQL.COLUMN_NAME_PARENT_ID, currentGroupID);
-            record.put(ActionMacro.SQL.COLUMN_NAME_PRIORITY, ActionMain.getInstance().rand.nextInt(100)); // 이것도 임시
-            record.put(ActionMacro.SQL.COLUMN_NAME_WORD, itemValue);
-            record.put(ActionMacro.SQL.COLUMN_NAME_STEM, itemValue);
-            record.put(ActionMacro.SQL.COLUMN_NAME_WORDCHAIN, wordChainString);
-            actionMain.itemChain[ActionMain.item.ID_Macro].raw_add(record);
-
-            record.clear();
-
-            madeChange = true;
-        }
-
-        if (madeChange) {
-            Intent i = new Intent();
-            Bundle extra = new Bundle();
-            extra.putString("ItemName", itemValue);
-            i.putExtras(extra);
-
-            setResult(RESULT_OK, i);
-            finish();
-        } else {
-            Toast.makeText(this, "Already Exists", Toast.LENGTH_SHORT)
-                    .show();
-        }
-
-    }
-
     @Override
     protected void onDestroy() {
         updater.onComplete(); // Setting Updater thread to end
@@ -177,10 +103,6 @@ public class SearchActivity extends AppCompatActivity {
     }
 
     class updateList extends AsyncTask<String, Integer, Long> {
-        // TODO: Change this into the multi-threaded version.
-        Document doc;
-        NodeList descNodes;
-
         private final Object mPauseLock = new Object();
         private boolean mPaused;
         private boolean mFinished;
@@ -215,30 +137,24 @@ public class SearchActivity extends AppCompatActivity {
 
             while (!mFinished) {
                 try {
-                    ConnectivityManager connMgr = (ConnectivityManager)
-                            getSystemService(Context.CONNECTIVITY_SERVICE);
-                    NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
-                    if (networkInfo != null && networkInfo.isConnected()) {
-                        System.out.println("Fetching data...");
-                        if (this.fetchSuggestion()) {
+                    suggestionList.clear();
+                    if (fetchSuggestion()) {
+                        int catID = 0;
 
-                            int suggestion_count = descNodes.getLength();
-                            suggestionList.clear();
-                            if (suggestion_count > 0) {
-                                for (int i = 0; i < suggestion_count; i++) {
-                                    suggestionList.add(descNodes.item(i).getAttributes().getNamedItem("data").getNodeValue());
-                                }
+                        Collections.sort(suggestionOCCList, new Comparator<ActionItem.onClickClass>() {
+                            @Override
+                            public int compare(ActionItem.onClickClass lhs, ActionItem.onClickClass rhs) {
+                                return lhs.rank > rhs.rank ? -1 : 1;
                             }
-                        }
-                        else {
-                            suggestionList.clear();
-                        }
+                        });
 
-                        runOnUiThread(new updateItem());
-                    } else {
-                        System.out.println("No network connection available.");
+                        for (ActionItem.onClickClass occ : suggestionOCCList) {
+
+                            suggestionList.add(occ.phonetic);
+                            catID++;
+                        }
                     }
-
+                    runOnUiThread(new updateItem());
 
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -295,51 +211,21 @@ public class SearchActivity extends AppCompatActivity {
             }
         }
 
-        protected boolean fetchSuggestion() throws Exception
+        boolean fetchSuggestion()
         {
-            String queryWord = textInput.getText().toString().trim().replace(" ", "%20");
-            if (queryWord.length() == 0) return false;
-            URL url = new URL("http://google.com/complete/search?output=toolbar&q=" + queryWord);
-            URLConnection connection = url.openConnection();
+            HashMap<String, Long> queryMap = ActionMain.reduce_to_map(textInput.getText().toString());
+            if (queryMap.size() == 0) return false;
 
-            // http://stackoverflow.com/questions/15596312/xml-saxparserexception-in-android : 참고한 사이트
-            try {
-                doc = parseXML(new BufferedInputStream(connection.getInputStream()));
-            } catch (UnknownHostException e) {
-                System.out.println("Unable to fetch data: Cannot resolve hostname");
-                return false;
-            }
-            descNodes = doc.getElementsByTagName("suggestion");
+            ActionMain actionMain = ActionMain.getInstance();
+            Vector<HashMap<Long, Double>> rank_vector = actionMain.allocEvaluation().evaluate_by_query_map(queryMap);
 
-            for(int i = 0; i < descNodes.getLength(); i++) {
-                System.out.println(descNodes.item(i).getAttributes().getNamedItem("data").getNodeValue());
+            suggestionOCCList.clear();
+            for (int i = 0 ; i < ActionMain.item.ITEM_COUNT; i++) {
+                update_occ_list(i, rank_vector.get(i));
             }
 
             return true;
         }
-
-        protected Document parseXML(InputStream stream)
-                throws Exception
-        {
-            DocumentBuilderFactory objDocumentBuilderFactory;
-            DocumentBuilder objDocumentBuilder;
-            Document doc;
-            try
-            {
-                objDocumentBuilderFactory = DocumentBuilderFactory.newInstance();
-                objDocumentBuilder = objDocumentBuilderFactory.newDocumentBuilder();
-
-                doc = objDocumentBuilder.parse(stream);
-            }
-            catch(Exception ex)
-            {
-                System.out.println("Error occurred while parsing fetched XML data.");
-                throw ex;
-            }
-
-            return doc;
-        }
-
     }
 
     @Override
@@ -358,7 +244,7 @@ public class SearchActivity extends AppCompatActivity {
 
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_add_word_macro) {
-            add(textInput.getText().toString());
+//            add(textInput.getText().toString());
             return true;
         }
         else if (id == R.id.action_cancel_add_word_macro) {
@@ -375,14 +261,8 @@ public class SearchActivity extends AppCompatActivity {
         public boolean onKey(View v, int keyCode, KeyEvent keyEvent) {
             if (keyEvent.getAction() == KeyEvent.ACTION_UP) {
                 if (keyCode == KeyEvent.KEYCODE_ENTER) {
-                    add(textInput.getText().toString());
                     return true;
                 }
-                else if (keyCode == KeyEvent.KEYCODE_BACK) {
-                    setResult(RESULT_CANCELED);
-                    finish();
-                }
-
             }
 
             return false;
@@ -394,4 +274,37 @@ public class SearchActivity extends AppCompatActivity {
         setResult(RESULT_CANCELED);
         finish();
     }
+
+    protected void update_occ_list(int categoryID, HashMap<Long, Double> map) {
+        ArrayList<Map.Entry<Long, Double>> entries =
+                new ArrayList<>(map.entrySet());
+
+        for (Map.Entry<Long, Double> entry : entries) if (entry.getValue() > AACGroupContainerPreferences.RANKING_FUNCTION_CUTOFF_THRESHOLD) {
+            ActionItem actionItem = actionMain.itemChain[categoryID];
+            ActionItem.onClickClass occ = actionItem.allocOCC(
+                    context,
+                    actionMain.getReferrer().get(getIntent().getIntExtra("AACGC_ID", -1))
+            );
+            occ.rank = entry.getValue();
+            occ.itemID = entry.getKey();
+
+            Cursor c = actionMain.getDB().query(
+                    actionItem.TABLE_NAME,
+                    new String[] {ActionItem.SQL.COLUMN_NAME_WORD},
+                    ActionItem.SQL._ID + "=" + entry.getKey(),
+                    null,
+                    null,
+                    null,
+                    null
+            );
+            c.moveToFirst();
+            occ.phonetic = c.getString(c.getColumnIndexOrThrow(ActionItem.SQL.COLUMN_NAME_WORD));
+            occ.message = occ.phonetic + " " + occ.rank;
+
+            c.close();
+            suggestionOCCList.add(occ);
+        }
+
+    }
+
 }

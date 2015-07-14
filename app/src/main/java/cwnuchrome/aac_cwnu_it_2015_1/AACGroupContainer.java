@@ -22,6 +22,8 @@ import java.util.Vector;
 /**
  * Created by Chrome on 5/9/15.
  * AAC 레이아웃 객체
+ *
+ * 경고: 이 클래스는 직접 선언하면 안 되고, ActionMain의 메소드를 통해 할당받는 것을 추천함. 액티비티간 통신을 위해서임.
  */
 public class AACGroupContainer {
     protected LinearLayout mainLayout;
@@ -46,6 +48,8 @@ public class AACGroupContainer {
 
     final GroupElement rootGroupElement = new GroupElement();
 
+    protected int container_id;
+
     public AACGroupContainer(LinearLayout mainLayout) {
         this.context = mainLayout.getContext();
         this.mainLayout = mainLayout;
@@ -59,7 +63,7 @@ public class AACGroupContainer {
 
         removalListBundle = new RemovalListBundle();
 
-        userImageDirectoryPathPrefix = context.getFilesDir() + "/pictures/";
+        userImageDirectoryPathPrefix = context.getFilesDir() + "/" + AACGroupContainerPreferences.USER_IMAGE_DIRECTORY_NAME + "/";
 
         // 그룹 제목 TextView 설정
         titleView = (TextView)(mainLayout.findViewById(R.id.groupTitle));
@@ -149,7 +153,7 @@ public class AACGroupContainer {
                 rName_c.getString(rName_c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_WORDCHAIN)),
                 new ActionMultiWord.onParseCommand() {
                     @Override
-                    public void onParse(int itemID) {
+                    public void onParse(long itemID) {
                         rootGroupElement.ids.add(itemID);
 
                         Cursor c = actionMain.getDB().query(
@@ -182,7 +186,7 @@ public class AACGroupContainer {
             values.put(ActionWord.SQL.COLUMN_NAME_PICTURE_IS_PRESET, c.getInt(c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_PICTURE_IS_PRESET)));
 
             addMenuWithCheckBox(
-                    new ActionWord.Button(context, new ActionWord.Button.onClickClass(context), this),
+                    new ActionWord.Button(context, new ActionWord.onClickClass(context, this), this),
                     values);
 
             values.clear();
@@ -237,7 +241,7 @@ public class AACGroupContainer {
             values.put(ActionMacro.SQL.COLUMN_NAME_PICTURE_IS_PRESET, c.getInt(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_PICTURE_IS_PRESET)));
 
             addMenuWithCheckBox(
-                    new ActionMacro.Button(context, new ActionMacro.Button.onClickClass(context), this),
+                    new ActionMacro.Button(context, new ActionMacro.onClickClass(context, this), this),
                     values);
 
             values.clear();
@@ -296,7 +300,7 @@ public class AACGroupContainer {
             values.put(ActionGroup.SQL.COLUMN_NAME_PICTURE_IS_PRESET, c.getInt(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_PICTURE_IS_PRESET)));
 
             addMenuWithCheckBox(
-                    new ActionGroup.Button(context, new ActionGroup.Button.onClickClass(context), this),
+                    new ActionGroup.Button(context, new ActionGroup.onClickClass(context, this), this),
                     values);
 
             values.clear();
@@ -307,7 +311,7 @@ public class AACGroupContainer {
         if (id != 1) {
             c = db.query(
                     actionMain.itemChain[ActionMain.item.ID_Group].TABLE_NAME, // The table to query
-                    projection, // The columns to return
+                    projectionGroup, // The columns to return
                     ActionGroup.SQL._ID + " = " + parentGroupID, // The columns for the WHERE clause
                     null, // The values for the WHERE clause
                     null, // don't group the rows
@@ -316,7 +320,7 @@ public class AACGroupContainer {
             );
             c.moveToFirst();
 
-            ActionGroup.Button parentGroupButton = new ActionGroup.Button(context, new ActionGroup.Button.onClickClass(context), this);
+            ActionGroup.Button parentGroupButton = new ActionGroup.Button(context, new ActionGroup.onClickClass(context, this), this);
 
             System.out.print("HashMap regenerated --> ");
             ActionMacro.print_hashmap(ActionMultiWord.parse_element_id_count_tag(c.getString(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_ELEMENT_ID_TAG))));
@@ -347,7 +351,7 @@ public class AACGroupContainer {
 
     void addMenuWithCheckBox(ActionItem.Button btn, ContentValues values) {
         btn.init(values);
-        btn.setContainer(this);
+//        btn.setContainer(this);
 
         LinearLayout item_layout = (LinearLayout) View.inflate(context, R.layout.aac_item_layout, null);
         CheckBox checkBox = (CheckBox)item_layout.findViewById(R.id.aac_item_checkbox);
@@ -371,7 +375,7 @@ public class AACGroupContainer {
 
     void addMenuWithoutCheckBox(ActionItem.Button btn, ContentValues values) {
         btn.init(values);
-        btn.setContainer(this);
+//        btn.setContainer(this);
 
         LinearLayout item_layout = (LinearLayout) View.inflate(context, R.layout.aac_item_layout, null);
         CheckBox checkBox = (CheckBox)item_layout.findViewById(R.id.aac_item_checkbox);
@@ -571,7 +575,7 @@ public class AACGroupContainer {
     protected class RemovalListBundle {
         protected String[] projection;
 
-        protected Vector<ArrayList<Integer>> itemVector;
+        protected Vector<ArrayList<Long>> itemVector;
         protected Vector<ArrayList<ContentValues>> missingDependencyPrintVector;
         protected Vector<ArrayList<Integer>> missingDependencyVector;
 
@@ -579,7 +583,7 @@ public class AACGroupContainer {
             projection = new String[] { ActionItem.SQL._ID };
 
             itemVector = new Vector<>(ActionMain.item.ITEM_COUNT);
-            for (int i = 0; i < ActionMain.item.ITEM_COUNT; i++) itemVector.add(new ArrayList<Integer>());
+            for (int i = 0; i < ActionMain.item.ITEM_COUNT; i++) itemVector.add(new ArrayList<Long>());
 
             missingDependencyPrintVector = new Vector<>(ActionMain.item.ITEM_COUNT);
             for (int i = 0; i < ActionMain.item.ITEM_COUNT; i++) missingDependencyPrintVector.add(new ArrayList<ContentValues>());
@@ -588,11 +592,11 @@ public class AACGroupContainer {
             for (int i = 0; i < ActionMain.item.ITEM_COUNT; i++) missingDependencyVector.add(new ArrayList<Integer>());
         }
 
-        public void add(int category_id, int id) {
+        public void add(int category_id, long id) {
             itemVector.get(category_id).add(id);
         }
 
-        public void addByOCC(ActionItem.Button.onClickClass occ) {
+        public void addByOCC(ActionItem.onClickClass occ) {
             add(occ.itemCategoryID, occ.itemID);
 
         }
@@ -645,15 +649,15 @@ public class AACGroupContainer {
 
             // 삭제 리스트 상의 모든 아이템 제거 (선택되지 않은 삭제 대상들도 모두 포함됨)
             cat_id = 0;
-            for (ArrayList<Integer> i : itemVector) {
-                for (int id : i) actionMain.itemChain[cat_id].removeWithID(context, id);
+            for (ArrayList<Long> i : itemVector) {
+                for (long id : i) actionMain.itemChain[cat_id].removeWithID(context, id);
                 i.clear();
                 cat_id++;
             }
         }
 
         public void clear() {
-            for (ArrayList<Integer> i : itemVector) i.clear();
+            for (ArrayList<Long> i : itemVector) i.clear();
         }
 
     }
@@ -668,31 +672,31 @@ public class AACGroupContainer {
             values.put(ActionItem.SQL.COLUMN_NAME_PICTURE, ExternalImageProcessor.copyAfterHashing(context, filepath));
         }
 
-        Vector<ArrayList<Integer>> id_Vector = new Vector<>(ActionMain.item.ITEM_COUNT);
+        Vector<ArrayList<Long>> id_Vector = new Vector<>(ActionMain.item.ITEM_COUNT);
         ActionMain actionMain = ActionMain.getInstance();
 
         // 각 분류별 리스트를 가지는 백터 객체 생성
-        for (int i = 0; i < ActionMain.item.ITEM_COUNT; i++) id_Vector.add(new ArrayList<Integer>());
+        for (int i = 0; i < ActionMain.item.ITEM_COUNT; i++) id_Vector.add(new ArrayList<Long>());
 
         // 선택된 리스트의 각 객체별로 OCC 객체에서 아이템의 분류 ID와 각 레코드 ID를 추출해 넣음.
         for (View v : selectedList) {
-            ActionItem.Button.onClickClass occ = ((ActionItem.Button)v.findViewById(R.id.aac_item_button_id)).onClickObj;
+            ActionItem.onClickClass occ = ((ActionItem.Button)v.findViewById(R.id.aac_item_button_id)).onClickObj;
             System.out.println("OCC CatID = " + occ.itemCategoryID);
             id_Vector.get(occ.itemCategoryID).add(occ.itemID);
         }
 
         // 각 분류 단위로 지정된 이미지를 쓰도록 DB 업데이트
         int i = 0;
-        for (ArrayList<Integer> list : id_Vector) {
+        for (ArrayList<Long> list : id_Vector) {
             if (list.size() == 0) {
                 i++;
                 continue;
             }
 
-            int[] id_ary = new int[list.size()];
+            long[] id_ary = new long[list.size()];
             int j = 0;
 
-            for (int k : list) id_ary[j++] = k;
+            for (long k : list) id_ary[j++] = k;
 
             actionMain.itemChain[i++].updateWithIDs(context, values, id_ary);
         }
@@ -701,7 +705,7 @@ public class AACGroupContainer {
     }
 
     protected class GroupElement {
-        ArrayList<Integer> ids;
+        ArrayList<Long> ids;
         ArrayList<String> words;
         public GroupElement() {
             ids = new ArrayList<>();
@@ -709,4 +713,11 @@ public class AACGroupContainer {
         }
     }
 
+    public int getContainerID() {
+        return container_id;
+    }
+
+    public void setContainerID(int containerID) {
+        this.container_id = containerID;
+    }
 }

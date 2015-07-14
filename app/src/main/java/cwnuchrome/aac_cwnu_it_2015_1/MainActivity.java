@@ -41,6 +41,7 @@ public class MainActivity extends AppCompatActivity {
 
         LinearLayout baseLayout = (LinearLayout)findViewById(R.id.groupLayout);
         container = new AACGroupContainer(baseLayout);
+        container.setContainerID(actionMain.getReferrer().attach(container));
 
         status = STATUS_MAIN;
 
@@ -171,8 +172,9 @@ public class MainActivity extends AppCompatActivity {
         }
 
         if (id == R.id.action_search) {
-            Intent i = new Intent(this, AddWordMacroActivity.class);
+            Intent i = new Intent(this, SearchActivity.class);
             i.putExtra("currentGroupID", container.getCurrentGroupID());
+            i.putExtra("AACGC_ID", container.getContainerID());
             startActivityForResult(i, ACTIVITY_SEARCH);
 
             return true;

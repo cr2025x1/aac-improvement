@@ -31,6 +31,7 @@
     <string name="menu_remove_item_dependency_warning_cancel">Cancel</string>
 
     <!-- 검색 관련 -->
+    <string name="title_activity_search">Search Items</string>
     <string name="menu_search">Search</string>
 
     <!-- 그림 선택 관련 -->

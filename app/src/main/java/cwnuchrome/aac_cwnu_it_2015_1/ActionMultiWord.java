@@ -20,8 +20,8 @@ import java.util.Map;
  */
 public abstract class ActionMultiWord extends ActionItem {
 
-    protected ActionMultiWord(int itemID) {
-        super(itemID);
+    protected ActionMultiWord(int itemID, String className) {
+        super(itemID, className);
     }
 
     interface SQL extends ActionItem.SQL {
@@ -36,7 +36,7 @@ public abstract class ActionMultiWord extends ActionItem {
         if (id != -1) {
             parseWordChain(values.getAsString(SQL.COLUMN_NAME_WORDCHAIN), new onParseCommand() {
                 @Override
-                public void onParse(int itemID) {
+                public void onParse(long itemID) {
                     actionWord.update_reference_count(itemID, 1);
                 }
             });
@@ -48,8 +48,8 @@ public abstract class ActionMultiWord extends ActionItem {
     // 의존성 검사... 이것 때문에 단순하게 생각했던 아이템 제거에서 지옥문이 열렸다.
     protected boolean verifyAndCorrectDependencyRemoval(Context context, AACGroupContainer.RemovalListBundle listBundle) {
         ActionMain actionMain = ActionMain.getInstance();
-        ArrayList<Integer> wordList = listBundle.itemVector.get(ActionMain.item.ID_Word);
-        ArrayList<Integer> itemList = listBundle.itemVector.get(itemClassID);
+        ArrayList<Long> wordList = listBundle.itemVector.get(ActionMain.item.ID_Word);
+        ArrayList<Long> itemList = listBundle.itemVector.get(itemClassID);
         ArrayList<ContentValues> itemMissingPrintList = listBundle.missingDependencyPrintVector.get(itemClassID);
         ArrayList<Integer> itemMissingList = listBundle.missingDependencyVector.get(itemClassID);
 
@@ -57,8 +57,8 @@ public abstract class ActionMultiWord extends ActionItem {
 
         /* 지울 단어들에 대해 의존성을 가지는 멀티워드 아이템들을 찾기 위한 쿼리문의 작성 */
 
-        Iterator<Integer> i = wordList.iterator();
-        int id = i.next();
+        Iterator<Long> i = wordList.iterator();
+        long id = i.next();
 
         final String OR = " OR ";
         final String LIKE_AND_HEAD = " LIKE '%:";
@@ -130,7 +130,7 @@ public abstract class ActionMultiWord extends ActionItem {
             boolean endOfCursor = false;
 
             // 선택된 아이템을 순차 검색하며 확인
-            for (int j : itemList) {
+            for (long j : itemList) {
                 // 현재 아이템의 ID값이 커서의 현재 아이템의 ID값보다 크다면?
                 while (c_id < j) {
                     // 커서에 있는 아이템이 itemList에 없다: 의존성 문제가 있는 아이템이므로 removeDepArray에 추가
@@ -318,6 +318,48 @@ public abstract class ActionMultiWord extends ActionItem {
     }
 
     public interface onParseCommand {
-        void onParse(int itemID);
+        void onParse(long itemID);
     }
+
+    @NonNull
+    public HashMap<Long, Double> evaluate_by_query_map(
+            @NonNull SQLiteDatabase db,
+            @NonNull HashMap<Long, QueryWordInfo> queryMap,
+            @NonNull HashMap<Long, Double> eval_map,
+            long entire_collection_count
+    ) {
+
+        for (Map.Entry<Long, QueryWordInfo> entry : queryMap.entrySet()) {
+            QueryWordInfo info = entry.getValue();
+            long query_word_id = entry.getKey();
+
+            Cursor c = db.query(
+                    TABLE_NAME,
+                    new String[] {SQL._ID, SQL.COLUMN_NAME_ELEMENT_ID_TAG},
+                    SQL.COLUMN_NAME_WORDCHAIN + " LIKE '%:" + query_word_id + ":%'",
+                    null,
+                    null,
+                    null,
+                    null
+            );
+            c.moveToFirst();
+
+            int multiword_id_col = c.getColumnIndexOrThrow(SQL._ID);
+            int id_tag_col = c.getColumnIndexOrThrow(SQL.COLUMN_NAME_ELEMENT_ID_TAG);
+            for (int i = 0; i < c.getCount(); i++) {
+                HashMap<Long, Long> map = parse_element_id_count_tag(c.getString(id_tag_col));
+                double k = AACGroupContainerPreferences.RANKING_FUNCTION_CONSTANT_K;
+                long ref_count = map.get(query_word_id);
+
+                double eval = info.count * (k + 1) * ref_count / (ref_count + k) * Math.log(entire_collection_count + 1 / info.ref_count);
+                long id = c.getLong(multiword_id_col);
+                eval_map.put(id, eval_map.get(id) + eval);
+                c.moveToNext();
+            }
+            c.close();
+        }
+
+        return eval_map;
+    }
+
 }

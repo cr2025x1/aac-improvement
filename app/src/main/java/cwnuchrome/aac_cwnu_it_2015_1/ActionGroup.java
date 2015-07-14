@@ -20,7 +20,7 @@ import java.util.ListIterator;
 public class ActionGroup extends ActionMultiWord {
 
     public ActionGroup() {
-        super(ActionMain.item.ID_Group);
+        super(ActionMain.item.ID_Group, "Group");
 
         reservedID = new int[] {1};
         TABLE_NAME = "LocalGroup";
@@ -89,27 +89,7 @@ public class ActionGroup extends ActionMultiWord {
             super(context, onClickObj, container);
         }
 
-        public static class onClickClass extends ActionItem.Button.onClickClass {
-            String message;
-
-            public onClickClass(Context context) {
-                super(context);
-                itemCategoryID = ActionMain.item.ID_Group;
-            }
-
-            public void onClick(View v) {
-                if (!isOnline) return;
-
-                Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
-                container.exploreGroup(itemID);
-            }
-            public void init(ContentValues values) {
-                super.init(values);
-                message = "그룹 " + values.get(ActionWord.SQL.COLUMN_NAME_WORD) + "," + values.get(ActionWord.SQL.COLUMN_NAME_PRIORITY);
-            }
-        }
-
-//        public void setGroupID (long groupID) {
+        //        public void setGroupID (long groupID) {
 //            this.groupID = groupID;
 //        }
 //        public long getGroupID() {
@@ -120,8 +100,8 @@ public class ActionGroup extends ActionMultiWord {
             super.init(values);
             this.setText("그룹 " + values.getAsString(SQL.COLUMN_NAME_WORD));
 //            this.setGroupID(values.getAsLong(SQL._ID));
-            this.onClickObj.setContainer(container);
-            this.onClickObj.setButton(this);
+//            this.onClickObj.setContainer(container);
+//            this.onClickObj.setButton(this);
             this.onClickObj.init(values);
         }
 
@@ -193,11 +173,11 @@ public class ActionGroup extends ActionMultiWord {
             }
 
             for (int i = 0; i < ActionMain.item.ITEM_COUNT; i++) {
-                ArrayList<Integer> list = listBundle.itemVector.get(i);
+                ArrayList<Long> list = listBundle.itemVector.get(i);
                 if (endIndex[i] < list.size()) {
-                    ListIterator<Integer> lI = list.listIterator(endIndex[i]);
+                    ListIterator<Long> lI = list.listIterator(endIndex[i]);
                     while (lI.hasNext()) {
-                        int j = lI.next();
+                        long j = lI.next();
 
                         Cursor c = db.query(
                                 actionMain.itemChain[i].TABLE_NAME,
@@ -269,5 +249,29 @@ public class ActionGroup extends ActionMultiWord {
             Boolean is_picture_preset
     ) {
         return add(parentID, priority, word, stem, wordIDs, Integer.toString(picture), is_picture_preset);
+    }
+
+    public onClickClass allocOCC(Context context, AACGroupContainer container) {
+        return new onClickClass(context, container);
+    }
+
+    public static class onClickClass extends ActionItem.onClickClass {
+        String message;
+
+        public onClickClass(Context context, AACGroupContainer container) {
+            super(context, container);
+            itemCategoryID = ActionMain.item.ID_Group;
+        }
+
+        public void onClick(View v) {
+            if (!isOnline) return;
+
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
+            container.exploreGroup(itemID);
+        }
+        public void init(ContentValues values) {
+            super.init(values);
+            message = "그룹 " + values.get(ActionWord.SQL.COLUMN_NAME_WORD) + "," + values.get(ActionWord.SQL.COLUMN_NAME_PRIORITY);
+        }
     }
 }

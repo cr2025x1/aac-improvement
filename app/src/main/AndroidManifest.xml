@@ -32,6 +32,10 @@
             android:name=".PresetImageSelectionActivity"
             android:label="@string/title_activity_preset_image_selection" >
         </activity>
+        <activity
+            android:name=".SearchActivity"
+            android:label="@string/title_activity_search" >
+        </activity>
     </application>
 
 </manifest>

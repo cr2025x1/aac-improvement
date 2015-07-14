@@ -19,7 +19,7 @@ import java.util.HashMap;
 public class ActionMacro extends ActionMultiWord {
 
     public ActionMacro() {
-        super(ActionMain.item.ID_Macro);
+        super(ActionMain.item.ID_Macro, "Macro");
 
         TABLE_NAME = "LocalMacro";
         SQL_DELETE_ENTRIES = "DROP TABLE IF EXISTS " + TABLE_NAME;
@@ -78,71 +78,12 @@ public class ActionMacro extends ActionMultiWord {
             super(context, onClickObj, container);
         }
 
-        public static class onClickClass extends ActionItem.Button.onClickClass {
-            String message;
-            ActionMain actionMain;
-
-            public onClickClass(Context context) {
-                super(context);
-                itemCategoryID = ActionMain.item.ID_Macro;
-                actionMain = ActionMain.getInstance();
-            }
-
-            public void onClick(View v) {
-                if (!isOnline) return;
-
-                Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
-                container.getTTS().speak(phonetic, TextToSpeech.QUEUE_FLUSH, null);
-//                container.getTTS().speak(phonetic, TextToSpeech.QUEUE_FLUSH, null, null); // API 21 이상 필요
-            }
-
-            public void init(ContentValues values) {
-                super.init(values);
-                message = values.get(SQL.COLUMN_NAME_WORD) + "," + values.get(SQL.COLUMN_NAME_PRIORITY);
-                phonetic = values.getAsString(SQL.COLUMN_NAME_WORD);
-
-                // wordchain 문자열 파싱
-                ((ActionMultiWord)actionMain.itemChain[itemCategoryID]).parseWordChain(
-                        values.getAsString(SQL.COLUMN_NAME_WORDCHAIN),
-                        new onParseCommand() {
-                            @Override
-                            public void onParse(int itemID) {
-                                // 쿼리 옵션 설정
-                                Cursor c;
-                                SQLiteDatabase db = actionMain.getDB();
-                                String[] projection = {
-                                        ActionWord.SQL._ID,
-                                        ActionWord.SQL.COLUMN_NAME_WORD,
-                                        ActionWord.SQL.COLUMN_NAME_PRIORITY
-                                };
-                                String sortOrder =
-                                        ActionWord.SQL.COLUMN_NAME_PRIORITY + " DESC";
-                                String queryClause = ActionWord.SQL._ID  + " = " + itemID; // 검색 조건
-
-                                // 워드 쿼리
-                                c = db.query(
-                                        ActionMain.getInstance().itemChain[ActionMain.item.ID_Word].TABLE_NAME, // The table to query
-                                        projection, // The columns to return
-                                        queryClause, // The columns for the WHERE clause
-                                        null, // The values for the WHERE clause
-                                        null, // don't group the rows
-                                        null, // don't filter by row groups
-                                        sortOrder // The sort order
-                                );
-                                c.moveToFirst();
-
-                                c.close();
-                            }
-                        });
-            }
-        }
-
         public void init(ContentValues values) {
             super.init(values);
 
             this.setText("매크로 " + values.getAsString(SQL.COLUMN_NAME_WORD));
-            this.onClickObj.setContainer(container);
-            this.onClickObj.setButton(this);
+//            this.onClickObj.setContainer(container);
+//            this.onClickObj.setButton(this);
             this.onClickObj.init(values);
         }
 
@@ -182,12 +123,7 @@ public class ActionMacro extends ActionMultiWord {
 
         values.put(SQL.COLUMN_NAME_ELEMENT_ID_TAG, create_element_id_count_tag(map));
 
-//        ActionMain actionMain = ActionMain.getInstance();
-//        long id = actionMain.getDB().insert(actionMain.itemChain[itemClassID].TABLE_NAME, null, values);
-//        if (id != -1) actionMain.update_db_collection_count(1);
         return raw_add(values);
-
-//        return id;
     }
 
     long add(
@@ -202,4 +138,65 @@ public class ActionMacro extends ActionMultiWord {
         return add(parentID, priority, word, stem, wordIDs, Integer.toString(picture), is_picture_preset);
     }
 
+    public onClickClass allocOCC(Context context, AACGroupContainer container) {
+        return new onClickClass(context, container);
+    }
+
+    public static class onClickClass extends ActionItem.onClickClass {
+        ActionMain actionMain;
+
+        public onClickClass(Context context, AACGroupContainer container) {
+            super(context, container);
+            itemCategoryID = ActionMain.item.ID_Macro;
+            actionMain = ActionMain.getInstance();
+        }
+
+        public void onClick(View v) {
+            if (!isOnline) return;
+
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
+            container.getTTS().speak(phonetic, TextToSpeech.QUEUE_FLUSH, null);
+//                container.getTTS().speak(phonetic, TextToSpeech.QUEUE_FLUSH, null, null); // API 21 이상 필요
+        }
+
+        public void init(ContentValues values) {
+            super.init(values);
+            message = values.get(SQL.COLUMN_NAME_WORD) + "," + values.get(SQL.COLUMN_NAME_PRIORITY);
+            phonetic = values.getAsString(SQL.COLUMN_NAME_WORD);
+
+            // wordchain 문자열 파싱
+            ((ActionMultiWord)actionMain.itemChain[itemCategoryID]).parseWordChain(
+                    values.getAsString(SQL.COLUMN_NAME_WORDCHAIN),
+                    new onParseCommand() {
+                        @Override
+                        public void onParse(long itemID) {
+                            // 쿼리 옵션 설정
+                            Cursor c;
+                            SQLiteDatabase db = actionMain.getDB();
+                            String[] projection = {
+                                    ActionWord.SQL._ID,
+                                    ActionWord.SQL.COLUMN_NAME_WORD,
+                                    ActionWord.SQL.COLUMN_NAME_PRIORITY
+                            };
+                            String sortOrder =
+                                    ActionWord.SQL.COLUMN_NAME_PRIORITY + " DESC";
+                            String queryClause = ActionWord.SQL._ID  + " = " + itemID; // 검색 조건
+
+                            // 워드 쿼리
+                            c = db.query(
+                                    ActionMain.getInstance().itemChain[ActionMain.item.ID_Word].TABLE_NAME, // The table to query
+                                    projection, // The columns to return
+                                    queryClause, // The columns for the WHERE clause
+                                    null, // The values for the WHERE clause
+                                    null, // don't group the rows
+                                    null, // don't filter by row groups
+                                    sortOrder // The sort order
+                            );
+                            c.moveToFirst();
+
+                            c.close();
+                        }
+                    });
+        }
+    }
 }

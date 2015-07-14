@@ -6,8 +6,12 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.provider.BaseColumns;
 import android.speech.tts.TextToSpeech;
+import android.support.annotation.NonNull;
 import android.view.View;
 import android.widget.Toast;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Created by Chrome on 5/5/15.
@@ -17,9 +21,10 @@ import android.widget.Toast;
 public class ActionWord extends ActionItem {
 
     public ActionWord () {
-        super(ActionMain.item.ID_Word);
+        super(ActionMain.item.ID_Word, "Word");
 
         reservedID = new int[] {1};
+
         TABLE_NAME = "LocalWord";
         SQL_DELETE_ENTRIES = "DROP TABLE IF EXISTS " + TABLE_NAME;
         SQL_CREATE_ENTRIES =
@@ -103,7 +108,7 @@ public class ActionWord extends ActionItem {
             if (parentID == 0) {
                 ContentValues record = new ContentValues();
                 record.put(ActionWord.SQL.COLUMN_NAME_PARENT_ID, values.getAsLong(SQL.COLUMN_NAME_PARENT_ID));
-                if (actionMain.itemChain[ActionMain.item.ID_Word].updateWithIDs(actionMain.containerRef.context, record, new int[] {id}) > 0) {
+                if (actionMain.itemChain[ActionMain.item.ID_Word].updateWithIDs(actionMain.containerRef.context, record, new long[] {id}) > 0) {
                     update_reference_count(id, 1);
                     actionMain.update_db_collection_count(1);
                 }
@@ -187,27 +192,6 @@ public class ActionWord extends ActionItem {
             super(context, onClickObj, container);
         }
 
-        public static class onClickClass extends ActionItem.Button.onClickClass {
-            String message;
-            public onClickClass(Context context) {
-                super(context);
-                itemCategoryID = ActionMain.item.ID_Word;
-            }
-
-            public void onClick(View v) {
-                if (!isOnline) return;
-
-                Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
-                container.getTTS().speak(phonetic, TextToSpeech.QUEUE_FLUSH, null);
-//                container.getTTS().speak(phonetic, TextToSpeech.QUEUE_FLUSH, null, null); // over API 21
-            }
-            public void init(ContentValues values) {
-                super.init(values);
-                message = values.get(SQL.COLUMN_NAME_WORD) + "," + values.get(SQL.COLUMN_NAME_PRIORITY);
-                phonetic = values.get(SQL.COLUMN_NAME_WORD).toString();
-            }
-        }
-
         public void init(ContentValues values) {
             super.init(values);
             this.setText("워드 " + values.getAsString(SQL.COLUMN_NAME_WORD));
@@ -231,7 +215,7 @@ public class ActionWord extends ActionItem {
     }
 
     @Override
-    public boolean removeWithID(Context context, int id) {
+    public boolean removeWithID(Context context, long id) {
         ActionMain actionMain = ActionMain.getInstance();
 
         boolean isReserved = false;
@@ -243,7 +227,7 @@ public class ActionWord extends ActionItem {
         if (actionMain.containerRef.rootGroupElement.ids.contains(id) || isReserved) {
             ContentValues values = new ContentValues();
             values.put(SQL.COLUMN_NAME_PARENT_ID, 0);
-            boolean effected = updateWithIDs(context, values, new int[] {id}) > 0;
+            boolean effected = updateWithIDs(context, values, new long[] {id}) > 0;
             update_reference_count(id, -1);
             actionMain.update_db_collection_count(-1);
 
@@ -283,4 +267,89 @@ public class ActionWord extends ActionItem {
         }
         return false;
     }
+
+    public onClickClass allocOCC(Context context, AACGroupContainer container) {
+        return new onClickClass(context, container);
+    }
+
+    public static class onClickClass extends ActionItem.onClickClass {
+        public onClickClass(Context context, AACGroupContainer container) {
+            super(context, container);
+            itemCategoryID = ActionMain.item.ID_Word;
+        }
+
+        public void onClick(View v) {
+            if (!isOnline) return;
+
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
+            container.getTTS().speak(phonetic, TextToSpeech.QUEUE_FLUSH, null);
+//                container.getTTS().speak(phonetic, TextToSpeech.QUEUE_FLUSH, null, null); // over API 21
+        }
+        public void init(ContentValues values) {
+            super.init(values);
+            message = values.get(SQL.COLUMN_NAME_WORD) + "," + values.get(SQL.COLUMN_NAME_PRIORITY);
+            phonetic = values.get(SQL.COLUMN_NAME_WORD).toString();
+        }
+    }
+
+
+
+    // 주어진 문자열-문자열 수 쿼리 해시맵에 대응되는 워드의 ID와 그 워드의 참조 횟수의 해시맵을 제공한다.
+    @NonNull
+    public HashMap<Long, QueryWordInfo> convert_to_id_ref_map(@NonNull SQLiteDatabase db, @NonNull HashMap<String, Long> queryMap) {
+        HashMap<Long, QueryWordInfo> id_ref_map = new HashMap<>();
+
+        for (Map.Entry<String, Long> entry : queryMap.entrySet()) {
+            String entry_word = entry.getKey();
+            Cursor entry_word_cursor = db.query(
+                    TABLE_NAME,
+                    new String[]{SQL._ID, SQL.COLUMN_NAME_REFERENCE_COUNT},
+                    ActionItem.SQL.COLUMN_NAME_STEM + "='" + entry_word + "'",
+                    null,
+                    null,
+                    null,
+                    null
+            );
+            entry_word_cursor.moveToFirst();
+
+            // DB 상에 존재하지 않는 쿼리 워드는 버림.
+            if (entry_word_cursor.getCount() > 0) {
+                long id = entry_word_cursor.getLong(entry_word_cursor.getColumnIndexOrThrow(SQL._ID));
+                if (!id_ref_map.containsKey(id)) {
+                    QueryWordInfo info = new QueryWordInfo(
+                            entry.getValue(),
+                            entry_word_cursor.getLong(entry_word_cursor.getColumnIndexOrThrow(SQL.COLUMN_NAME_REFERENCE_COUNT))
+                    );
+
+                    id_ref_map.put(
+                            id,
+                            info
+                    );
+                }
+            }
+            entry_word_cursor.close();
+        }
+        return id_ref_map;
+    }
+
+
+    @NonNull
+    public HashMap<Long, Double> evaluate_by_query_map(
+            @NonNull SQLiteDatabase db,
+            @NonNull HashMap<Long, QueryWordInfo> queryMap,
+            @NonNull HashMap<Long, Double> eval_map,
+            long entire_collection_count) {
+
+        for (Map.Entry<Long, QueryWordInfo> entry : queryMap.entrySet()) {
+            QueryWordInfo info = entry.getValue();
+
+            double eval = info.count * Math.log(entire_collection_count + 1.0d / info.ref_count);
+            long key = entry.getKey();
+            eval_map.put(key, eval_map.get(key) + eval);
+
+        }
+
+        return eval_map;
+    }
+
 }

@@ -6,6 +6,7 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.drawable.Drawable;
 import android.provider.BaseColumns;
+import android.support.annotation.NonNull;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
@@ -15,6 +16,7 @@ import android.widget.LinearLayout;
 import java.io.File;
 import java.io.Serializable;
 import java.util.Comparator;
+import java.util.HashMap;
 
 /**
  * Created by Chrome on 5/2/15.
@@ -26,8 +28,9 @@ public abstract class ActionItem implements Serializable {
     protected int itemClassID;
     protected int[] reservedID;
 
-    protected ActionItem(int itemID) {
+    protected ActionItem(int itemID, String className) {
         this.itemClassID = itemID;
+        this.CLASS_NAME = className;
     }
 
     public abstract int execute(); // 버튼 클릭 시 수행되는 메소드
@@ -65,6 +68,7 @@ public abstract class ActionItem implements Serializable {
     }
 
     String TABLE_NAME;
+    String CLASS_NAME;
     String SQL_CREATE_ENTRIES;
     String SQL_DELETE_ENTRIES;
 
@@ -157,10 +161,10 @@ public abstract class ActionItem implements Serializable {
         return id;
     }
 
-    public long updateWithIDs(Context context, ContentValues values, int[] idArray) {
+    public long updateWithIDs(Context context, ContentValues values, long[] idArray) {
         SQLiteDatabase db = ActionMain.getInstance().getDB();
         StringBuilder sb = new StringBuilder();
-        for (int i : idArray) {
+        for (long i : idArray) {
             sb.append(SQL._ID);
             sb.append("=");
             sb.append(i);
@@ -242,7 +246,7 @@ public abstract class ActionItem implements Serializable {
         return count;
     }
 
-    public boolean removeWithID(Context context, int id) {
+    public boolean removeWithID(Context context, long id) {
         if (exists(id) == -1) return false;
 
         removeExclusiveImage(context, SQL._ID + "=" + id);
@@ -263,7 +267,7 @@ public abstract class ActionItem implements Serializable {
     abstract protected boolean verifyAndCorrectDependencyRemoval(Context context, AACGroupContainer.RemovalListBundle listBundle);
 
     protected void printRemovalList(AACGroupContainer.RemovalListBundle listBundle) {
-        for (int i : listBundle.itemVector.get(itemClassID)) System.out.println(i);
+        for (long i : listBundle.itemVector.get(itemClassID)) System.out.println(i);
     }
 
     protected void printMissingDependencyList(AACGroupContainer.RemovalListBundle listBundle) {
@@ -272,81 +276,53 @@ public abstract class ActionItem implements Serializable {
         }
     }
 
-    /**
-     * Created by Chrome on 5/8/15.
-     */
+
+
+
+
+
+
     public abstract static class Button extends android.widget.Button {
         protected onClickClass onClickObj;
-        protected long priority;
+//        protected long priority;
         int image_half_height;
-        AACGroupContainer container;
+//        AACGroupContainer container;
         Context context;
 
         public Button(Context context, onClickClass onClickObj, AACGroupContainer container) {
             super(context);
             this.context = context;
-            this.container = container;
+//            this.container = container;
             this.onClickObj = onClickObj;
-            this.onClickObj.setContainer(this.container);
+//            this.onClickObj.setContainer(this.container);
             this.setOnClickListener(this.onClickObj);
-            this.setId(View.generateViewId());
+//            this.setId(View.generateViewId());
         }
 
-        protected abstract static class onClickClass implements OnClickListener {
-            protected Context context;
-            protected AACGroupContainer container;
-            protected Button button;
-            protected String phonetic;
-            protected int itemCategoryID;
-            protected int itemID;
-            protected boolean isOnline;
-            public abstract void onClick(View v);
-            public onClickClass(Context context) {
-                this.context = context;
-                isOnline = true;
-            }
-
-            public void init(ContentValues values) {
-                itemID = values.getAsInteger(SQL._ID);
-            }
-            public void setContainer (AACGroupContainer container) {
-                this.container = container;
-            }
-            public void setButton (Button button) {
-                this.button = button;
-            }
-            public boolean isOnline() {
-                return isOnline;
-            }
-            public void toogleOnline() {
-                isOnline = !isOnline;
-            }
-        }
-
-        public long getPriority() {return priority; }
-        public void setPriority(long value) {priority = value; }
+        //        public long getPriority() {return priority; }
+//        public void setPriority(long value) {priority = value; }
 
         public static class itemComparator implements Comparator<View> {
             @Override
             public int compare(View lhs, View rhs) {
-                Button lhs_btn = (ActionItem.Button)lhs.findViewById(R.id.aac_item_button_id);
-                Button rhs_btn = (ActionItem.Button)rhs.findViewById(R.id.aac_item_button_id);
+                Button lhs_btn = (Button)lhs.findViewById(R.id.aac_item_button_id);
+                Button rhs_btn = (Button)rhs.findViewById(R.id.aac_item_button_id);
 
-                return lhs_btn.priority > rhs_btn.priority ? -1 : lhs_btn.priority < rhs_btn.priority ? 1 : 0;
+                return lhs_btn.onClickObj.priority > rhs_btn.onClickObj.priority ? -1 : lhs_btn.onClickObj.priority < rhs_btn.onClickObj.priority ? 1 : 0;
             }
         }
 
         public void init(ContentValues values) {
             // TODO: Make this use XMLs.
 
-            priority = values.getAsLong(SQL.COLUMN_NAME_PRIORITY);
+//            priority = values.getAsLong(SQL.COLUMN_NAME_PRIORITY);
 
             Drawable d;
             if (values.getAsInteger(SQL.COLUMN_NAME_PICTURE_IS_PRESET) == 1)
                 d = context.getResources().getDrawable(values.getAsInteger(SQL.COLUMN_NAME_PICTURE));
 //                d = context.getResources().getDrawable(values.getAsInteger(SQL.COLUMN_NAME_PICTURE), context.getTheme()); // API 21 이상 필요
             else {
-                d = Drawable.createFromPath(container.userImageDirectoryPathPrefix +
+                d = Drawable.createFromPath(context.getFilesDir() + "/" + AACGroupContainerPreferences.USER_IMAGE_DIRECTORY_NAME + "/" +
                         values.getAsString(SQL.COLUMN_NAME_PICTURE));
             }
 
@@ -383,10 +359,142 @@ public abstract class ActionItem implements Serializable {
             return LP;
         }
 
-        public void setContainer(AACGroupContainer container) {
-            this.container = container;
-        }
+//        public void setContainer(AACGroupContainer container) {
+//            this.container = container;
+//        }
 
     }
 
+    public abstract onClickClass allocOCC(Context context, AACGroupContainer container);
+
+    protected abstract static class onClickClass implements View.OnClickListener {
+        protected String message;
+        protected Context context;
+        protected AACGroupContainer container;
+//        protected Button button;
+        protected String phonetic;
+        protected int itemCategoryID;
+        protected long itemID;
+        protected boolean isOnline;
+
+        protected double rank;
+        protected long priority;
+
+        public abstract void onClick(View v);
+        public onClickClass(Context context, AACGroupContainer container) {
+            this.context = context;
+            isOnline = true;
+            this.container = container;
+        }
+
+        public void init(ContentValues values) {
+            itemID = values.getAsInteger(SQL._ID);
+        }
+//        public void setContainer (AACGroupContainer container) {
+//            this.container = container;
+//        }
+//        public void setButton (Button button) {
+//            this.button = button;
+//        }
+
+        public boolean isOnline() {
+            return isOnline;
+        }
+
+        public void toogleOnline() {
+            isOnline = !isOnline;
+        }
+    }
+
+//    // 아이템 검색 내부 클래스
+//    public abstract Evaluation allocEvaluation();
+//    protected abstract class Evaluation {
+//        long entire_collection_count; // 두 메소드의 공통 분모. 이것 때문에 이너 클래스 형성.
+//        ActionMain actionMain;
+//        SQLiteDatabase db;
+//
+//        public Evaluation() {
+//            actionMain = ActionMain.getInstance();
+//            db = actionMain.getDB();
+//            entire_collection_count = actionMain.get_db_collection_count();
+//        }
+//
+//        // 말이 좋아 클래스지 사실상 그냥 C의 구조체임.
+//        public class query_word_info {
+//            long count;
+//            long ref_count;
+//
+//            public query_word_info(long count, long ref_count) {
+//                this.count = count;
+//                this.ref_count = ref_count;
+//            }
+//        }
+//
+//        // 주어진 쿼리 해시맵에 대해 이 카테고리 아이템의 레코드 전체의 평가값이 담긴 해시맵을 반환.
+//        @NonNull public abstract HashMap<Long, Double> evaluate_by_query_map(@NonNull HashMap<Long, query_word_info> queryMap);
+//
+//        // 이 아이템의 테이블의 모든 행에 대응하는 1:1 대응하는 키를 모두 가지는 해쉬맵을 만들어 반환한다.
+//        @NonNull protected HashMap<Long, Double> alloc_evaluation_map() {
+//            HashMap<Long, Double> eval_map = new HashMap<>();
+//
+//            Cursor entire_item_cursor = db.query(
+//                    TABLE_NAME,
+//                    new String[] {ActionItem.SQL._ID},
+//                    null,
+//                    null,
+//                    null,
+//                    null,
+//                    null
+//            );
+//            entire_item_cursor.moveToFirst();
+//            int colNum = entire_item_cursor.getColumnIndexOrThrow(ActionItem.SQL._ID);
+//
+//            for (int i = 0; i < entire_item_cursor.getCount(); i++) {
+//                eval_map.put(
+//                        entire_item_cursor.getLong(colNum),
+//                        0d
+//                );
+//                entire_item_cursor.moveToNext();
+//            }
+//            entire_item_cursor.close();
+//
+//            return eval_map;
+//        }
+//    }
+
+    // 주어진 쿼리 해시맵에 대해 이 카테고리 아이템의 레코드 전체의 평가값이 담긴 해시맵을 반환.
+    @NonNull
+    public abstract HashMap<Long, Double> evaluate_by_query_map(
+            @NonNull SQLiteDatabase db,
+            @NonNull HashMap<Long, QueryWordInfo> queryMap,
+            @NonNull HashMap<Long, Double> eval_map,
+            long entire_collection_count);
+
+    // 이 아이템의 테이블의 모든 행에 대응하는 1:1 대응하는 키를 모두 가지는 해쉬맵을 만들어 반환한다.
+    @NonNull protected HashMap<Long, Double> alloc_evaluation_map(SQLiteDatabase db) {
+        HashMap<Long, Double> eval_map = new HashMap<>();
+
+        Cursor entire_item_cursor = db.query(
+                TABLE_NAME,
+                new String[] {ActionItem.SQL._ID},
+                null,
+                null,
+                null,
+                null,
+                null
+        );
+        entire_item_cursor.moveToFirst();
+        int colNum = entire_item_cursor.getColumnIndexOrThrow(ActionItem.SQL._ID);
+
+        for (int i = 0; i < entire_item_cursor.getCount(); i++) {
+            eval_map.put(
+                    entire_item_cursor.getLong(colNum),
+                    0d
+            );
+            entire_item_cursor.moveToNext();
+        }
+        entire_item_cursor.close();
+
+        return eval_map;
+    }
 }
