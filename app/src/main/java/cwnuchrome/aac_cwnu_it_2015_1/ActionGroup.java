@@ -74,7 +74,7 @@ public class ActionGroup extends ActionMultiWord {
         values.put(SQL.COLUMN_NAME_ELEMENT_ID_TAG, create_element_id_count_tag(map));
         db.insert(TABLE_NAME, null, values);
 
-        ActionMain.update_db_collection_count(db, 1);
+        ActionMain.update_db_collection_count(db, 1, 1); // 워드체인의 길이가 1이므로 문서 길이 1임. 워드체인이 더 길어지면 변경 필요.
     }
 
     // TODO: 그룹 추가 기능 넣기... 아직도 안 넣고 있었다니!
@@ -89,19 +89,9 @@ public class ActionGroup extends ActionMultiWord {
             super(context, onClickObj, container);
         }
 
-        //        public void setGroupID (long groupID) {
-//            this.groupID = groupID;
-//        }
-//        public long getGroupID() {
-//            return groupID;
-//        }
-
         public void init(ContentValues values) {
             super.init(values);
             this.setText("그룹 " + values.getAsString(SQL.COLUMN_NAME_WORD));
-//            this.setGroupID(values.getAsLong(SQL._ID));
-//            this.onClickObj.setContainer(container);
-//            this.onClickObj.setButton(this);
             this.onClickObj.init(values);
         }
 
@@ -227,14 +217,16 @@ public class ActionGroup extends ActionMultiWord {
         HashMap<Long, Long> map = create_element_id_count_map(wordIDs);
 
         ContentValues values = new ContentValues();
-        values.put(ActionGroup.SQL.COLUMN_NAME_PARENT_ID, parentID);
-        values.put(ActionWord.SQL.COLUMN_NAME_PRIORITY, priority);
-        values.put(ActionGroup.SQL.COLUMN_NAME_WORD, word);
-        values.put(ActionGroup.SQL.COLUMN_NAME_STEM, stem);
-        values.put(ActionMacro.SQL.COLUMN_NAME_WORDCHAIN, create_wordchain(wordIDs));
-        values.put(ActionGroup.SQL.COLUMN_NAME_PICTURE, picture);
-        values.put(ActionItem.SQL.COLUMN_NAME_PICTURE_IS_PRESET, is_picture_preset ? 1 : 0);
+        values.put(SQL.COLUMN_NAME_PARENT_ID, parentID);
+        values.put(SQL.COLUMN_NAME_PRIORITY, priority);
+        values.put(SQL.COLUMN_NAME_WORD, word);
+        values.put(SQL.COLUMN_NAME_STEM, stem);
+        values.put(SQL.COLUMN_NAME_WORDCHAIN, create_wordchain(wordIDs));
+        values.put(SQL.COLUMN_NAME_PICTURE, picture);
+        values.put(SQL.COLUMN_NAME_PICTURE_IS_PRESET, is_picture_preset ? 1 : 0);
+
         values.put(SQL.COLUMN_NAME_ELEMENT_ID_TAG, create_element_id_count_tag(map));
+        values.put(SQL.ATTACHMENT_ID_MAP, map_carrier.attach(map));
 
         return raw_add(values);
     }

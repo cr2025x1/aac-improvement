@@ -61,6 +61,7 @@ public class ActionMacro extends ActionMultiWord {
         record.put(SQL.COLUMN_NAME_PICTURE_IS_PRESET, 1);
 
         record.put(SQL.COLUMN_NAME_ELEMENT_ID_TAG, values.getAsString(SQL.COLUMN_NAME_ELEMENT_ID_TAG));
+        record.put(SQL.ATTACHMENT_ID_MAP, values.getAsInteger(SQL.ATTACHMENT_ID_MAP));
 
         result = super.raw_add(record);
         record.clear();
@@ -122,6 +123,7 @@ public class ActionMacro extends ActionMultiWord {
         values.put(ActionItem.SQL.COLUMN_NAME_PICTURE_IS_PRESET, is_picture_preset ? 1 : 0);
 
         values.put(SQL.COLUMN_NAME_ELEMENT_ID_TAG, create_element_id_count_tag(map));
+        values.put(SQL.ATTACHMENT_ID_MAP, map_carrier.attach(map));
 
         return raw_add(values);
     }

@@ -33,6 +33,7 @@
     <!-- 검색 관련 -->
     <string name="title_activity_search">Search Items</string>
     <string name="menu_search">Search</string>
+    <string name="label_search">Query</string>
 
     <!-- 그림 선택 관련 -->
     <string name="title_activity_image_selection">Image Selection</string>

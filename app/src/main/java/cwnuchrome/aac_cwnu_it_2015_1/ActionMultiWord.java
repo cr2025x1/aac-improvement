@@ -20,29 +20,70 @@ import java.util.Map;
  */
 public abstract class ActionMultiWord extends ActionItem {
 
+    protected final InterActivityReferrer<HashMap<Long, Long>> map_carrier;
+
     protected ActionMultiWord(int itemID, String className) {
         super(itemID, className);
+        map_carrier = new InterActivityReferrer<>();
     }
 
     interface SQL extends ActionItem.SQL {
         String COLUMN_NAME_WORDCHAIN = "wordchain";
         String COLUMN_NAME_ELEMENT_ID_TAG = "element_id_tag";
+        String ATTACHMENT_ID_MAP = "attached_id_map";
     }
 
     @Override
     public long raw_add(ContentValues values) {
+        HashMap<Long, Long> map = map_carrier.detach(values.getAsInteger(SQL.ATTACHMENT_ID_MAP));
+        values.remove(SQL.ATTACHMENT_ID_MAP);
         long id = super.raw_add(values);
-        final ActionWord actionWord = (ActionWord)ActionMain.getInstance().itemChain[ActionMain.item.ID_Word];
+
         if (id != -1) {
-            parseWordChain(values.getAsString(SQL.COLUMN_NAME_WORDCHAIN), new onParseCommand() {
-                @Override
-                public void onParse(long itemID) {
-                    actionWord.update_reference_count(itemID, 1);
-                }
-            });
+            ActionMain actionMain = ActionMain.getInstance();
+            ActionWord actionWord = (ActionWord)actionMain.itemChain[ActionMain.item.ID_Word];
+            long doc_length = -1;
+            for (Map.Entry<Long, Long> entry : map.entrySet()) {
+                actionWord.update_reference_count(entry.getKey(), 1);
+                doc_length += entry.getValue();
+            }
+            actionMain.update_db_collection_count(0, doc_length); // 문서 수 변화량이 0인 이유 : super.raw_add()에서 1이 이미 늘어났기 때문.
         }
 
         return id;
+    }
+
+    @Override
+    public boolean removeWithID(Context context, long id) {
+        if (exists(id) != -1) {
+            ActionMain actionMain = ActionMain.getInstance();
+            Cursor c = actionMain.getDB().query(
+                    TABLE_NAME,
+                    new String[]{SQL.COLUMN_NAME_WORDCHAIN, SQL.COLUMN_NAME_ELEMENT_ID_TAG},
+                    SQL._ID + "=" + id,
+                    null,
+                    null,
+                    null,
+                    null
+            );
+            c.moveToFirst();
+            HashMap<Long, Long> map = parse_element_id_count_tag(c.getString(c.getColumnIndexOrThrow(SQL.COLUMN_NAME_ELEMENT_ID_TAG)));
+            c.close();
+
+            boolean effected = super.removeWithID(context, id);
+
+            long doc_length = 1;
+            ActionWord actionWord = (ActionWord)actionMain.itemChain[ActionMain.item.ID_Word];
+            for (Map.Entry<Long, Long> entry : map.entrySet()) {
+                actionWord.update_reference_count(entry.getKey(), -1);
+                doc_length -= entry.getValue();
+            }
+            actionMain.update_db_collection_count(0, doc_length); // 문서 수 변화량이 0인 이유 : super.raw_add()에서 -1이 이미 적용됐기 때문.
+
+            return effected;
+        }
+
+        return false;
     }
 
     // 의존성 검사... 이것 때문에 단순하게 생각했던 아이템 제거에서 지옥문이 열렸다.
@@ -326,7 +367,8 @@ public abstract class ActionMultiWord extends ActionItem {
             @NonNull SQLiteDatabase db,
             @NonNull HashMap<Long, QueryWordInfo> queryMap,
             @NonNull HashMap<Long, Double> eval_map,
-            long entire_collection_count
+            long entire_collection_count,
+            long average_document_length
     ) {
 
         for (Map.Entry<Long, QueryWordInfo> entry : queryMap.entrySet()) {
@@ -348,10 +390,17 @@ public abstract class ActionMultiWord extends ActionItem {
             int id_tag_col = c.getColumnIndexOrThrow(SQL.COLUMN_NAME_ELEMENT_ID_TAG);
             for (int i = 0; i < c.getCount(); i++) {
                 HashMap<Long, Long> map = parse_element_id_count_tag(c.getString(id_tag_col));
-                double k = AACGroupContainerPreferences.RANKING_FUNCTION_CONSTANT_K;
-                long ref_count = map.get(query_word_id);
+                long doc_ref_count = map.get(query_word_id);
 
-                double eval = info.count * (k + 1) * ref_count / (ref_count + k) * Math.log(entire_collection_count + 1 / info.ref_count);
+                double eval = ActionMain.ranking_function(
+                        info.count,
+                        doc_ref_count,
+                        map.size(),
+                        average_document_length,
+                        entire_collection_count,
+                        info.ref_count
+                        );
+
                 long id = c.getLong(multiword_id_col);
                 eval_map.put(id, eval_map.get(id) + eval);
                 c.moveToNext();

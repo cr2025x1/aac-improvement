@@ -110,7 +110,7 @@ public class ActionWord extends ActionItem {
                 record.put(ActionWord.SQL.COLUMN_NAME_PARENT_ID, values.getAsLong(SQL.COLUMN_NAME_PARENT_ID));
                 if (actionMain.itemChain[ActionMain.item.ID_Word].updateWithIDs(actionMain.containerRef.context, record, new long[] {id}) > 0) {
                     update_reference_count(id, 1);
-                    actionMain.update_db_collection_count(1);
+                    actionMain.update_db_collection_count(1, 1);
                 }
             }
 
@@ -126,13 +126,7 @@ public class ActionWord extends ActionItem {
         record.put(SQL.COLUMN_NAME_PICTURE_IS_PRESET, 1);
         record.put(SQL.COLUMN_NAME_REFERENCE_COUNT, 1);
 
-//        ActionMain actionMain = ActionMain.getInstance();
         return super.raw_add(record);
-//        record.clear();
-
-//        if (result != -1) actionMain.update_db_collection_count(1);
-
-//        return result;
     }
 
     // TODO: 오로지 디버깅용. 나중에는 삭제해야 할 메소드임.
@@ -153,12 +147,7 @@ public class ActionWord extends ActionItem {
         values.put(ActionItem.SQL.COLUMN_NAME_PICTURE_IS_PRESET, is_picture_preset ? 1 : 0);
         values.put(SQL.COLUMN_NAME_REFERENCE_COUNT, 1);
 
-//        ActionMain actionMain = ActionMain.getInstance();
-//        long id = actionMain.getDB().insert(actionMain.itemChain[itemClassID].TABLE_NAME, null, values);
-//        if (id != -1) actionMain.update_db_collection_count(1);
         return raw_add(values);
-
-//        return id;
     }
 
     long add(
@@ -227,9 +216,10 @@ public class ActionWord extends ActionItem {
         if (actionMain.containerRef.rootGroupElement.ids.contains(id) || isReserved) {
             ContentValues values = new ContentValues();
             values.put(SQL.COLUMN_NAME_PARENT_ID, 0);
-            boolean effected = updateWithIDs(context, values, new long[] {id}) > 0;
+            boolean effected = updateWithIDs(context, values, new long[]{id}) > 0;
+
             update_reference_count(id, -1);
-            actionMain.update_db_collection_count(-1);
+            actionMain.update_db_collection_count(-1, -1);
 
             return effected;
         }
@@ -338,12 +328,21 @@ public class ActionWord extends ActionItem {
             @NonNull SQLiteDatabase db,
             @NonNull HashMap<Long, QueryWordInfo> queryMap,
             @NonNull HashMap<Long, Double> eval_map,
-            long entire_collection_count) {
+            long entire_collection_count,
+            long average_document_length) {
 
         for (Map.Entry<Long, QueryWordInfo> entry : queryMap.entrySet()) {
             QueryWordInfo info = entry.getValue();
 
-            double eval = info.count * Math.log(entire_collection_count + 1.0d / info.ref_count);
+            double eval = ActionMain.ranking_function(
+                    info.count,
+                    1,
+                    1,
+                    average_document_length,
+                    entire_collection_count,
+                    info.ref_count
+            );
+
             long key = entry.getKey();
             eval_map.put(key, eval_map.get(key) + eval);
 

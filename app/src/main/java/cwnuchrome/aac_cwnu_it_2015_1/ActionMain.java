@@ -66,17 +66,52 @@ public final class ActionMain {
 
     public SQLiteDatabase getDB() { return db; }
 
-    public void update_db_collection_count(long diff) {
+    public void update_db_collection_count(long diff, long doc_length) {
+        log("***", "starts, diff=" + diff + ", doc_length=" + doc_length + " ***");
+        long collection_count = get_db_collection_count();
+        long updated_collection_count = collection_count + diff;
         db.execSQL("UPDATE " + SQL.TABLE_NAME +
-                " SET " + SQL.COLUMN_NAME_COLLECTION_COUNT + "=" + SQL.COLUMN_NAME_COLLECTION_COUNT + "+(" + diff + ")");
+                " SET " + SQL.COLUMN_NAME_COLLECTION_COUNT + "=" + updated_collection_count);
+        db.execSQL("UPDATE " + SQL.TABLE_NAME +
+                        " SET " + SQL.COLUMN_NAME_AVERAGE_DOCUMENT_LENGTH +
+                        "=(" + SQL.COLUMN_NAME_AVERAGE_DOCUMENT_LENGTH + "*" + collection_count + "+" + doc_length + ")" +
+                        "/" + updated_collection_count
+        );
+        log("***", "ends ***");
     }
 
-    public static void update_db_collection_count(SQLiteDatabase db, long diff) {
+    public static void update_db_collection_count(@NonNull SQLiteDatabase db, long diff, long doc_length) {
+        log("***", "starts, diff=" + diff + ", doc_length=" + doc_length + " (static) ***");
+        long collection_count = get_db_collection_count(db);
+        long updated_collection_count = collection_count + diff;
         db.execSQL("UPDATE " + SQL.TABLE_NAME +
-                " SET " + SQL.COLUMN_NAME_COLLECTION_COUNT + "=" + SQL.COLUMN_NAME_COLLECTION_COUNT + "+(" + diff + ")");
+                " SET " + SQL.COLUMN_NAME_COLLECTION_COUNT + "=" + updated_collection_count);
+        db.execSQL("UPDATE " + SQL.TABLE_NAME +
+                        " SET " + SQL.COLUMN_NAME_AVERAGE_DOCUMENT_LENGTH +
+                        "=(" + SQL.COLUMN_NAME_AVERAGE_DOCUMENT_LENGTH + "*" + collection_count + "+" + doc_length + ")" +
+                        "/" + updated_collection_count
+        );
+        log("***", "ends ***");
     }
 
     public long get_db_collection_count() {
+        Cursor c = db.query(
+                SQL.TABLE_NAME,
+                new String[]{SQL.COLUMN_NAME_COLLECTION_COUNT},
+                null,
+                null,
+                null,
+                null,
+                null
+        );
+        c.moveToFirst();
+
+        Long count = c.getLong(c.getColumnIndexOrThrow(SQL.COLUMN_NAME_COLLECTION_COUNT));
+        c.close();
+        return count;
+    }
+
+    public static long get_db_collection_count(@NonNull SQLiteDatabase db) {
         Cursor c = db.query(
                 SQL.TABLE_NAME,
                 new String[] {SQL.COLUMN_NAME_COLLECTION_COUNT},
@@ -91,6 +126,23 @@ public final class ActionMain {
         Long count = c.getLong(c.getColumnIndexOrThrow(SQL.COLUMN_NAME_COLLECTION_COUNT));
         c.close();
         return count;
+    }
+
+    public long get_db_avg_doc_length() {
+        Cursor c = db.query(
+                SQL.TABLE_NAME,
+                new String[]{SQL.COLUMN_NAME_AVERAGE_DOCUMENT_LENGTH},
+                null,
+                null,
+                null,
+                null,
+                null
+        );
+        c.moveToFirst();
+
+        Long avg_doc_length = c.getLong(c.getColumnIndexOrThrow(SQL.COLUMN_NAME_AVERAGE_DOCUMENT_LENGTH));
+        c.close();
+        return avg_doc_length;
     }
 
     private class ActionDBHelper extends SQLiteOpenHelper {
@@ -154,35 +206,41 @@ public final class ActionMain {
 
     private interface SQL extends BaseColumns {
         String INTEGER_TYPE = " INTEGER";
+        String REAL_TYPE = " REAL";
         String COMMA_SEP = ",";
         String COLUMN_NAME_COLLECTION_COUNT = "collection_count";
+        String COLUMN_NAME_AVERAGE_DOCUMENT_LENGTH = "avg_doc_length";
 
         String TABLE_NAME = "Central";
         String QUERY_DELETE_ENTRIES = "DROP TABLE IF EXISTS " + TABLE_NAME;
         String QUERY_CREATE_ENTRIES =
                 "CREATE TABLE IF NOT EXISTS " + TABLE_NAME + " (" +
-                        _ID + " INTEGER PRIMARY KEY, "
-                        + COLUMN_NAME_COLLECTION_COUNT + INTEGER_TYPE +
+                        _ID + " INTEGER PRIMARY KEY, " +
+                        COLUMN_NAME_COLLECTION_COUNT + INTEGER_TYPE + COMMA_SEP +
+                        COLUMN_NAME_AVERAGE_DOCUMENT_LENGTH + REAL_TYPE +
                         ");";
         String QUERY_INIT_ENTRIES =
-                "INSERT INTO "
-                + TABLE_NAME
-                + " ("
-                + _ID + COMMA_SEP
-                + COLUMN_NAME_COLLECTION_COUNT
-                + ") SELECT "
-                + 1 + COMMA_SEP
-                + 0
-                + " WHERE NOT EXISTS (SELECT "
-                + _ID
-                + " FROM "
-                + TABLE_NAME
-                + ");";
+                "INSERT INTO " +
+                        TABLE_NAME +
+                        " (" +
+                        _ID + COMMA_SEP +
+                        COLUMN_NAME_COLLECTION_COUNT + COMMA_SEP +
+                        COLUMN_NAME_AVERAGE_DOCUMENT_LENGTH +
+                        ") SELECT " +
+                        1 + COMMA_SEP +
+                        0 + COMMA_SEP +
+                        0 +
+                        " WHERE NOT EXISTS (SELECT " +
+                        _ID + " FROM " +
+                        TABLE_NAME +
+                        ");";
         String QUERY_RESET_ENTRIES =
-                "UPDATE "
-                + TABLE_NAME
-                + " SET "
-                + COLUMN_NAME_COLLECTION_COUNT + "=" + 0 + ";";
+                "UPDATE " +
+                        TABLE_NAME +
+                        " SET " +
+                        COLUMN_NAME_COLLECTION_COUNT + "=" + 0 + COMMA_SEP +
+                        COLUMN_NAME_AVERAGE_DOCUMENT_LENGTH + "=" + 0 +
+                        ";";
     }
 
     // 참조: http://stackoverflow.com/questions/4065518/java-how-to-get-the-caller-function-name
@@ -220,9 +278,11 @@ public final class ActionMain {
     @NonNull public Evaluation allocEvaluation() { return new Evaluation(); }
     class Evaluation {
         long entire_collection_count;
+        long average_document_length;
 
         public Evaluation() {
             entire_collection_count = get_db_collection_count();
+            average_document_length = get_db_avg_doc_length();
         }
 
         @NonNull private Vector<HashMap<Long, Double>> alloc_eval_map_vector() {
@@ -242,15 +302,25 @@ public final class ActionMain {
                         db,
                         id_ref_map,
                         eval_map_vector.get(i),
-                        entire_collection_count
+                        entire_collection_count,
+                        average_document_length
                 ));
                 i++;
             }
 
             return rank_vector;
         }
+    }
 
-
+    public static double ranking_function(
+            long word_count_in_query,
+            long word_count_in_document,
+            long document_length,
+            long average_document_length,
+            long collection_count,
+            long document_with_word_count_in_collection
+    ) {
+        return word_count_in_query * Math.log1p(Math.log1p(word_count_in_document)) / (1 - AACGroupContainerPreferences.RANKING_FUNCTION_CONSTANT_B + AACGroupContainerPreferences.RANKING_FUNCTION_CONSTANT_B * document_length / average_document_length) * Math.log(collection_count + 1 / document_with_word_count_in_collection);
     }
 
 }

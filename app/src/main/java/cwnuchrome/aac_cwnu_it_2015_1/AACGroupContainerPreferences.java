@@ -48,7 +48,7 @@ public class AACGroupContainerPreferences {
     // 최상위 그룹 이름
     public static final String ROOT_GROUP_NAME = "최상위";
 
-    // 검색 알고리즘 순위 함수의 상수 k
-    public static final double RANKING_FUNCTION_CONSTANT_K = 7.0d;
-    public static final double RANKING_FUNCTION_CUTOFF_THRESHOLD = 0.0d;
+    // 검색 알고리즘
+    public static final double RANKING_FUNCTION_CONSTANT_B = 0.25d; // 순위 함수의 상수 b
+    public static final double RANKING_FUNCTION_CUTOFF_THRESHOLD = 0.0d; // 출력할 아이템의 중요도 평가값 탈락 한계선
 }

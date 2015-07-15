@@ -13,17 +13,17 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/label_add_word_macro"
-        android:labelFor="@+id/edittext_add_word_macro"/>
+        android:text="@string/label_search"
+        android:labelFor="@+id/edittext_search"/>
 
     <EditText
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:id="@+id/edittext_add_word_macro"
+        android:id="@+id/edittext_search"
         android:inputType="textPhonetic" />
 
     <ListView
-        android:id="@+id/list_add_word_macro"
+        android:id="@+id/list_search"
         android:layout_height="wrap_content"
         android:layout_width="match_parent">
     </ListView>

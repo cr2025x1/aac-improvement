@@ -47,15 +47,15 @@ public class SearchActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_add_word_macro);
+        setContentView(R.layout.activity_search);
 
         actionMain = ActionMain.getInstance();
 
-        textInput = (EditText)findViewById(R.id.edittext_add_word_macro);
+        textInput = (EditText)findViewById(R.id.edittext_search);
         textInput.setOnKeyListener(new enterKeyListener());
 
         /* ListView Initialization */
-        listView = (ListView) findViewById(R.id.list_add_word_macro);
+        listView = (ListView) findViewById(R.id.list_search);
         // Define a new Adapter
         // First parameter - Context
         // Second parameter - Layout for the row
@@ -139,8 +139,6 @@ public class SearchActivity extends AppCompatActivity {
                 try {
                     suggestionList.clear();
                     if (fetchSuggestion()) {
-                        int catID = 0;
-
                         Collections.sort(suggestionOCCList, new Comparator<ActionItem.onClickClass>() {
                             @Override
                             public int compare(ActionItem.onClickClass lhs, ActionItem.onClickClass rhs) {
@@ -149,9 +147,7 @@ public class SearchActivity extends AppCompatActivity {
                         });
 
                         for (ActionItem.onClickClass occ : suggestionOCCList) {
-
                             suggestionList.add(occ.phonetic);
-                            catID++;
                         }
                     }
                     runOnUiThread(new updateItem());
@@ -231,7 +227,7 @@ public class SearchActivity extends AppCompatActivity {
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_add_word_macro, menu);
+//        getMenuInflater().inflate(R.menu.menu_search, menu);
         return true;
     }
 
@@ -240,18 +236,17 @@ public class SearchActivity extends AppCompatActivity {
         // Handle action bar item clicks here. The action bar will
         // automatically handle clicks on the Home/Up button, so long
         // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
+//        int id = item.getItemId();
 
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_add_word_macro) {
-//            add(textInput.getText().toString());
-            return true;
-        }
-        else if (id == R.id.action_cancel_add_word_macro) {
-            setResult(RESULT_CANCELED);
-            finish();
-            return true;
-        }
+//        //noinspection SimplifiableIfStatement
+//        if (id == R.id.action_add_word_macro) {
+//            return true;
+//        }
+//        else if (id == R.id.action_cancel_add_word_macro) {
+//            setResult(RESULT_CANCELED);
+//            finish();
+//            return true;
+//        }
 
         return super.onOptionsItemSelected(item);
     }

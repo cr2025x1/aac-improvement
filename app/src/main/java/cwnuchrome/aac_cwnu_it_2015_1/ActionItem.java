@@ -63,8 +63,6 @@ public abstract class ActionItem implements Serializable {
         String COLUMN_NAME_STEM = "stem";
         String COLUMN_NAME_PICTURE = "picture";
         String COLUMN_NAME_PICTURE_IS_PRESET = "picture_is_preset";
-
-        String VARIABLE_CONTAINER = "AACGroupContainer";
     }
 
     String TABLE_NAME;
@@ -120,24 +118,12 @@ public abstract class ActionItem implements Serializable {
         ActionMain actionMain = ActionMain.getInstance();
         long id = actionMain.getDB().insert(TABLE_NAME, null, values);
 
-        if (id != -1) actionMain.update_db_collection_count(1);
+        if (id != -1) {
+            actionMain.update_db_collection_count(1, 1);
+        }
 
         return id;
    }
-
-
-
-    public boolean remove(String word) {
-        SQLiteDatabase db = ActionMain.getInstance().getDB();
-        if (exists(word) == -1) return false;
-
-        db.delete(
-                TABLE_NAME,
-                SQL.COLUMN_NAME_WORD + " = '" + word + "'",
-                null
-        );
-        return true;
-    }
 
     public long find_id_by_word(String word) {
         long id;
@@ -258,7 +244,7 @@ public abstract class ActionItem implements Serializable {
                 null
         );
 
-        actionMain.update_db_collection_count(-1);
+        actionMain.update_db_collection_count(-1, -1);
 
         return true;
     }
@@ -406,69 +392,14 @@ public abstract class ActionItem implements Serializable {
         }
     }
 
-//    // 아이템 검색 내부 클래스
-//    public abstract Evaluation allocEvaluation();
-//    protected abstract class Evaluation {
-//        long entire_collection_count; // 두 메소드의 공통 분모. 이것 때문에 이너 클래스 형성.
-//        ActionMain actionMain;
-//        SQLiteDatabase db;
-//
-//        public Evaluation() {
-//            actionMain = ActionMain.getInstance();
-//            db = actionMain.getDB();
-//            entire_collection_count = actionMain.get_db_collection_count();
-//        }
-//
-//        // 말이 좋아 클래스지 사실상 그냥 C의 구조체임.
-//        public class query_word_info {
-//            long count;
-//            long ref_count;
-//
-//            public query_word_info(long count, long ref_count) {
-//                this.count = count;
-//                this.ref_count = ref_count;
-//            }
-//        }
-//
-//        // 주어진 쿼리 해시맵에 대해 이 카테고리 아이템의 레코드 전체의 평가값이 담긴 해시맵을 반환.
-//        @NonNull public abstract HashMap<Long, Double> evaluate_by_query_map(@NonNull HashMap<Long, query_word_info> queryMap);
-//
-//        // 이 아이템의 테이블의 모든 행에 대응하는 1:1 대응하는 키를 모두 가지는 해쉬맵을 만들어 반환한다.
-//        @NonNull protected HashMap<Long, Double> alloc_evaluation_map() {
-//            HashMap<Long, Double> eval_map = new HashMap<>();
-//
-//            Cursor entire_item_cursor = db.query(
-//                    TABLE_NAME,
-//                    new String[] {ActionItem.SQL._ID},
-//                    null,
-//                    null,
-//                    null,
-//                    null,
-//                    null
-//            );
-//            entire_item_cursor.moveToFirst();
-//            int colNum = entire_item_cursor.getColumnIndexOrThrow(ActionItem.SQL._ID);
-//
-//            for (int i = 0; i < entire_item_cursor.getCount(); i++) {
-//                eval_map.put(
-//                        entire_item_cursor.getLong(colNum),
-//                        0d
-//                );
-//                entire_item_cursor.moveToNext();
-//            }
-//            entire_item_cursor.close();
-//
-//            return eval_map;
-//        }
-//    }
-
     // 주어진 쿼리 해시맵에 대해 이 카테고리 아이템의 레코드 전체의 평가값이 담긴 해시맵을 반환.
     @NonNull
     public abstract HashMap<Long, Double> evaluate_by_query_map(
             @NonNull SQLiteDatabase db,
             @NonNull HashMap<Long, QueryWordInfo> queryMap,
             @NonNull HashMap<Long, Double> eval_map,
-            long entire_collection_count);
+            long entire_collection_count,
+            long average_document_length);
 
     // 이 아이템의 테이블의 모든 행에 대응하는 1:1 대응하는 키를 모두 가지는 해쉬맵을 만들어 반환한다.
     @NonNull protected HashMap<Long, Double> alloc_evaluation_map(SQLiteDatabase db) {
