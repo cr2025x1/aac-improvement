@@ -51,4 +51,5 @@ public class AACGroupContainerPreferences {
     // 검색 알고리즘
     public static final double RANKING_FUNCTION_CONSTANT_B = 0.25d; // 순위 함수의 상수 b
     public static final double RANKING_FUNCTION_CUTOFF_THRESHOLD = 0.0d; // 출력할 아이템의 중요도 평가값 탈락 한계선
+    public static final int RANKING_FUNCTION_BEST_MATCH_N = 30; // 평가값 최상위 n개 회수. 이 때의 n값.
 }

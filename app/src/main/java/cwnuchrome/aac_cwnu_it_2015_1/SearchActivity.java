@@ -30,6 +30,7 @@ public class SearchActivity extends AppCompatActivity {
     updateList updater;
     ArrayList<String> suggestionList;
     ArrayAdapter<String> adapter;
+    HashMap<String, Long> queryMap;
 
     ArrayList<ActionItem.onClickClass> suggestionOCCList;
 
@@ -139,13 +140,6 @@ public class SearchActivity extends AppCompatActivity {
                 try {
                     suggestionList.clear();
                     if (fetchSuggestion()) {
-                        Collections.sort(suggestionOCCList, new Comparator<ActionItem.onClickClass>() {
-                            @Override
-                            public int compare(ActionItem.onClickClass lhs, ActionItem.onClickClass rhs) {
-                                return lhs.rank > rhs.rank ? -1 : 1;
-                            }
-                        });
-
                         for (ActionItem.onClickClass occ : suggestionOCCList) {
                             suggestionList.add(occ.phonetic);
                         }
@@ -209,15 +203,17 @@ public class SearchActivity extends AppCompatActivity {
 
         boolean fetchSuggestion()
         {
-            HashMap<String, Long> queryMap = ActionMain.reduce_to_map(textInput.getText().toString());
-            if (queryMap.size() == 0) return false;
+            HashMap<String, Long> new_query_map = ActionMain.reduce_to_map(textInput.getText().toString());
+            suggestionOCCList.clear();
+            if (new_query_map.size() == 0 ||
+                    new_query_map.equals(queryMap)) return false;
 
+            queryMap = new_query_map;
             ActionMain actionMain = ActionMain.getInstance();
             Vector<HashMap<Long, Double>> rank_vector = actionMain.allocEvaluation().evaluate_by_query_map(queryMap);
 
-            suggestionOCCList.clear();
             for (int i = 0 ; i < ActionMain.item.ITEM_COUNT; i++) {
-                update_occ_list(i, rank_vector.get(i));
+                filter_and_update_occ_list(i, rank_vector.get(i));
             }
 
             return true;
@@ -270,34 +266,49 @@ public class SearchActivity extends AppCompatActivity {
         finish();
     }
 
-    protected void update_occ_list(int categoryID, HashMap<Long, Double> map) {
+    protected void filter_and_update_occ_list(int categoryID, HashMap<Long, Double> map) {
         ArrayList<Map.Entry<Long, Double>> entries =
                 new ArrayList<>(map.entrySet());
 
-        for (Map.Entry<Long, Double> entry : entries) if (entry.getValue() > AACGroupContainerPreferences.RANKING_FUNCTION_CUTOFF_THRESHOLD) {
-            ActionItem actionItem = actionMain.itemChain[categoryID];
-            ActionItem.onClickClass occ = actionItem.allocOCC(
-                    context,
-                    actionMain.getReferrer().get(getIntent().getIntExtra("AACGC_ID", -1))
-            );
-            occ.rank = entry.getValue();
-            occ.itemID = entry.getKey();
+        Collections.sort(entries, new Comparator<Map.Entry<Long, Double>>() {
+            @Override
+            public int compare(Map.Entry<Long, Double> lhs, Map.Entry<Long, Double> rhs) {
+                return lhs.getValue()> rhs.getValue() ? -1 : 1;
+            }
+        });
 
-            Cursor c = actionMain.getDB().query(
-                    actionItem.TABLE_NAME,
-                    new String[] {ActionItem.SQL.COLUMN_NAME_WORD},
-                    ActionItem.SQL._ID + "=" + entry.getKey(),
-                    null,
-                    null,
-                    null,
-                    null
-            );
-            c.moveToFirst();
-            occ.phonetic = c.getString(c.getColumnIndexOrThrow(ActionItem.SQL.COLUMN_NAME_WORD));
-            occ.message = occ.phonetic + " " + occ.rank;
+        int insertion_count = 0;
+        for (Map.Entry<Long, Double> entry : entries) {
+            if (insertion_count >= AACGroupContainerPreferences.RANKING_FUNCTION_BEST_MATCH_N) break;
 
-            c.close();
-            suggestionOCCList.add(occ);
+            if (entry.getValue() > AACGroupContainerPreferences.RANKING_FUNCTION_CUTOFF_THRESHOLD) {
+                insertion_count++;
+
+                ActionItem actionItem = actionMain.itemChain[categoryID];
+                ActionItem.onClickClass occ = actionItem.allocOCC(
+                        context,
+                        actionMain.getReferrer().get(getIntent().getIntExtra("AACGC_ID", -1))
+                );
+                occ.rank = entry.getValue();
+                occ.itemID = entry.getKey();
+
+                Cursor c = actionMain.getDB().query(
+                        actionItem.TABLE_NAME,
+                        new String[] {ActionItem.SQL.COLUMN_NAME_WORD},
+                        ActionItem.SQL._ID + "=" + entry.getKey(),
+                        null,
+                        null,
+                        null,
+                        null
+                );
+                c.moveToFirst();
+                occ.phonetic = c.getString(c.getColumnIndexOrThrow(ActionItem.SQL.COLUMN_NAME_WORD));
+                occ.message = occ.phonetic + " " + occ.rank;
+
+                c.close();
+                suggestionOCCList.add(occ);
+            }
+            else break;
         }
 
     }
