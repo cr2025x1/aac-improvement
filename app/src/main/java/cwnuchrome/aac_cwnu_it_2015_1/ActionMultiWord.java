@@ -394,6 +394,7 @@ public abstract class ActionMultiWord extends ActionItem {
 
                 double eval = ActionMain.ranking_function(
                         info.count,
+                        info.feedback_weight,
                         doc_ref_count,
                         map.size(),
                         average_document_length,
@@ -411,4 +412,20 @@ public abstract class ActionMultiWord extends ActionItem {
         return eval_map;
     }
 
+    @NonNull public HashMap<Long, Long> get_id_count_map(long id) {
+        Cursor c = ActionMain.getInstance().getDB().query(
+                TABLE_NAME,
+                new String[] {SQL.COLUMN_NAME_ELEMENT_ID_TAG},
+                SQL._ID + "=" + id,
+                null,
+                null,
+                null,
+                null
+        );
+        c.moveToFirst();
+
+        HashMap<Long, Long> map = parse_element_id_count_tag(c.getString(c.getColumnIndexOrThrow(SQL.COLUMN_NAME_ELEMENT_ID_TAG)));
+        c.close();
+        return map;
+    }
 }

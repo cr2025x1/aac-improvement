@@ -55,6 +55,7 @@ public class AACGroupContainer {
         this.mainLayout = mainLayout;
         contentList = new ArrayList<>();
         actionMain = ActionMain.getInstance();
+        actionMain.setContext(context.getApplicationContext());
         TTS = new TextToSpeech(context, new TTSListener());
         actionMain.containerRef = this;
 

@@ -46,16 +46,20 @@ public abstract class ActionItem implements Serializable {
 
     }
     public void deleteTable(SQLiteDatabase db) {
-        db.execSQL("DROP TABLE IF EXISTS " + TABLE_NAME + ";");
+//        db.execSQL("DROP TABLE IF EXISTS " + TABLE_NAME + ";");
+        db.execSQL(SQL_DELETE_ENTRIES);
     }
 
 
     interface SQL extends BaseColumns {
+        String INTEGER_PRIMARY_KEY = " INTEGER PRIMARY KEY";
+        String NOT_NULL = " NOT NULL";
+
         String TEXT_TYPE = " TEXT";
         String INTEGER_TYPE = " INTEGER";
         String REAL_TYPE = " REAL";
         String BLOB_TYPE = " BLOB";
-        String COMMA_SEP = ",";
+        String COMMA_SEP = ", ";
 
         String COLUMN_NAME_PARENT_ID = "parent_id";
         String COLUMN_NAME_PRIORITY = "priority";
@@ -390,6 +394,13 @@ public abstract class ActionItem implements Serializable {
         public void toogleOnline() {
             isOnline = !isOnline;
         }
+
+        public int getItemCategoryID() {
+            return itemCategoryID;
+        }
+        public long getItemID() {
+            return itemID;
+        }
     }
 
     // 주어진 쿼리 해시맵에 대해 이 카테고리 아이템의 레코드 전체의 평가값이 담긴 해시맵을 반환.
@@ -428,4 +439,6 @@ public abstract class ActionItem implements Serializable {
 
         return eval_map;
     }
+
+    @NonNull public abstract HashMap<Long, Long> get_id_count_map(long id);
 }
