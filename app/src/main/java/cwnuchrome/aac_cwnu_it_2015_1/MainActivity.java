@@ -128,41 +128,6 @@ public class MainActivity extends AppCompatActivity {
 //            return true;
 //        }
 
-//        if (id == R.id.action_remove_word) { // 아직 작업 필요
-//            final LinearLayout linear = (LinearLayout)View.inflate(this, R.layout.remove_word, null);
-//
-//            new AlertDialog.Builder(this)
-//                    .setTitle("Remove Word Menu(Temp)")
-//                    .setView(linear)
-//                    .setPositiveButton("Confirm",
-//                            new DialogInterface.OnClickListener() {
-//                                @Override
-//                                public void onClick(DialogInterface dialog, int which) {
-//                                    EditText ETWord = (EditText) linear.findViewById(R.id.etword);
-//                                    ContentValues values = new ContentValues();
-//
-//                                    if (container.removeWord(db, ETWord.getText().toString())) {
-//                                        isInited = false;
-//                                        container.exploreGroup(container.getCurrentGroupID());
-//                                        Toast.makeText(getBaseContext(), "Word Removed", Toast.LENGTH_SHORT)
-//                                                .show();
-//                                    } else {
-//                                        Toast.makeText(getBaseContext(), "Word Doesn't Exists", Toast.LENGTH_SHORT)
-//                                                .show();
-//                                    }
-//
-//                                }
-//                            })
-//                    .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-//                        @Override
-//                        public void onClick(DialogInterface dialog, int which) {
-//                        }
-//                    })
-//                    .show();
-//
-//            return true;
-//        }
-
         if (id == R.id.action_add_word_macro) {
             Intent i = new Intent(this, AddItemActivity.class);
             i.putExtra("currentGroupID", container.getCurrentGroupID());

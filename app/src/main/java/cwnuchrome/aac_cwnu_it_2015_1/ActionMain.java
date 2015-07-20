@@ -61,6 +61,9 @@ public final class ActionMain {
     public void setContext(Context context) {
         this.context = context;
     }
+    public Context getContext() {
+        return context;
+    }
 
     public interface item {
         int ITEM_COUNT = 3;

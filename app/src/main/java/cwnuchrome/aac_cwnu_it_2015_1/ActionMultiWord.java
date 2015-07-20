@@ -47,7 +47,8 @@ public abstract class ActionMultiWord extends ActionItem {
                 actionWord.update_reference_count(entry.getKey(), 1);
                 doc_length += entry.getValue();
             }
-            actionMain.update_db_collection_count(0, doc_length); // 문서 수 변화량이 0인 이유 : super.raw_add()에서 1이 이미 늘어났기 때문.
+//            actionMain.update_db_collection_count(0, doc_length); // 문서 수 변화량이 0인 이유 : super.raw_add()에서 1이 이미 늘어났기 때문.
+            actionMain.update_db_collection_count(1, doc_length);
         }
 
         return id;
@@ -78,7 +79,8 @@ public abstract class ActionMultiWord extends ActionItem {
                 actionWord.update_reference_count(entry.getKey(), -1);
                 doc_length -= entry.getValue();
             }
-            actionMain.update_db_collection_count(0, doc_length); // 문서 수 변화량이 0인 이유 : super.raw_add()에서 -1이 이미 적용됐기 때문.
+//            actionMain.update_db_collection_count(0, doc_length); // 문서 수 변화량이 0인 이유 : super.raw_add()에서 -1이 이미 적용됐기 때문.
+            actionMain.update_db_collection_count(-1, doc_length);
 
             return effected;
         }

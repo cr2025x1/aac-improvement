@@ -41,7 +41,8 @@ public final class ActionPreset {
 
         // TODO: 이후 프리셋이 정규로 편입될 때 레퍼 클래스를 만들어서 대량으로 한꺼번에 삽입하게 만들기.
         id = actionWord.add(
-                1,
+//                1,
+                0,
                 2,
                 "테스트",
                 "테스트",
@@ -62,7 +63,8 @@ public final class ActionPreset {
 
         long[] chain = new long[3];
         chain[0] = actionWord.add(
-                id,
+//                id,
+                0,
                 2,
                 "나는",
                 "나는",
@@ -72,7 +74,8 @@ public final class ActionPreset {
         if (chain[0] == -1) chain[0] = actionWord.find_id_by_word("나는");
 
         chain[1] = actionWord.add(
-                id,
+//                id,
+                0,
                 3,
                 "당신을",
                 "당신을",
@@ -82,7 +85,8 @@ public final class ActionPreset {
         if (chain[1] == -1) chain[1] = actionWord.find_id_by_word("당신을");
 
         chain[2] = actionWord.add(
-                id,
+//                id,
+                0,
                 4,
                 "사랑합니다",
                 "사랑합니다",

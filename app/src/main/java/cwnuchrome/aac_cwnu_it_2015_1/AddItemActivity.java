@@ -151,7 +151,8 @@ public class AddItemActivity extends AppCompatActivity {
                 madeChange = true;
                 ActionMain.log(null, "adding word \"" + s + "\"");
                 id = actionWord.add(
-                        currentGroupID,
+//                        currentGroupID,
+                        0,
                         0,
                         s,
                         s,
@@ -171,8 +172,8 @@ public class AddItemActivity extends AppCompatActivity {
 //        mode_values = actionMain.process_external_images(mode_values);
         switch (mod) {
             case ADD_WORD_MACRO:
-                if (textTokens.length > 1) {
-                    ActionMain.log(null, "identified as a macro needed\"");
+//                if (textTokens.length > 1) { // 워드의 매크로화를 위해 주석 처리됨.
+//                    ActionMain.log(null, "identified as a macro needed\"");
                     ActionMacro actionMacro = (ActionMacro)actionMain.itemChain[ActionMain.item.ID_Macro];
                     if (actionMacro.exists(itemText) == -1) {
                         madeChange = true;
@@ -188,7 +189,7 @@ public class AddItemActivity extends AppCompatActivity {
                         );
                     }
                     else ActionMain.log(null, " macro \"" + itemText + "\" already exists");
-                }
+//                }
                 break;
 
             case ADD_GROUP:

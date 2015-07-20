@@ -55,4 +55,7 @@ public class AACGroupContainerPreferences {
 //    public static final double FEEDBACK_ROCCHIO_CONSTANT_ALPHA = 1.0d; // 로치오 피드백 공식에서의 상수 알파 (쿼리 본체 적용 계수)
     public static final double FEEDBACK_ROCCHIO_COEFFICIENT_RELEVANT_DOC = 1.0d; // 로치오 피드백 공식: 관련 문서 적용 계수)
     public static final double FEEDBACK_ROCCHIO_COEFFICIENT_IRRELEVANT_DOC = 1.0d; // 로치오 피드백 공식: 비관련 문서 적용 계수)
+
+    // 데이터베이스
+    public static final boolean DATABASE_REMOVE_WORD_WITH_NO_REFERENCE = true; // 레퍼런스 카운트가 0에 도달한 워드 아이템을 자동 제거? 제거된 워드 아이템에 대한 정보는 피드백 정보를 포함, 영구히 데이터베이스에서 소실된다.
 }

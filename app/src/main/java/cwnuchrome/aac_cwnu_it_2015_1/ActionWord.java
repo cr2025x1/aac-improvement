@@ -131,7 +131,6 @@ public class ActionWord extends ActionItem {
     }
 
     // 주어진 단어가 이미 DB 상에 존재하면 그 단어의 ID를 반환, 없으면 추가 후 추가된 단어의 ID를 반환.
-    // TODO: ContentValues 리패킹 제거
     public long raw_add(ContentValues values) {
         String word = values.getAsString(ActionWord.SQL.COLUMN_NAME_WORD);
         long result = exists(word);
@@ -154,29 +153,21 @@ public class ActionWord extends ActionItem {
             c.close();
 
 //                if (parentID == 0 && actionMain.containerRef.rootGroupElement.ids.contains(id)) {
-            if (parentID == 0) {
+            if (parentID == 0) { // 사실 이제부터는 항상 parentID == 0이겠지만 그래도 일단 워드를 양지로 다시 들일 경우를 대비해서 남겨둔다.
                 ContentValues record = new ContentValues();
                 record.put(ActionWord.SQL.COLUMN_NAME_PARENT_ID, values.getAsLong(SQL.COLUMN_NAME_PARENT_ID));
                 if (actionMain.itemChain[ActionMain.item.ID_Word].updateWithIDs(actionMain.containerRef.context, record, new long[] {id}) > 0) {
-                    update_reference_count(id, 1);
-                    actionMain.update_db_collection_count(1, 1);
+//                    update_reference_count(id, 1); // 이제 더 이상 워드는 가시화되지 않으므로 auto-reference는 카운트를 올리지 못한다.
+//                    actionMain.update_db_collection_count(1, 1); // 이제 더 이상 워드는 가시화되지 않으므로 콜렉션에서 제외된다.
                 }
             }
 
             return result;
         }
 
-        ContentValues record = new ContentValues();
-        record.put(SQL.COLUMN_NAME_PARENT_ID, values.getAsString(SQL.COLUMN_NAME_PARENT_ID));
-        record.put(SQL.COLUMN_NAME_PRIORITY, ActionMain.getInstance().rand.nextInt(100)); // 이것도 임시
-        record.put(SQL.COLUMN_NAME_WORD, word);
-        record.put(SQL.COLUMN_NAME_STEM, word);
-        record.put(SQL.COLUMN_NAME_PICTURE, values.getAsString(SQL.COLUMN_NAME_PICTURE));
-        record.put(SQL.COLUMN_NAME_PICTURE_IS_PRESET, 1);
-        record.put(SQL.COLUMN_NAME_REFERENCE_COUNT, 1);
-        record.put(SQL.COLUMN_NAME_FEEDBACK_MAP_TAG, create_feedback_map_tag(null));
+        values.put(SQL.COLUMN_NAME_FEEDBACK_MAP_TAG, create_feedback_map_tag(null));
 
-        long id = super.raw_add(record);
+        long id = super.raw_add(values);
         if (id != -1) {
             ContentValues map_table_values = new ContentValues();
             map_table_values.put(SQL.COLUMN_NAME_OWNER_ID, id);
@@ -210,7 +201,8 @@ public class ActionWord extends ActionItem {
         values.put(ActionWord.SQL.COLUMN_NAME_STEM, stem);
         values.put(ActionWord.SQL.COLUMN_NAME_PICTURE, picture);
         values.put(ActionItem.SQL.COLUMN_NAME_PICTURE_IS_PRESET, is_picture_preset ? 1 : 0);
-        values.put(SQL.COLUMN_NAME_REFERENCE_COUNT, 1);
+//        values.put(SQL.COLUMN_NAME_REFERENCE_COUNT, 1); // 이제 워드는 모두 숨겨지게 되므로 레퍼런스를 0으로 세팅한다.
+        values.put(SQL.COLUMN_NAME_REFERENCE_COUNT, 0);
 
         return raw_add(values);
     }
@@ -281,12 +273,13 @@ public class ActionWord extends ActionItem {
         }
 
         if (actionMain.containerRef.rootGroupElement.ids.contains(id) || isReserved) {
+            // 예약어 처리 부분: 이 블록은 상위 클래스 메소드를 호출하지 않고 여기서 끝난다.
             ContentValues values = new ContentValues();
             values.put(SQL.COLUMN_NAME_PARENT_ID, 0);
             boolean effected = updateWithIDs(context, values, new long[]{id}) > 0;
 
-            update_reference_count(id, -1);
-            actionMain.update_db_collection_count(-1, -1);
+//            update_reference_count(id, -1); 워드의 불가시화로 인해 자기 자신에 대한 레퍼런스 카운트가 없어졌으므로 주석 처리됨.
+//            actionMain.update_db_collection_count(-1, -1); 워드의 불가시화 -> 콜렉션 카운트에서 제외 -> 따라서 삭제 시에도 콜렉션 카운트 업데이트 따위 없음. 주석 처리됨.
 
             return effected;
         }
@@ -334,10 +327,28 @@ public class ActionWord extends ActionItem {
     // 단어의 참조 카운트 업데이트 메소드
     public void update_reference_count(long id, long diff) {
         ActionMain actionMain = ActionMain.getInstance();
-        actionMain.getDB().execSQL("UPDATE " + TABLE_NAME +
-                " SET " + SQL.COLUMN_NAME_REFERENCE_COUNT + "=" + SQL.COLUMN_NAME_REFERENCE_COUNT + "+(" + diff + ")"
-                + " WHERE " + SQL._ID + "=" + id
+        Cursor c = actionMain.getDB().query(
+                TABLE_NAME,
+                new String[]{SQL.COLUMN_NAME_REFERENCE_COUNT},
+                SQL._ID + "=" + id,
+                null,
+                null,
+                null,
+                null
         );
+        if (c.getCount() == 0) throw new IllegalArgumentException("Given ID does not exists.");
+        c.moveToFirst();
+
+        long ref_count = c.getLong(c.getColumnIndexOrThrow(SQL.COLUMN_NAME_REFERENCE_COUNT)) + diff;
+        c.close();
+        //noinspection PointlessBooleanExpression,ConstantConditions
+        if (ref_count <= 0 && AACGroupContainerPreferences.DATABASE_REMOVE_WORD_WITH_NO_REFERENCE) removeWithID(actionMain.getContext(), id);
+        else {
+            actionMain.getDB().execSQL("UPDATE " + TABLE_NAME +
+                            " SET " + SQL.COLUMN_NAME_REFERENCE_COUNT + "=" + SQL.COLUMN_NAME_REFERENCE_COUNT + "+(" + diff + ")"
+                            + " WHERE " + SQL._ID + "=" + id
+            );
+        }
     }
 
     // 해당 워드의 아이디와 피드백 맵을 받아 데이터베이스를 업데이트하는 메소드

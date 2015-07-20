@@ -123,9 +123,10 @@ public abstract class ActionItem implements Serializable {
         values = ActionMain.getInstance().process_external_images(values);
         long id = actionMain.getDB().insert(TABLE_NAME, null, values);
 
-        if (id != -1) {
-            actionMain.update_db_collection_count(1, 1);
-        }
+        // 워드의 불가시화로 인해 공통 코드 부분에서 콜렉션 업데이트를 하면 안 되게 됐음.
+//        if (id != -1) {
+//            actionMain.update_db_collection_count(1, 1);
+//        }
 
         return id;
    }
@@ -251,7 +252,7 @@ public abstract class ActionItem implements Serializable {
                 null
         );
 
-        actionMain.update_db_collection_count(-1, -1);
+//        actionMain.update_db_collection_count(-1, -1); // 워드의 불가시화로 인해 더 이상 공통 코드에서 콜렉션 카운트 업그레이드가 있으면 안 됨.
 
         return true;
     }
