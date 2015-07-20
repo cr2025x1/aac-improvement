@@ -1,6 +1,7 @@
 package cwnuchrome.aac_cwnu_it_2015_1;
 
 import android.content.Context;
+import android.content.Intent;
 import android.database.Cursor;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -330,10 +331,15 @@ public class SearchActivity extends AppCompatActivity {
 
     protected void addOCC(int catID, Map.Entry<Long, Double> entry) {
         ActionItem actionItem = actionMain.itemChain[catID];
-        ActionItem.onClickClass occ = actionItem.allocOCC(
-                context,
-                actionMain.getReferrer().get(getIntent().getIntExtra("AACGC_ID", -1))
-        );
+        ActionItem.onClickClass occ;
+        AACGroupContainer container = actionMain.getReferrer().get(getIntent().getIntExtra("AACGC_ID", -1));
+        if (catID == ActionMain.item.ID_Group) {
+            occ = new GroupOCCWrapper(context, container);
+        }
+        else {
+            occ = actionItem.allocOCC(context, container);
+        }
+
         occ.rank = entry.getValue();
         long key = entry.getKey();
         occ.itemID = key;
@@ -354,6 +360,23 @@ public class SearchActivity extends AppCompatActivity {
         c.close();
         suggestionOCCList.add(occ);
 
+    }
+
+    // 그룹 아이템 클릭시에는 액티비티를 벗어나는 추가 동작이 필요하므로 서브클래스를 하나 정의한다.
+    protected class GroupOCCWrapper extends ActionGroup.onClickClass {
+        public GroupOCCWrapper(Context context, AACGroupContainer container) {
+            super(context, container);
+        }
+
+        @Override
+        public void onClick(View v) {
+            Intent i = new Intent();
+            setResult(RESULT_OK, i);
+            super.onClick(v);
+            send_feedback();
+
+            finish();
+        }
     }
 
     protected void send_feedback() {

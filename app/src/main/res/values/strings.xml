@@ -4,16 +4,19 @@
 
     <string name="groupName">그룹 이름</string>
     <string name="groupContext">그룹 내용</string>
-    <string name="title_activity_add_word_macro">Add Word/Macro</string>
-    <string name="button_add_word_macro">Add</string>
-    <string name="button_cancel_add_word_macro">Cancel</string>
-    <string name="label_add_word_macro">Word/Macro to be added :</string>
 
     <string name="hello_world">Hello world!</string>
 
     <string name="fold">Fold</string>
 
     <string name="test">Test</string>
+
+    <!-- 아이템 추가 관련 -->
+    <string name="title_activity_add_item">Add Item</string>
+    <string name="button_add_word_macro">Add Word/Macro</string>
+    <string name="button_add_group">Add Group</string>
+    <string name="button_cancel_add_item">Cancel</string>
+    <string name="label_add_item">Item to be added :</string>
 
     <!-- 아이템 선택 메뉴 관련 -->
     <string name="menu_select_item">Select Item</string>

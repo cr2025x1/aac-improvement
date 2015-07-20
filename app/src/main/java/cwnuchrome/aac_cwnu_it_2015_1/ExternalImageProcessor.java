@@ -42,11 +42,25 @@ public class ExternalImageProcessor {
         // inStream을 입력해 파일 이름으로 사용할 MD5 해쉬값 생성
         String hashedFilename;
         try {
-            hashedFilename = Base64.encodeToString(MD5Checksum.createChecksumWithStream(inStream), Base64.DEFAULT);
+            /*
+            // 아파치 커먼즈 라이브러리 이용 Base32 코딩
+            Base32 base32 = new Base32();
+            hashedFilename = base32.encodeToString(MD5Checksum.createChecksumWithStream(inStream));
+            */
+
+            // 안드로이드 자체 라이브러리 이용 Base64 코딩
+            hashedFilename =
+                    Base64.encodeToString(
+                            MD5Checksum.createChecksumWithStream(inStream),
+                            Base64.URL_SAFE); // 파일 이름에 사용되는 Base64 코딩이므로 일부 특수문자 대체 (RFC 3548 section 4)
             hashedFilename = hashedFilename.substring(0, hashedFilename.lastIndexOf("\n") - 1) + filepath.substring(filepath.lastIndexOf("."));
+
+
+            hashedFilename = hashedFilename + filepath.substring(filepath.lastIndexOf("."));
             inStream.close();
         } catch (Exception e){
             System.out.println("MD5 hashing met an exception.");
+            e.printStackTrace();
             return null;
         }
 
@@ -67,6 +81,7 @@ public class ExternalImageProcessor {
                 outStream.close();
             } catch (Exception e) {
                 System.out.println("Error occurred while copying the selected file.");
+                e.printStackTrace();
                 return null;
             }
 

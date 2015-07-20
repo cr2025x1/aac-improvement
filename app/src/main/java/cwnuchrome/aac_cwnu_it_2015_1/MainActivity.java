@@ -164,7 +164,7 @@ public class MainActivity extends AppCompatActivity {
 //        }
 
         if (id == R.id.action_add_word_macro) {
-            Intent i = new Intent(this, AddWordMacroActivity.class);
+            Intent i = new Intent(this, AddItemActivity.class);
             i.putExtra("currentGroupID", container.getCurrentGroupID());
             startActivityForResult(i, ACTIVITY_ADD);
 

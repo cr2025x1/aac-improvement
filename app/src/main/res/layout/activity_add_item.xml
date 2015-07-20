@@ -8,22 +8,22 @@
     android:paddingRight="@dimen/activity_horizontal_margin"
     android:paddingTop="@dimen/activity_vertical_margin"
     android:paddingBottom="@dimen/activity_vertical_margin"
-    tools:context="cwnuchrome.aac_cwnu_it_2015_1.AddWordMacroActivity">
+    tools:context="cwnuchrome.aac_cwnu_it_2015_1.AddItemActivity">
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/label_add_word_macro"
-        android:labelFor="@+id/edittext_add_word_macro"/>
+        android:text="@string/label_add_item"
+        android:labelFor="@+id/edittext_add_item"/>
 
     <EditText
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:id="@+id/edittext_add_word_macro"
+        android:id="@+id/edittext_add_item"
         android:inputType="textPhonetic" />
 
     <ListView
-        android:id="@+id/list_add_word_macro"
+        android:id="@+id/list_add_item"
         android:layout_height="wrap_content"
         android:layout_width="match_parent">
     </ListView>

@@ -667,12 +667,6 @@ public class AACGroupContainer {
 
     // 선택된 항목들의 이미지를 지정한 것으로 바꿈.
     public int setImageForSelected(ContentValues values) {
-        if (values.getAsInteger(ActionItem.SQL.COLUMN_NAME_PICTURE_IS_PRESET) == 0) {
-            String filepath = values.getAsString(ActionItem.SQL.COLUMN_NAME_PICTURE);
-            values.remove(ActionItem.SQL.COLUMN_NAME_PICTURE);
-            values.put(ActionItem.SQL.COLUMN_NAME_PICTURE, ExternalImageProcessor.copyAfterHashing(context, filepath));
-        }
-
         Vector<ArrayList<Long>> id_Vector = new Vector<>(ActionMain.item.ITEM_COUNT);
         ActionMain actionMain = ActionMain.getInstance();
 

@@ -1,11 +1,13 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    tools:context="cwnuchrome.aac_cwnu_it_2015_1.AddWordMacroActivity">
+    tools:context="cwnuchrome.aac_cwnu_it_2015_1.AddItemActivity">
 
     <item android:id="@+id/action_add_word_macro" android:title="@string/button_add_word_macro"
         android:orderInCategory="100" app:showAsAction="never" />
-    <item android:id="@+id/action_cancel_add_word_macro" android:title="@string/button_cancel_add_word_macro"
+    <item android:id="@+id/action_add_group" android:title="@string/button_add_group"
+        android:orderInCategory="100" app:showAsAction="never" />
+    <item android:id="@+id/action_cancel_add_word_macro" android:title="@string/button_cancel_add_item"
         android:orderInCategory="100" app:showAsAction="never" />
 
 </menu>

@@ -120,6 +120,7 @@ public abstract class ActionItem implements Serializable {
 
     public long raw_add(ContentValues values) {
         ActionMain actionMain = ActionMain.getInstance();
+        values = ActionMain.getInstance().process_external_images(values);
         long id = actionMain.getDB().insert(TABLE_NAME, null, values);
 
         if (id != -1) {
@@ -164,6 +165,8 @@ public abstract class ActionItem implements Serializable {
         String whereClause = sb.toString();
 
         if (values.containsKey(SQL.COLUMN_NAME_PICTURE) && values.containsKey(SQL.COLUMN_NAME_PICTURE_IS_PRESET)) {
+            values = ActionMain.getInstance().process_external_images(values);
+
             sb.append(" AND ");
             sb.append(SQL.COLUMN_NAME_PICTURE);
             sb.append("!='");

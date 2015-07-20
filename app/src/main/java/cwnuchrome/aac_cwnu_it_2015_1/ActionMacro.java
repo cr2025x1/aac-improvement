@@ -58,7 +58,7 @@ public class ActionMacro extends ActionMultiWord {
         record.put(SQL.COLUMN_NAME_STEM, word);
         record.put(SQL.COLUMN_NAME_WORDCHAIN, values.getAsString(SQL.COLUMN_NAME_WORDCHAIN));
         record.put(SQL.COLUMN_NAME_PICTURE, values.getAsString(SQL.COLUMN_NAME_PICTURE));
-        record.put(SQL.COLUMN_NAME_PICTURE_IS_PRESET, 1);
+        record.put(SQL.COLUMN_NAME_PICTURE_IS_PRESET, values.getAsInteger(SQL.COLUMN_NAME_PICTURE_IS_PRESET));
 
         record.put(SQL.COLUMN_NAME_ELEMENT_ID_TAG, values.getAsString(SQL.COLUMN_NAME_ELEMENT_ID_TAG));
         record.put(SQL.ATTACHMENT_ID_MAP, values.getAsInteger(SQL.ATTACHMENT_ID_MAP));
@@ -109,7 +109,7 @@ public class ActionMacro extends ActionMultiWord {
             String stem,
             long[] wordIDs,
             String picture,
-            Boolean is_picture_preset
+            boolean is_picture_preset
     ) {
         HashMap<Long, Long> map = create_element_id_count_map(wordIDs);
 
@@ -135,7 +135,7 @@ public class ActionMacro extends ActionMultiWord {
             String stem,
             long[] wordIDs,
             int picture,
-            Boolean is_picture_preset
+            boolean is_picture_preset
     ) {
         return add(parentID, priority, word, stem, wordIDs, Integer.toString(picture), is_picture_preset);
     }

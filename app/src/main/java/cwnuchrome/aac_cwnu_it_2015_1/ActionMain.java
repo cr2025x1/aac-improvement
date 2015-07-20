@@ -1,5 +1,6 @@
 package cwnuchrome.aac_cwnu_it_2015_1;
 
+import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
@@ -281,8 +282,15 @@ public final class ActionMain {
         StackTraceElement e = stacktrace[3];
         String className = e.getClassName();
 
-        if (prefix == null) System.out.println(className.substring(className.lastIndexOf('.') + 1) + "." + e.getMethodName() + ": " + text);
-        else System.out.println(prefix + className.substring(className.lastIndexOf('.') + 1) + "." + e.getMethodName() + ": " + text);
+        StringBuilder sb = new StringBuilder();
+        if (prefix != null) sb.append(prefix);
+        sb.append(className.substring(className.lastIndexOf('.') + 1));
+        sb.append('.');
+        sb.append(e.getMethodName());
+        sb.append(": ");
+        sb.append(text);
+
+        System.out.println(sb.toString());
     }
 
     public InterActivityReferrer<AACGroupContainer> getReferrer() {
@@ -313,7 +321,8 @@ public final class ActionMain {
 
         String wordSequence = text.trim();
         if (wordSequence.length() == 0) return map;
-        String[] keys = text.split("(?<=.)"); // 참고 출처: http://stackoverflow.com/questions/13453075/splitting-a-string-with-no-delimiter (Bohemian의 답변)
+        // 참고 출처: http://stackoverflow.com/questions/13453075/splitting-a-string-with-no-delimiter (Bohemian의 답변)
+        String[] keys = text.split("(?<=.)");
 
         for (String key : keys) {
             if (map.containsKey(key)) map.put(key, map.get(key) + 1l);
@@ -350,6 +359,7 @@ public final class ActionMain {
         return scalar_product / lhs_vector_size / rhs_vector_size;
     }
 
+    // 쿼리에 따른 아이템들의 관련성 평가를 위한 내부 클래스
     @NonNull public Evaluation allocEvaluation() { return new Evaluation(); }
     class Evaluation {
         long entire_collection_count;
@@ -426,8 +436,6 @@ public final class ActionMain {
                             );
                             query_id_map_feedbacked.put(fb_key, fb_qwi);
                         }
-
-                        // TODO: 단어 삭제 메소드도 맵에서도 결과 반영하도록 필히 업데이트 해야함!!!!!!
                     }
                 }
 
@@ -637,5 +645,15 @@ public final class ActionMain {
         HashMap<Long, Double> thawed_map = kryo.readObject(input, HashMap.class);
         input.close();
         return thawed_map;
+    }
+
+    @NonNull public ContentValues process_external_images(@NonNull ContentValues values) {
+        if (values.getAsInteger(ActionItem.SQL.COLUMN_NAME_PICTURE_IS_PRESET) == 0) {
+            String filepath = values.getAsString(ActionItem.SQL.COLUMN_NAME_PICTURE);
+            values.remove(ActionItem.SQL.COLUMN_NAME_PICTURE);
+            values.put(ActionItem.SQL.COLUMN_NAME_PICTURE, ExternalImageProcessor.copyAfterHashing(context, filepath));
+        }
+
+        return values;
     }
 }

@@ -1,5 +1,6 @@
 package cwnuchrome.aac_cwnu_it_2015_1;
 
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.net.ConnectivityManager;
@@ -33,7 +34,7 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
 
-public class AddWordMacroActivity extends AppCompatActivity {
+public class AddItemActivity extends AppCompatActivity {
     ListView listView;
     EditText textInput;
     Context context;
@@ -43,25 +44,34 @@ public class AddWordMacroActivity extends AppCompatActivity {
 
     protected ActionMain actionMain;
 
-    public AddWordMacroActivity() {
+    protected ContentValues mode_values;
+    protected int mode;
+    protected static final int ADD_WORD_MACRO = 0;
+    protected static final int ADD_GROUP = 1;
+
+    protected static final int ACTIVITY_IMAGE_SELECTION = 0;
+
+    public AddItemActivity() {
         super();
         context = this;
         updater = new updateList();
         suggestionList = new ArrayList<>();
+        mode = -1;
+        mode_values = new ContentValues();
     }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_add_word_macro);
+        setContentView(R.layout.activity_add_item);
 
         actionMain = ActionMain.getInstance();
 
-        textInput = (EditText)findViewById(R.id.edittext_add_word_macro);
+        textInput = (EditText)findViewById(R.id.edittext_add_item);
         textInput.setOnKeyListener(new enterKeyListener());
 
         /* ListView Initialization */
-        listView = (ListView) findViewById(R.id.list_add_word_macro);
+        listView = (ListView) findViewById(R.id.list_add_item);
         // Define a new Adapter
         // First parameter - Context
         // Second parameter - Layout for the row
@@ -80,7 +90,7 @@ public class AddWordMacroActivity extends AppCompatActivity {
 
                 textInput.setText(itemValue);
 
-                add(itemValue);
+//                add(itemValue);
             }
         });
         /* End of ListView initialization */
@@ -104,15 +114,31 @@ public class AddWordMacroActivity extends AppCompatActivity {
         updater.execute(); // Initializing Updater thread
     }
 
-    protected void add(String itemValue) {
+    // TODO: 단일 단어 길이의 워드도 매크로로 취급하도록 만들기
+    // TODO: 작업 시 워드가 자동 삭제되게 만들어야 한다.
+    protected void add(String itemText, int mod) {
         ActionMain.log("*** ", "started ***");
         long currentGroupID = getIntent().getLongExtra("currentGroupID", 0);
 
-        itemValue = itemValue.trim();
-        ActionMain.log(null, "adding word \"" + itemValue + "\"");
-        String[] textTokens = itemValue.split("\\s");
-        boolean isMacro = textTokens.length > 1;
-        ActionMain.log(null, "identified as a macro needed\"");
+        itemText = itemText.trim();
+        ActionMain.log(null, "adding word \"" + itemText + "\"");
+        String[] textTokens = itemText.split("\\s");
+        switch (mod) {
+            case ADD_WORD_MACRO:
+                break;
+            case ADD_GROUP:
+                break;
+        }
+//        boolean isMultiwordRequired = textTokens.length > 1;
+//        switch (mod) {
+//            case ADD_WORD_MACRO:
+//                ActionMain.log(null, "identified as a macro needed\"");
+//                isMultiwordRequired = textTokens.length > 1;
+//                break;
+//            case ADD_GROUP:
+//                isMultiwordRequired = true;
+//                break;
+//        }
 
         long wordIDs[] = new long[textTokens.length];
         int wordPos = 0;
@@ -141,25 +167,52 @@ public class AddWordMacroActivity extends AppCompatActivity {
             wordIDs[wordPos++] = id;
         }
 
-        ActionMacro actionMacro = (ActionMacro)actionMain.itemChain[ActionMain.item.ID_Macro];
-        if (isMacro && actionMacro.exists(itemValue) == -1) {
-            madeChange = true;
+        // 코드 공통화가 안 되는 이유... add 메소드는 상속 메소드가 아니기 때문임.
+//        mode_values = actionMain.process_external_images(mode_values);
+        switch (mod) {
+            case ADD_WORD_MACRO:
+                if (textTokens.length > 1) {
+                    ActionMain.log(null, "identified as a macro needed\"");
+                    ActionMacro actionMacro = (ActionMacro)actionMain.itemChain[ActionMain.item.ID_Macro];
+                    if (actionMacro.exists(itemText) == -1) {
+                        madeChange = true;
 
-            actionMacro.add(
-                    currentGroupID,
-                    0,
-                    itemValue,
-                    itemValue,
-                    wordIDs,
-                    R.drawable.btn_default,
-                    true
-            );
+                        actionMacro.add(
+                                currentGroupID,
+                                0,
+                                itemText,
+                                itemText,
+                                wordIDs,
+                                mode_values.getAsString(ActionMacro.SQL.COLUMN_NAME_PICTURE),
+                                mode_values.getAsInteger(ActionMacro.SQL.COLUMN_NAME_PICTURE_IS_PRESET) == 1
+                        );
+                    }
+                    else ActionMain.log(null, " macro \"" + itemText + "\" already exists");
+                }
+                break;
+
+            case ADD_GROUP:
+                ActionGroup actionGroup = (ActionGroup)actionMain.itemChain[ActionMain.item.ID_Group];
+                if (actionGroup.exists(itemText) == -1) {
+                    madeChange = true;
+
+                    actionGroup.add(
+                            currentGroupID,
+                            0,
+                            itemText,
+                            itemText,
+                            wordIDs,
+                            mode_values.getAsString(ActionMacro.SQL.COLUMN_NAME_PICTURE),
+                            mode_values.getAsInteger(ActionMacro.SQL.COLUMN_NAME_PICTURE_IS_PRESET) == 1
+                    );
+                }
+                break;
         }
 
         if (madeChange) {
             Intent i = new Intent();
             Bundle extra = new Bundle();
-            extra.putString("ItemName", itemValue);
+            extra.putString("ItemName", itemText);
             i.putExtras(extra);
 
             setResult(RESULT_OK, i);
@@ -346,7 +399,7 @@ public class AddWordMacroActivity extends AppCompatActivity {
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_add_word_macro, menu);
+        getMenuInflater().inflate(R.menu.menu_add_item, menu);
         return true;
     }
 
@@ -359,10 +412,20 @@ public class AddWordMacroActivity extends AppCompatActivity {
 
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_add_word_macro) {
-            add(textInput.getText().toString());
+            mode = ADD_WORD_MACRO;
+            getImage();
+//            add(textInput.getText().toString(), ADD_WORD_MACRO);
             return true;
         }
-        else if (id == R.id.action_cancel_add_word_macro) {
+
+        if (id == R.id.action_add_group) {
+            mode = ADD_GROUP;
+            getImage();
+//            add(textInput.getText().toString(), ADD_GROUP);
+            return true;
+        }
+
+        if (id == R.id.action_cancel_add_word_macro) {
             setResult(RESULT_CANCELED);
             finish();
             return true;
@@ -371,19 +434,47 @@ public class AddWordMacroActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
+    protected void getImage() {
+        Intent i = new Intent(this, ImageSelectionActivity.class);
+        startActivityForResult(i, ACTIVITY_IMAGE_SELECTION);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == ACTIVITY_IMAGE_SELECTION) {
+            switch (resultCode) {
+                case RESULT_CANCELED:
+                    break;
+
+                case RESULT_OK:
+                    int isPreset = data.getIntExtra(ActionItem.SQL.COLUMN_NAME_PICTURE_IS_PRESET, -1);
+                    if (isPreset == -1) {
+                        System.out.println("Extra doesn't contain a required data. (IS_PRESET)");
+                        break;
+                    }
+                    else mode_values.put(ActionItem.SQL.COLUMN_NAME_PICTURE_IS_PRESET, isPreset);
+
+                    String pictureFilename = data.getStringExtra(ActionItem.SQL.COLUMN_NAME_PICTURE);
+                    if (pictureFilename == null) {
+                        System.out.println("Extra doesn't contain a required data. (PICTURE_FILENAME)");
+                        break;
+                    }
+                    else mode_values.put(ActionItem.SQL.COLUMN_NAME_PICTURE, pictureFilename);
+
+                    add(textInput.getText().toString(), mode);
+                    break;
+            }
+
+        }
+    }
+
     class enterKeyListener implements EditText.OnKeyListener {
 
         public boolean onKey(View v, int keyCode, KeyEvent keyEvent) {
             if (keyEvent.getAction() == KeyEvent.ACTION_UP) {
                 if (keyCode == KeyEvent.KEYCODE_ENTER) {
-                    add(textInput.getText().toString());
                     return true;
                 }
-                else if (keyCode == KeyEvent.KEYCODE_BACK) {
-                    setResult(RESULT_CANCELED);
-                    finish();
-                }
-
             }
 
             return false;

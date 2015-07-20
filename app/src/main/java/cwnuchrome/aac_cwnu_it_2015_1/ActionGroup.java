@@ -206,7 +206,7 @@ public class ActionGroup extends ActionMultiWord {
     }
 
     long add(
-            int parentID,
+            long parentID,
             int priority,
             String word,
             String stem,
@@ -232,7 +232,7 @@ public class ActionGroup extends ActionMultiWord {
     }
 
     long add(
-            int parentID,
+            long parentID,
             int priority,
             String word,
             String stem,
@@ -248,7 +248,6 @@ public class ActionGroup extends ActionMultiWord {
     }
 
     public static class onClickClass extends ActionItem.onClickClass {
-        String message;
 
         public onClickClass(Context context, AACGroupContainer container) {
             super(context, container);

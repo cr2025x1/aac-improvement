@@ -21,8 +21,8 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".AddWordMacroActivity"
-            android:label="@string/title_activity_add_word_macro" >
+            android:name=".AddItemActivity"
+            android:label="@string/title_activity_add_item" >
         </activity>
         <activity
             android:name=".ImageSelectionActivity"
