@@ -120,15 +120,8 @@ public class AddItemActivity extends AppCompatActivity {
         ActionMain.log("*** ", "started ***");
         long currentGroupID = getIntent().getLongExtra("currentGroupID", 0);
 
-        itemText = itemText.trim();
-        ActionMain.log(null, "adding word \"" + itemText + "\"");
-        String[] textTokens = itemText.split("\\s");
-        switch (mod) {
-            case ADD_WORD_MACRO:
-                break;
-            case ADD_GROUP:
-                break;
-        }
+        String[] textTokens = ActionMain.tokenize(itemText);
+
 //        boolean isMultiwordRequired = textTokens.length > 1;
 //        switch (mod) {
 //            case ADD_WORD_MACRO:
@@ -140,36 +133,10 @@ public class AddItemActivity extends AppCompatActivity {
 //                break;
 //        }
 
-        long wordIDs[] = new long[textTokens.length];
-        int wordPos = 0;
+        long[] wordIDs = ((ActionWord)actionMain.itemChain[ActionMain.item.ID_Word]).add_multi(textTokens);
 
         boolean madeChange = false;
-        ActionWord actionWord = (ActionWord)actionMain.itemChain[ActionMain.item.ID_Word];
-        for (String s : textTokens) {
-            long id = actionWord.exists(s);
-            if (actionWord.is_hidden_word(s) || id == -1) {
-                madeChange = true;
-                ActionMain.log(null, "adding word \"" + s + "\"");
-                id = actionWord.add(
-//                        currentGroupID,
-                        0,
-                        0,
-                        s,
-                        s,
-                        R.drawable.btn_default,
-                        true
-                );
-            }
-            else {
-                madeChange = false;
-                ActionMain.log(null, "word \"" + s + "\" already exists");
-            }
-
-            wordIDs[wordPos++] = id;
-        }
-
         // 코드 공통화가 안 되는 이유... add 메소드는 상속 메소드가 아니기 때문임.
-//        mode_values = actionMain.process_external_images(mode_values);
         switch (mod) {
             case ADD_WORD_MACRO:
 //                if (textTokens.length > 1) { // 워드의 매크로화를 위해 주석 처리됨.

@@ -1,5 +1,6 @@
 package cwnuchrome.aac_cwnu_it_2015_1;
 
+import android.annotation.SuppressLint;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
@@ -305,9 +306,7 @@ public final class ActionMain {
     @NonNull public static HashMap<String, Long> reduce_to_map(@NonNull String text) {
         HashMap<String, Long> map = new HashMap<>();
 
-        String wordSequence = text.trim();
-        if (wordSequence.length() == 0) return map;
-        String[] textTokens = wordSequence.trim().split("\\s");
+        String[] textTokens = tokenize(text);
         if (textTokens.length == 0) return map;
 
         for (String s : textTokens) {
@@ -373,12 +372,26 @@ public final class ActionMain {
             average_document_length = get_db_avg_doc_length();
         }
 
+        @SuppressLint("UseSparseArrays")
         @NonNull private Vector<HashMap<Long, Double>> alloc_eval_map_vector() {
             Vector<HashMap<Long, Double>> eval_map_vector = new Vector<>();
-            for (ActionItem item : itemChain) eval_map_vector.add(item.alloc_evaluation_map(db));
+            for (ActionItem item : itemChain) {
+                /* ****************************************************************************** */
+                // 워드는 불가시화되었으므로 평가하지 않고 넘긴다. 만일 워드를 다시 되살린다 할 경우 다음의 if 블록을 제거해야 한다.
+                // 이외에도 영향받은 검색 엔진 로직 쪽 코드:
+                // evaluate_by_query_map()
+                /* ****************************************************************************** */
+//                if (item.itemClassID == ActionMain.item.ID_Word) {
+//                    eval_map_vector.add(new HashMap<Long, Double>());
+//                    continue;
+//                }
+
+                eval_map_vector.add(item.alloc_evaluation_map(db));
+            }
             return eval_map_vector;
         }
 
+        @SuppressLint("UseSparseArrays")
         @NonNull public Vector<ArrayList<Map.Entry<Long, Double>>> evaluate_by_query_map(@NonNull HashMap<Long, QueryWordInfo> query_id_map) {
             // 피드백 파트
             HashMap<Long, QueryWordInfo> query_id_map_feedbacked = new HashMap<>();
@@ -449,6 +462,16 @@ public final class ActionMain {
             Vector<HashMap<Long, Double>> rank_vector = new Vector<>();
             int i = 0;
             for (ActionItem item : itemChain) {
+                /* ****************************************************************************** */
+                // 워드는 불가시화되었으므로 평가하지 않고 넘긴다. 만일 워드를 다시 되살린다 할 경우 다음의 if 블록을 제거해야 한다.
+                // 이외에도 영향받은 검색 엔진 로직 쪽 코드:
+                // alloc_eval_map_vector()
+                /* ****************************************************************************** */
+//                if (item.itemClassID == ActionMain.item.ID_Word) {
+//                    rank_vector.add(new HashMap<Long, Double>());
+//                    continue;
+//                }
+
                 rank_vector.add(item.evaluate_by_query_map(
                         db,
                         query_id_map_feedbacked,
@@ -465,9 +488,14 @@ public final class ActionMain {
     }
 
     @NonNull public Vector<ArrayList<Map.Entry<Long, Double>>> filter_rank_vector(@NonNull Vector<HashMap<Long, Double>> rank_vector) {
-        // 기준값 이하의 엔트리들은 모두 소거
         Vector<ArrayList<Map.Entry<Long, Double>>> filtered_rank_vector = new Vector<>(item.ITEM_COUNT);
         for (int i = 0; i < item.ITEM_COUNT; i++) filtered_rank_vector.add(new ArrayList<Map.Entry<Long, Double>>(rank_vector.get(i).size())); // 왜인지는 모르나 <> 형식을 쓰면 에러가 난다.
+
+        // 워드 아이템 목록에서 지우기 - 워드 불가시화로 인함.
+        // TODO: 최적화가 좀 더 가능한 ad-hoc 방안은 아닌지 추후 제정신일 때 재검토하기.
+        rank_vector.get(item.ID_Word).clear();
+
+        // 기준값 이하의 엔트리들은 모두 소거
         int i = 0;
         for (HashMap<Long, Double> map : rank_vector) {
             ArrayList<Map.Entry<Long, Double>> filtered_list = filtered_rank_vector.get(i);
@@ -658,5 +686,14 @@ public final class ActionMain {
         }
 
         return values;
+    }
+
+    // 주어진 문장을 어떻게 토큰화할 것인지 정의하는 메소드이다.
+    @NonNull public static String[] tokenize(@NonNull String text) {
+        String trimmed = text.trim();
+        if (trimmed.length() == 0 || trimmed.equals("")) return new String[0];
+        else {
+            return trimmed.split("\\s");
+        }
     }
 }

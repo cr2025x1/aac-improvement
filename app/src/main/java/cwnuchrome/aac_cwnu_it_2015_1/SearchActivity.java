@@ -150,8 +150,8 @@ public class SearchActivity extends AppCompatActivity {
 
             while (!mFinished) {
                 try {
-                    suggestionList.clear();
                     if (fetchSuggestion()) {
+                        suggestionList.clear();
                         for (ActionItem.onClickClass occ : suggestionOCCList) {
                             int catID = occ.getItemCategoryID();
                             suggestionList.add(actionMain.itemChain[catID].CLASS_NAME + " " + occ.phonetic);

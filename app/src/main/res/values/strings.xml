@@ -11,12 +11,27 @@
 
     <string name="test">Test</string>
 
+    <!-- 메인 액티비티 관련 -->
+    <string name="menu_main_return_to_default">Return to default</string>
+    <string name="menu_main_add_item">Add Item</string>
+    <string name="menu_select_item_to_modify">Modify Item</string>
+
     <!-- 아이템 추가 관련 -->
     <string name="title_activity_add_item">Add Item</string>
     <string name="button_add_word_macro">Add Word/Macro</string>
     <string name="button_add_group">Add Group</string>
     <string name="button_cancel_add_item">Cancel</string>
     <string name="label_add_item">Item to be added :</string>
+
+    <!-- 아이템 수정 관련 -->
+    <string name="title_activity_select_item_to_rename">Select an item to rename</string>
+    <string name="button_main_item_rename_cancel">Cancel</string>
+    <string name="label_rename_item">Item</string>
+    <string name="title_dialog_item_rename">Item Renaming</string>
+    <string name="button_dialog_item_rename_positive">Apply</string>
+    <string name="button_dialog_item_rename_negative">Cancel</string>
+    <string name="toast_dialog_item_rename_success">Item changed</string>
+    <string name="toast_dialog_item_rename_failure">Failed to change item</string>
 
     <!-- 아이템 선택 메뉴 관련 -->
     <string name="menu_select_item">Select Item</string>

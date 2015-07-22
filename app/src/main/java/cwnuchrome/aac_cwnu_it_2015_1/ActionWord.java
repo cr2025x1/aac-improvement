@@ -141,8 +141,8 @@ public class ActionWord extends ActionItem {
             Cursor c = db.query(
                     actionMain.itemChain[ActionMain.item.ID_Word].TABLE_NAME,
                     new String[] {ActionWord.SQL._ID, ActionWord.SQL.COLUMN_NAME_PARENT_ID},
-                    ActionWord.SQL.COLUMN_NAME_WORD + "='" + word + "'",
-                    null,
+                    ActionWord.SQL.COLUMN_NAME_WORD + "=?",
+                    new String[] {word},
                     null,
                     null,
                     null
@@ -156,6 +156,7 @@ public class ActionWord extends ActionItem {
             if (parentID == 0) { // 사실 이제부터는 항상 parentID == 0이겠지만 그래도 일단 워드를 양지로 다시 들일 경우를 대비해서 남겨둔다.
                 ContentValues record = new ContentValues();
                 record.put(ActionWord.SQL.COLUMN_NAME_PARENT_ID, values.getAsLong(SQL.COLUMN_NAME_PARENT_ID));
+                //noinspection StatementWithEmptyBody
                 if (actionMain.itemChain[ActionMain.item.ID_Word].updateWithIDs(actionMain.containerRef.context, record, new long[] {id}) > 0) {
 //                    update_reference_count(id, 1); // 이제 더 이상 워드는 가시화되지 않으므로 auto-reference는 카운트를 올리지 못한다.
 //                    actionMain.update_db_collection_count(1, 1); // 이제 더 이상 워드는 가시화되지 않으므로 콜렉션에서 제외된다.
@@ -260,7 +261,7 @@ public class ActionWord extends ActionItem {
         super.printMissingDependencyList(listBundle);
     }
 
-    // TODO: 데이터베이스의 부하를 해결하기 위해 한 번에 여러 id를 받아 한 번에 처리하도록 만들기?
+    // TODO: 데이터베이스의 부하를 해결하기 위해 한 번에 여러 id를 받아 한 번에 처리하도록 만들기? 하지만 만일 그렇게 할 경우 작업 도중 중단시에는 어떤 일이 발생할까? transaction -> commit 구조 흉내내기?
     @Override
     public boolean removeWithID(Context context, long id) {
         ActionMain actionMain = ActionMain.getInstance();
@@ -274,14 +275,18 @@ public class ActionWord extends ActionItem {
 
         if (actionMain.containerRef.rootGroupElement.ids.contains(id) || isReserved) {
             // 예약어 처리 부분: 이 블록은 상위 클래스 메소드를 호출하지 않고 여기서 끝난다.
-            ContentValues values = new ContentValues();
-            values.put(SQL.COLUMN_NAME_PARENT_ID, 0);
-            boolean effected = updateWithIDs(context, values, new long[]{id}) > 0;
+//            ContentValues values = new ContentValues();
+//            values.put(SQL.COLUMN_NAME_PARENT_ID, 0); // 워드 불가시화: 어차피 모든 워드의 parent_id == 0이므로 주석 처리함.
+
+//            boolean effected = updateWithIDs(context, values, new long[]{id}) > 0;
 
 //            update_reference_count(id, -1); 워드의 불가시화로 인해 자기 자신에 대한 레퍼런스 카운트가 없어졌으므로 주석 처리됨.
 //            actionMain.update_db_collection_count(-1, -1); 워드의 불가시화 -> 콜렉션 카운트에서 제외 -> 따라서 삭제 시에도 콜렉션 카운트 업데이트 따위 없음. 주석 처리됨.
 
-            return effected;
+//            return effected;
+//            return updateWithIDs(context, values, new long[]{id}) > 0;
+
+            return true;
         }
         else {
             // 단어가 영구히 제거되므로 이 단어와 연관된 모든 피드백 맵에서도 이 단어 부분을 제거한다.
@@ -303,7 +308,7 @@ public class ActionWord extends ActionItem {
                 Cursor fb_c = db.query(
                         MAP_TABLE_NAME,
                         new String[] {SQL.COLUMN_NAME_FEEDBACK_MAP},
-                        SQL.COLUMN_NAME_OWNER_ID + "=" + effected_id,
+                        SQL.COLUMN_NAME_OWNER_ID + "=" + effected_id + " AND " + SQL.COLUMN_NAME_OWNER_ID + "!=" + id, // 자기 자신의 것은 수정 안 함. 어차피 지워지니까.
                         null,
                         null,
                         null,
@@ -319,6 +324,13 @@ public class ActionWord extends ActionItem {
                 c.moveToNext();
             }
             c.close();
+
+            // 자기 자신의 피드백 맵 제거.
+            db.delete(
+                    MAP_TABLE_NAME,
+                    SQL.COLUMN_NAME_OWNER_ID + " = " + id,
+                    null
+            );
 
             return super.removeWithID(context, id);
         }
@@ -341,8 +353,11 @@ public class ActionWord extends ActionItem {
 
         long ref_count = c.getLong(c.getColumnIndexOrThrow(SQL.COLUMN_NAME_REFERENCE_COUNT)) + diff;
         c.close();
+
+        if (ref_count < 0) throw new IllegalStateException("Reference count is below 0.");
+
         //noinspection PointlessBooleanExpression,ConstantConditions
-        if (ref_count <= 0 && AACGroupContainerPreferences.DATABASE_REMOVE_WORD_WITH_NO_REFERENCE) removeWithID(actionMain.getContext(), id);
+        if (ref_count == 0 && AACGroupContainerPreferences.DATABASE_REMOVE_WORD_WITH_NO_REFERENCE) removeWithID(actionMain.getContext(), id);
         else {
             actionMain.getDB().execSQL("UPDATE " + TABLE_NAME +
                             " SET " + SQL.COLUMN_NAME_REFERENCE_COUNT + "=" + SQL.COLUMN_NAME_REFERENCE_COUNT + "+(" + diff + ")"
@@ -427,9 +442,9 @@ public class ActionWord extends ActionItem {
             String entry_word = entry.getKey();
             Cursor entry_word_cursor = db.query(
                     TABLE_NAME,
-                    new String[]{SQL._ID, SQL.COLUMN_NAME_REFERENCE_COUNT, SQL.COLUMN_NAME_STEM},
-                    ActionItem.SQL.COLUMN_NAME_STEM + " LIKE '%" + entry_word + "%'",
-                    null,
+                    new String[] {SQL._ID, SQL.COLUMN_NAME_REFERENCE_COUNT, SQL.COLUMN_NAME_STEM},
+                    ActionItem.SQL.COLUMN_NAME_STEM + " LIKE ?",
+                    new String[] {"%" + entry_word + "%"},
                     null,
                     null,
                     null
@@ -518,4 +533,36 @@ public class ActionWord extends ActionItem {
 
         return sb.toString();
     }
+
+    // 동시에 여러 개의 워드를 생성하는 메소드. 멀티워드 아이템 생성 시에 유용하다.
+    @NonNull public long[] add_multi(@NonNull String[] textTokens) {
+        if (textTokens.length == 0) throw new IllegalArgumentException("Size of given String array is 0.");
+
+        ActionMain actionMain = ActionMain.getInstance();
+        long[] wordIDs = new long[textTokens.length];
+        int wordPos = 0;
+        for (String s : textTokens) {
+            long id = exists(s);
+            if (is_hidden_word(s) || id == -1) {
+//                ActionMain.log(null, "adding word \"" + s + "\"");
+                id = add(
+//                        currentGroupID,
+                        0,
+                        0,
+                        s,
+                        s,
+                        R.drawable.btn_default,
+                        true
+                );
+            }
+//            else {
+//                ActionMain.log(null, "word \"" + s + "\" already exists");
+//            }
+
+            wordIDs[wordPos++] = id;
+        }
+
+        return wordIDs;
+    }
+
 }

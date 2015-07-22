@@ -49,14 +49,21 @@ public class ExternalImageProcessor {
             */
 
             // 안드로이드 자체 라이브러리 이용 Base64 코딩
-            hashedFilename =
+            StringBuilder sb = new StringBuilder(
                     Base64.encodeToString(
                             MD5Checksum.createChecksumWithStream(inStream),
-                            Base64.URL_SAFE); // 파일 이름에 사용되는 Base64 코딩이므로 일부 특수문자 대체 (RFC 3548 section 4)
-            hashedFilename = hashedFilename.substring(0, hashedFilename.lastIndexOf("\n") - 1) + filepath.substring(filepath.lastIndexOf("."));
+                            Base64.URL_SAFE) // 파일 이름에 사용되는 Base64 코딩이므로 일부 특수문자 대체 (RFC 3548 section 4)
+            );
+                    sb.setLength(sb.lastIndexOf("\n"));
+                    sb.append(filepath.substring(filepath.lastIndexOf(".")));
+            hashedFilename = sb.toString();
 
-
-            hashedFilename = hashedFilename + filepath.substring(filepath.lastIndexOf("."));
+//
+//            hashedFilename =
+//            hashedFilename = hashedFilename.substring(0, hashedFilename.lastIndexOf("\n") - 1) + filepath.substring(filepath.lastIndexOf("."));
+//
+//
+//            hashedFilename = hashedFilename + filepath.substring(filepath.lastIndexOf("."));
             inStream.close();
         } catch (Exception e){
             System.out.println("MD5 hashing met an exception.");

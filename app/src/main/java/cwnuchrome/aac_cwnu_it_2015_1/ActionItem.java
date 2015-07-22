@@ -81,8 +81,8 @@ public abstract class ActionItem implements Serializable {
         Cursor c = ActionMain.getInstance().getDB().query(
                 TABLE_NAME, // The table to query
                 new String[]{SQL._ID}, // The columns to return
-                SQL.COLUMN_NAME_WORD + " = '" + word + "'", // The columns for the WHERE clause
-                null, // The values for the WHERE clause
+                SQL.COLUMN_NAME_WORD + "=?", // The columns for the WHERE clause
+                new String[]{word}, // The values for the WHERE clause
                 null, // don't group the rows
                 null, // don't filter by row groups
                 null // The sort order
@@ -137,9 +137,9 @@ public abstract class ActionItem implements Serializable {
 
         Cursor c = db.query(
                 TABLE_NAME,
-                new String[]{ActionWord.SQL._ID},
-                ActionWord.SQL.COLUMN_NAME_WORD + "='" + word + "'",
-                null,
+                new String[] {ActionWord.SQL._ID},
+                ActionWord.SQL.COLUMN_NAME_WORD + "=?",
+                new String[] {word},
                 null,
                 null,
                 null
@@ -165,6 +165,7 @@ public abstract class ActionItem implements Serializable {
         sb.delete(sb.length() - 4, sb.length() - 1); // 맨 마지막 " OR "를 삭제
         String whereClause = sb.toString();
 
+        // TODO: 집합 필터링보다 그냥 word와 같이 레퍼런스 카운팅을 통한 제거가 좀 더 효율적이지 않을까?
         if (values.containsKey(SQL.COLUMN_NAME_PICTURE) && values.containsKey(SQL.COLUMN_NAME_PICTURE_IS_PRESET)) {
             values = ActionMain.getInstance().process_external_images(values);
 

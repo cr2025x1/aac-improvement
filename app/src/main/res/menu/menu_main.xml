@@ -5,15 +5,17 @@
     <group
         android:id="@+id/menu_group_main" >
 
-        <item android:id="@+id/action_add_word_macro" android:title="Add Word/Macro"
+        <item android:id="@+id/action_add_word_macro" android:title="@string/menu_main_add_item"
             android:orderInCategory="100" app:showAsAction="never" />
         <item android:id="@+id/action_search" android:title="@string/menu_search"
             android:orderInCategory="100" app:showAsAction="never" />
-        <item android:id="@+id/action_set_debug_db" android:title="Set test DB"
-            android:orderInCategory="100" app:showAsAction="never" />
-        <item android:id="@+id/action_set_default_db" android:title="Return to defaults"
-            android:orderInCategory="100" app:showAsAction="never" />
         <item android:id="@+id/action_remove_item" android:title="@string/menu_select_item"
+            android:orderInCategory="100" app:showAsAction="never" />
+        <item android:id="@+id/action_rename_item" android:title="@string/menu_select_item_to_modify"
+            android:orderInCategory="100" app:showAsAction="never" />
+        <item android:id="@+id/action_set_default_db" android:title="@string/menu_main_return_to_default"
+            android:orderInCategory="100" app:showAsAction="never" />
+        <item android:id="@+id/action_set_debug_db" android:title="Set test DB"
             android:orderInCategory="100" app:showAsAction="never" />
 
     </group>

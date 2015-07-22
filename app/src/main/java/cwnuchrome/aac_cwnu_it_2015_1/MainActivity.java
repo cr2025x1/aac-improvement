@@ -10,6 +10,7 @@ import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 
@@ -17,14 +18,16 @@ import android.widget.Toast;
 public class MainActivity extends AppCompatActivity {
     protected AACGroupContainer container;
 
-    ActionMain actionMain;
+    protected ActionMain actionMain;
+    protected Resources r;
 
     protected boolean isInited;
 
-    protected int status;
-    protected final int STATUS_NOT_QUEUED = 0;
+    protected int menu_prep_command_status;
+    protected final int STATUS_NO_PREP_ISSUED = 0;
     protected final int STATUS_MAIN = 1;
     protected final int STATUS_ITEM_REMOVAL = 2;
+    protected final int STATUS_ITEM_RENAMING = 3;
 
     protected final int ACTIVITY_ADD = 0;
     protected final int ACTIVITY_SEARCH = 1;
@@ -38,12 +41,13 @@ public class MainActivity extends AppCompatActivity {
         actionMain = ActionMain.getInstance();
         actionMain.initDBHelper(getApplicationContext());
         actionMain.initTables();
+        r = getResources();
 
         LinearLayout baseLayout = (LinearLayout)findViewById(R.id.groupLayout);
         container = new AACGroupContainer(baseLayout);
         container.setContainerID(actionMain.getReferrer().attach(container));
 
-        status = STATUS_MAIN;
+        menu_prep_command_status = STATUS_MAIN;
 
         isInited = false;
         container.exploreGroup(1);
@@ -52,7 +56,11 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
-        switch (status) {
+        super.onCreateOptionsMenu(menu);
+
+        menu.clear();
+
+        switch (menu_prep_command_status) {
             case STATUS_MAIN:
                 getMenuInflater().inflate(R.menu.menu_main, menu);
                 break;
@@ -60,27 +68,19 @@ public class MainActivity extends AppCompatActivity {
             case STATUS_ITEM_REMOVAL:
                 getMenuInflater().inflate(R.menu.menu_main_item_removal, menu);
                 break;
+
+            case STATUS_ITEM_RENAMING:
+                getMenuInflater().inflate(R.menu.menu_main_item_renaming, menu);
+                break;
         }
 
-        status = STATUS_NOT_QUEUED;
+        menu_prep_command_status = STATUS_NO_PREP_ISSUED;
         return true;
     }
 
     @Override
     public boolean onPrepareOptionsMenu(Menu menu) {
-        switch (status) {
-            case STATUS_MAIN:
-                menu.removeGroup(R.id.menu_group_remove_item);
-                getMenuInflater().inflate(R.menu.menu_main, menu);
-                break;
-
-            case STATUS_ITEM_REMOVAL:
-                menu.removeGroup(R.id.menu_group_main);
-                getMenuInflater().inflate(R.menu.menu_main_item_removal, menu);
-                break;
-        }
-
-        status = STATUS_NOT_QUEUED;
+        super.onPrepareOptionsMenu(menu);
         return true;
     }
 
@@ -92,42 +92,6 @@ public class MainActivity extends AppCompatActivity {
         int id = item.getItemId();
 
         //noinspection SimplifiableIfStatement
-//        if (id == R.id.action_add_word) { // TODO: Going to be deleted
-//            final LinearLayout linear = (LinearLayout)View.inflate(this, R.layout.aac_confirm_dependency, null);
-//
-//            new AlertDialog.Builder(this)
-//                    .setTitle("Add Word Menu(Temp)")
-//                    .setView(linear)
-//                    .setPositiveButton("Confirm",
-//                            new DialogInterface.OnClickListener() {
-//                                @Override
-//                                public void onClick(DialogInterface dialog, int which) {
-//                                    EditText ETWord = (EditText) linear.findViewById(R.id.etword);
-//                                    ContentValues values = new ContentValues();
-//                                    values.put(ActionWord.SQL.COLUMN_NAME_PARENT_ID, container.getCurrentGroupID());
-//                                    values.put(ActionWord.SQL.COLUMN_NAME_WORD, ETWord.getText().toString());
-//
-//                                    if (container.addWord(db, values) != -1) {
-//                                        container.exploreGroup(container.getCurrentGroupID());
-//                                        Toast.makeText(getBaseContext(), "Word Added", Toast.LENGTH_SHORT)
-//                                                .show();
-//                                    } else {
-//                                        Toast.makeText(getBaseContext(), "Word Already Exists", Toast.LENGTH_SHORT)
-//                                                .show();
-//                                    }
-//
-//                                }
-//                            })
-//                    .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-//                        @Override
-//                        public void onClick(DialogInterface dialog, int which) {
-//                        }
-//                    })
-//                    .show();
-//
-//            return true;
-//        }
-
         if (id == R.id.action_add_word_macro) {
             Intent i = new Intent(this, AddItemActivity.class);
             i.putExtra("currentGroupID", container.getCurrentGroupID());
@@ -166,22 +130,22 @@ public class MainActivity extends AppCompatActivity {
             return true;
         }
 
+        if (id == R.id.action_rename_item) {
+            set_menu(R.string.title_activity_select_item_to_rename, STATUS_ITEM_RENAMING);
+            container.setMode(AACGroupContainer.MODE_RENAMING);
+            return true;
+        }
+
         /* 아이템 제거 메뉴 선택 시의 메뉴들 */
 
         if (id == R.id.action_remove_item) {
-            this.setTitle(R.string.title_select_item);
-            status = STATUS_ITEM_REMOVAL;
-            supportInvalidateOptionsMenu();
-
+            set_menu(R.string.title_select_item, STATUS_ITEM_REMOVAL);
             container.toggleFold();
             return true;
         }
 
         if (id == R.id.action_remove_item_cancel) {
-            this.setTitle(R.string.app_name);
-            status = STATUS_MAIN;
-            supportInvalidateOptionsMenu();
-
+            revert_menu_to_main();
             container.toggleFold();
             return true;
         }
@@ -218,6 +182,15 @@ public class MainActivity extends AppCompatActivity {
             Intent i = new Intent(this, ImageSelectionActivity.class);
             i.putExtra("currentGroupID", container.getCurrentGroupID());
             startActivityForResult(i, ACTIVITY_IMAGE_SELECTION);
+
+            return true;
+        }
+
+        /* 아이템 수정 메뉴 선택시의 메뉴들 */
+
+        if (id == R.id.action_main_item_rename_cancel) {
+            container.setMode(AACGroupContainer.MODE_NORMAL);
+            revert_menu_to_main();
 
             return true;
         }
@@ -284,19 +257,18 @@ public class MainActivity extends AppCompatActivity {
 
     public void confirmDependency() {
         final LinearLayout linear = (LinearLayout)View.inflate(this, R.layout.aac_confirm_dependency, null);
-        Resources r = this.getResources();
 
         new AlertDialog.Builder(this)
-                .setTitle(r.getString(R.string.menu_remove_item_dependency_warning_title))
+                .setTitle(R.string.menu_remove_item_dependency_warning_title)
                 .setView(linear)
-                .setPositiveButton(r.getString(R.string.menu_remove_item_dependency_warning_confirm),
+                .setPositiveButton(R.string.menu_remove_item_dependency_warning_confirm,
                         new DialogInterface.OnClickListener() {
                             @Override
                             public void onClick(DialogInterface dialog, int which) {
                                 container.invokeRemoval();
                             }
                         })
-                .setNegativeButton(r.getString(R.string.menu_remove_item_dependency_warning_cancel), new DialogInterface.OnClickListener() {
+                .setNegativeButton(R.string.menu_remove_item_dependency_warning_cancel, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
                     }
@@ -306,10 +278,69 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void revertMenu() {
-        this.setTitle(R.string.app_name);
-        status = STATUS_MAIN;
-        supportInvalidateOptionsMenu();
+        revert_menu_to_main();
         container.toggleFold();
+    }
+
+    protected void revert_menu_to_main() {
+        set_menu(R.string.app_name, STATUS_MAIN);
+    }
+
+    protected void set_menu(String title, int command_status) {
+        this.setTitle(title);
+        menu_prep_command_status = command_status;
+        supportInvalidateOptionsMenu();
+    }
+
+    protected void set_menu(int title_string_id, int command_status) {
+        set_menu(r.getString(title_string_id), command_status);
+    }
+
+    public void dialog_rename(int category_id, long item_id) {
+        final int category_id_wrapper = category_id;
+        final long item_id_wrapper = item_id;
+        final LinearLayout linear = (LinearLayout)View.inflate(this, R.layout.dialog_item_rename, null);
+
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.title_dialog_item_rename)
+                .setView(linear)
+                .setPositiveButton(R.string.button_dialog_item_rename_positive,
+                        new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                ContentValues values = new ContentValues();
+                                values.put(
+                                        ActionWord.SQL.COLUMN_NAME_WORD,
+                                        ((EditText) linear.findViewById(R.id.dialog_item_rename_edit_text))
+                                                .getText()
+                                                .toString()
+                                                .trim()
+                                );
+
+                                if (actionMain.itemChain[category_id_wrapper].updateWithIDs(getBaseContext(), values, new long[]{item_id_wrapper}) > 0) {
+                                    // TODO: 아니면 버튼 텍스트만 업데이트하게 변경?
+                                    container.exploreGroup(container.getCurrentGroupID());
+                                    Toast
+                                            .makeText(getBaseContext(), R.string.toast_dialog_item_rename_success, Toast.LENGTH_SHORT)
+                                            .show();
+                                }
+                                else {
+                                    Toast
+                                            .makeText(getBaseContext(), R.string.toast_dialog_item_rename_failure, Toast.LENGTH_SHORT)
+                                            .show();
+                                }
+
+                                revert_menu_to_main();
+                            }
+                        })
+                .setNegativeButton(R.string.button_dialog_item_rename_negative, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        container.setMode(AACGroupContainer.MODE_NORMAL);
+                        revert_menu_to_main();
+                    }
+                })
+                .show();
     }
 
 }

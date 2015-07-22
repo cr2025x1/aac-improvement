@@ -48,6 +48,9 @@ public class AACGroupContainer {
 
     final GroupElement rootGroupElement = new GroupElement();
 
+    public final static int MODE_NORMAL = 0;
+    public final static int MODE_RENAMING = 1;
+
     protected int container_id;
 
     public AACGroupContainer(LinearLayout mainLayout) {
@@ -99,8 +102,8 @@ public class AACGroupContainer {
                         ActionGroup.SQL.COLUMN_NAME_PICTURE,
                         ActionGroup.SQL.COLUMN_NAME_PICTURE_IS_PRESET
                 },
-                ActionGroup.SQL._ID + " = " + id,
-                null,
+                ActionGroup.SQL._ID + " = ?",
+                new String[] {Long.toString(id)},
                 null,
                 null,
                 null
@@ -714,5 +717,45 @@ public class AACGroupContainer {
 
     public void setContainerID(int containerID) {
         this.container_id = containerID;
+    }
+
+    @SuppressWarnings("UnnecessaryReturnStatement")
+    public void setMode(int mode) {
+        if (mode == MODE_RENAMING) {
+            for (View v : contentList) {
+                ActionItem.Button btn =  (ActionItem.Button)v.findViewById(R.id.aac_item_button_id);
+                final ActionItem.onClickClass occ = btn.onClickObj;
+
+                // 루트 그룹의 개명은 방지. (가능하게 만들 수는 있지만 그냥 놔두겠음.)
+                if (occ.getItemCategoryID() == ActionMain.item.ID_Group && occ.getItemID() == 1) {
+                    occ.isOnline = false;
+                }
+                else {
+                    btn.setOnClickListener(new View.OnClickListener() {
+                        public void onClick(View v) {
+                            ((MainActivity)context).dialog_rename(occ.getItemCategoryID(), occ.getItemID());
+                        }
+                    });
+                }
+
+            }
+
+            return;
+        }
+
+        if (mode == MODE_NORMAL) {
+            for (View v : contentList) {
+                ActionItem.Button btn = (ActionItem.Button)v.findViewById(R.id.aac_item_button_id);
+
+                // 루트 그룹만 특별 처리.
+                if (btn.onClickObj.getItemCategoryID() == ActionMain.item.ID_Group && btn.onClickObj.getItemID() == 1) {
+                    btn.onClickObj.isOnline = true;
+                }
+                else {
+                    btn.setOnClickListener(btn.onClickObj);
+                }
+            }
+            return;
+        }
     }
 }

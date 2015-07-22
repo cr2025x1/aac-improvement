@@ -13,6 +13,8 @@
     android:gravity="center"
     android:id="@+id/gridview_preset_image_selection"
     android:background="#fff8dc"
+    android:cacheColorHint="#00000000"
+    android:listSelector="@android:color/transparent"
     >
 </GridView>
 

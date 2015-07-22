@@ -41,7 +41,7 @@ public abstract class ActionMultiWord extends ActionItem {
 
         if (id != -1) {
             ActionMain actionMain = ActionMain.getInstance();
-            ActionWord actionWord = (ActionWord)actionMain.itemChain[ActionMain.item.ID_Word];
+            ActionWord actionWord = (ActionWord) actionMain.itemChain[ActionMain.item.ID_Word];
             long doc_length = -1;
             for (Map.Entry<Long, Long> entry : map.entrySet()) {
                 actionWord.update_reference_count(entry.getKey(), 1);
@@ -74,7 +74,7 @@ public abstract class ActionMultiWord extends ActionItem {
             boolean effected = super.removeWithID(context, id);
 
             long doc_length = 1;
-            ActionWord actionWord = (ActionWord)actionMain.itemChain[ActionMain.item.ID_Word];
+            ActionWord actionWord = (ActionWord) actionMain.itemChain[ActionMain.item.ID_Word];
             for (Map.Entry<Long, Long> entry : map.entrySet()) {
                 actionWord.update_reference_count(entry.getKey(), -1);
                 doc_length -= entry.getValue();
@@ -139,7 +139,7 @@ public abstract class ActionMultiWord extends ActionItem {
 
         String whereClause = qBuilder.toString(); // 완성된 조건문을 String으로 변환
         String sortOrder = SQL._ID + " ASC"; // 이후의 알고리즘을 위해 정렬 순서는 ID 기준 오름차순
-        String projection[] = { SQL._ID, SQL.COLUMN_NAME_WORD };
+        String projection[] = {SQL._ID, SQL.COLUMN_NAME_WORD};
 
         Cursor c;
         int c_count;
@@ -238,8 +238,11 @@ public abstract class ActionMultiWord extends ActionItem {
         boolean inWord = false;
         int pos = 0;
         if (wordChain.charAt(pos++) == '|') inChain = true;
-        for (;inChain;pos++) {
-            if (wordChain.charAt(pos) == '|') {inChain = false; continue;}
+        for (; inChain; pos++) {
+            if (wordChain.charAt(pos) == '|') {
+                inChain = false;
+                continue;
+            }
             if (wordChain.charAt(pos) == ':') {
                 inWord = !inWord;
                 if (!inWord) {
@@ -294,7 +297,8 @@ public abstract class ActionMultiWord extends ActionItem {
         return s.toString();
     }
 
-    @NonNull public static HashMap<Long, Long> parse_element_id_count_tag(String id_tag) {
+    @NonNull
+    public static HashMap<Long, Long> parse_element_id_count_tag(String id_tag) {
         HashMap<Long, Long> map = new HashMap<>();
         final String syntax_error = "ID Tag syntax error.";
 
@@ -306,7 +310,10 @@ public abstract class ActionMultiWord extends ActionItem {
         if (id_tag.charAt(pos++) != '|') throw new IllegalArgumentException(syntax_error);
         while (id_tag.length() > pos) {
             char posChar = id_tag.charAt(pos);
-            if (posChar == '|') {inChain = false; break;}
+            if (posChar == '|') {
+                inChain = false;
+                break;
+            }
             if (posChar == ':') {
                 inEntry = !inEntry;
 
@@ -379,7 +386,7 @@ public abstract class ActionMultiWord extends ActionItem {
 
             Cursor c = db.query(
                     TABLE_NAME,
-                    new String[] {SQL._ID, SQL.COLUMN_NAME_ELEMENT_ID_TAG},
+                    new String[]{SQL._ID, SQL.COLUMN_NAME_ELEMENT_ID_TAG},
                     SQL.COLUMN_NAME_WORDCHAIN + " LIKE '%:" + query_word_id + ":%'",
                     null,
                     null,
@@ -402,7 +409,7 @@ public abstract class ActionMultiWord extends ActionItem {
                         average_document_length,
                         entire_collection_count,
                         info.ref_count
-                        );
+                );
 
                 long id = c.getLong(multiword_id_col);
                 eval_map.put(id, eval_map.get(id) + eval);
@@ -414,10 +421,11 @@ public abstract class ActionMultiWord extends ActionItem {
         return eval_map;
     }
 
-    @NonNull public HashMap<Long, Long> get_id_count_map(long id) {
+    @NonNull
+    public HashMap<Long, Long> get_id_count_map(long id) {
         Cursor c = ActionMain.getInstance().getDB().query(
                 TABLE_NAME,
-                new String[] {SQL.COLUMN_NAME_ELEMENT_ID_TAG},
+                new String[]{SQL.COLUMN_NAME_ELEMENT_ID_TAG},
                 SQL._ID + "=" + id,
                 null,
                 null,
@@ -430,4 +438,70 @@ public abstract class ActionMultiWord extends ActionItem {
         c.close();
         return map;
     }
+
+    @Override
+    public long updateWithIDs(@NonNull Context context, @NonNull ContentValues values, @NonNull long[] idArray) {
+        // TODO: 작업하기
+
+        // TODO: 해당 아이템의 해쉬맵 정보를 받고, 아이템을 업데이트하고, 차집합을 구한 다음에 그 차집합의 워드에 대해 레퍼런스 감소 실시
+        // 인수 필터링
+        if (idArray.length == 0) throw new IllegalArgumentException("Argument idArray is empty.");
+        if (values.containsKey(SQL.COLUMN_NAME_WORD)) {
+            if (idArray.length > 1) {
+                // 동시에 한 아이템 이상에 대해 단어 변경을 수행하게 되면 동일 이름을 가지는 여러 아이템을 생성하게 되므로 고유성 원칙에 위배된다.
+                throw new IllegalArgumentException("This method does not allow change of words in multiple items.");
+            }
+
+            ActionMain actionMain = ActionMain.getInstance();
+            SQLiteDatabase db = actionMain.getDB();
+
+            for (long id : idArray) {
+                Cursor c = db.query(
+                        TABLE_NAME,
+                        new String[]{SQL.COLUMN_NAME_ELEMENT_ID_TAG},
+                        SQL._ID + "=" + id,
+                        null,
+                        null,
+                        null,
+                        null
+                );
+                c.moveToFirst();
+                HashMap<Long, Long> old_map = parse_element_id_count_tag(c.getString(c.getColumnIndexOrThrow(SQL.COLUMN_NAME_ELEMENT_ID_TAG)));
+                c.close();
+
+                ActionWord actionWord = (ActionWord)actionMain.itemChain[ActionMain.item.ID_Word];
+                long[] wordIDs = actionWord.add_multi(ActionMain.tokenize(values.getAsString(SQL.COLUMN_NAME_WORD)));
+                HashMap<Long, Long> new_map = create_element_id_count_map(wordIDs);
+                HashMap<Long, Long> diff_map = new HashMap<>(new_map);
+
+                for (Map.Entry<Long, Long> e : old_map.entrySet()) {
+                    long key = e.getKey();
+                    long value = e.getValue();
+                    if (diff_map.containsKey(key)) {
+                        diff_map.put(key, diff_map.get(key) - value);
+                    }
+                    else {
+                        diff_map.put(key, (-1) * value);
+                    }
+                }
+
+                for (Map.Entry<Long, Long> e : diff_map.entrySet()) {
+                    actionWord.update_reference_count(e.getKey(), e.getValue());
+                }
+                // 워드는 콜렉션에 이제 해당하지 않으므로 콜렉션 카운트는 손댈 필요 없음.
+
+                String new_wordchain = create_wordchain(wordIDs);
+                String new_id_tag = create_element_id_count_tag(new_map);
+
+                values.put(SQL.COLUMN_NAME_WORDCHAIN, new_wordchain);
+                values.put(SQL.COLUMN_NAME_STEM, values.getAsString(SQL.COLUMN_NAME_WORD)); // TODO: 언젠가는 바뀌어야 한다.
+                values.put(SQL.COLUMN_NAME_ELEMENT_ID_TAG, new_id_tag);
+
+                // TODO: 최상위 그룹과 예약어 핸들링도 점검하고 구현해야 한다.
+            }
+        }
+
+        return super.updateWithIDs(context, values, idArray);
+    }
+
 }

@@ -158,7 +158,7 @@ public class ActionMacro extends ActionMultiWord {
 
             Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
             container.getTTS().speak(phonetic, TextToSpeech.QUEUE_FLUSH, null);
-//                container.getTTS().speak(phonetic, TextToSpeech.QUEUE_FLUSH, null, null); // API 21 이상 필요
+//            container.getTTS().speak(phonetic, TextToSpeech.QUEUE_FLUSH, null, null); // API 21 이상 필요
         }
 
         public void init(ContentValues values) {
