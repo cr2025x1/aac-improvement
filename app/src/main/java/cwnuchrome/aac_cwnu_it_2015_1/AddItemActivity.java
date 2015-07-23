@@ -27,6 +27,7 @@ import java.io.BufferedInputStream;
 import java.io.InputStream;
 import java.net.URL;
 import java.net.URLConnection;
+import java.net.URLEncoder;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 
@@ -319,9 +320,10 @@ public class AddItemActivity extends AppCompatActivity {
 
         protected boolean fetchSuggestion() throws Exception
         {
-            String queryWord = textInput.getText().toString().trim().replace(" ", "%20");
+            String queryWord = textInput.getText().toString().trim();
             if (queryWord.length() == 0) return false;
-            URL url = new URL("http://google.com/complete/search?output=toolbar&q=" + queryWord);
+            // 출처: http://stackoverflow.com/questions/10786042/java-url-encoding-of-query-string-parameters
+            URL url = new URL("http://google.com/complete/search?output=toolbar&q=" + URLEncoder.encode(queryWord, "UTF-8"));
             URLConnection connection = url.openConnection();
 
             // http://stackoverflow.com/questions/15596312/xml-saxparserexception-in-android : 참고한 사이트

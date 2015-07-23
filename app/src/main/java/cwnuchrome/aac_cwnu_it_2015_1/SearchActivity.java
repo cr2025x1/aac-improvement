@@ -9,8 +9,6 @@ import android.support.v7.app.AppCompatActivity;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.KeyEvent;
-import android.view.Menu;
-import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -62,7 +60,7 @@ public class SearchActivity extends AppCompatActivity {
         actionMain = ActionMain.getInstance();
 
         textInput = (EditText)findViewById(R.id.edittext_search);
-        textInput.setOnKeyListener(new enterKeyListener());
+        textInput.setOnKeyListener(new EnterKeyBlocker());
 
         /* ListView Initialization */
         listView = (ListView) findViewById(R.id.list_search);
@@ -103,6 +101,8 @@ public class SearchActivity extends AppCompatActivity {
                                       int before, int count) {
                 updater.onResume();
             }
+
+            // 백슬레시?
         });
         /* End of Method for text-changing event */
 
@@ -154,7 +154,15 @@ public class SearchActivity extends AppCompatActivity {
                         suggestionList.clear();
                         for (ActionItem.onClickClass occ : suggestionOCCList) {
                             int catID = occ.getItemCategoryID();
-                            suggestionList.add(actionMain.itemChain[catID].CLASS_NAME + " " + occ.phonetic);
+                            StringBuilder sb = new StringBuilder();
+                            String className = actionMain.itemChain[catID].CLASS_NAME;
+                            if (className == null || !className.equals("")) {
+                                sb.append(className);
+                                sb.append(": ");
+                            }
+                            sb.append(occ.phonetic);
+
+                            suggestionList.add(sb.toString());
                         }
                     }
                     runOnUiThread(new updateItem());
@@ -217,14 +225,28 @@ public class SearchActivity extends AppCompatActivity {
         boolean fetchSuggestion()
         {
             HashMap<String, Long> new_query_map = ActionMain.reduce_to_map(textInput.getText().toString());
-            if (new_query_map.size() == 0 ||
+            if ((new_query_map.size() == 0 && queryMap == null)||
                     (queryMap != null && new_query_map.equals(queryMap))) return false;
+            if (new_query_map.size() == 0 && queryMap != null) {
+                send_feedback();
+                suggestionOCCList.clear();
+                queryMap = null;
+                return true;
+            }
+
             HashMap<Long, QueryWordInfo> new_query_id_map =
                     ((ActionWord)actionMain.itemChain[ActionMain.item.ID_Word]).convert_to_id_ref_map(new_query_map);
-            if (new_query_id_map.size() == 0 ||
+            if ((new_query_id_map.size() == 0 && query_id_map == null) ||
                     (query_id_map != null && new_query_id_map.equals(query_id_map))) return false;
+
             send_feedback();
             suggestionOCCList.clear();
+
+            if (new_query_id_map.size() == 0 && query_id_map != null) {
+                queryMap = new_query_map;
+                query_id_map = null;
+                return true;
+            }
 
             ActionMain actionMain = ActionMain.getInstance();
             queryMap = new_query_map;
@@ -237,39 +259,13 @@ public class SearchActivity extends AppCompatActivity {
         }
     }
 
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-//        getMenuInflater().inflate(R.menu.menu_search, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-//        int id = item.getItemId();
-
-//        //noinspection SimplifiableIfStatement
-//        if (id == R.id.action_add_word_macro) {
-//            return true;
-//        }
-//        else if (id == R.id.action_cancel_add_word_macro) {
-//            setResult(RESULT_CANCELED);
-//            finish();
-//            return true;
-//        }
-
-        return super.onOptionsItemSelected(item);
-    }
-
-    class enterKeyListener implements EditText.OnKeyListener {
+    // 키보드의 엔터키를 무시하기 위해 지정한 리스너 클래스
+    class EnterKeyBlocker implements EditText.OnKeyListener {
 
         public boolean onKey(View v, int keyCode, KeyEvent keyEvent) {
             if (keyEvent.getAction() == KeyEvent.ACTION_UP) {
-                if (keyCode == KeyEvent.KEYCODE_ENTER) {
-                    return true;
+                if (keyCode == KeyEvent.KEYCODE_ENTER) { // 엔터키 이벤트
+                    return true; // 아무 작업도 없이 그대로 true 값을 반환해 이벤트를 종료시킨다.
                 }
             }
 
@@ -277,23 +273,44 @@ public class SearchActivity extends AppCompatActivity {
         }
     }
 
+    // 뒤로 가기 버튼을 눌렀을 때의 동작 메소드
     @Override
     public void onBackPressed() {
+        // 피드백을 보내고 액티비티 종료 결과를 알린다.
         send_feedback();
-
         setResult(RESULT_CANCELED);
-        finish();
+
+        super.onBackPressed();
     }
 
+    // OCC 객체의 리스트를 업데이트하는 메소드.
     protected void update_occ_list(Vector<ArrayList<Map.Entry<Long, Double>>> rank_list) {
+
+        /*
+         * OCC 객체의 리스트는 정렬 순서가 몹시 중요하다.
+         * 물론 ListView 객체에 직접 연결된 객체는 suggestionList이지만, suggestionList를 클릭 시 호출되는 객체는
+         * suggestionOCCList이며 suggestionList의 객체는 자신의 인덱스 위치와 같은 위치에 있는 suggestionOCCList
+         * 의 원소 객체를 호출하기 때문이다.
+         * 즉, suggestionList와 그 원소들에 1:1 대응하는 객체들의 리스트인 suggestionOCCList는 정렬 상태가 완전히
+         * 똑같아야 한다.
+         *
+         * rank_list는 최상위 n개만 추려내어 각 카테고리별로 정렬된 채로 있으므로, 매 카테고리별로 제일 앞에 있는 원소의 값을
+         * 비교한 후 제일 큰 것을 먼저 OCC 객체 리스트에 삽입하고, 그 삽입한 객체가 있는 리스트의 이터레이터를 1 전진시킨다.
+         * 그리고 이 과정을 더 이상 비교할 필요가 없을 때까지 반복한다.
+         * 여기서 비교할 필요가 없는 상태라는 말은, 최대 단 하나의 카테고리 리스트만이 남은 원소가 있는 경우이다.
+         * 이 때부터는 남은 리스트만을 기반으로 순차적으로 OCC 객체를 생성해 삽입하기를 반복한다.
+         */
+
         Vector<ListIterator<Map.Entry<Long, Double>>> iterator_vector = new Vector<>(ActionMain.item.ITEM_COUNT);
         for (int i = 0; i < ActionMain.item.ITEM_COUNT; i++) iterator_vector.add(rank_list.get(i).listIterator());
 
         int iter_end_count = 0;
         int catID;
+        // "ActionMain.item.ITEM_COUNT - 1". 즉 하나의 원소만 남을 때까지 최대값 찾기 - 최대값 가진 원소 추가 루틴 반복
         while (iter_end_count < ActionMain.item.ITEM_COUNT - 1) {
             double max_rank = 0.0d;
 
+            // 각 이터레이터의 현재 위치에서의 최대값을 찾는다.
             for (ListIterator<Map.Entry<Long, Double>> iter : iterator_vector) {
                 if (iter.hasNext()) {
                     Map.Entry<Long, Double> e = iter.next();
@@ -301,10 +318,12 @@ public class SearchActivity extends AppCompatActivity {
                     if (value > max_rank) {
                         max_rank = value;
                     }
-                    iter.previous();
+                    iter.previous(); // next() 때문에 이터레이터가 한 칸 전진했으므로, previous()로 다시 원위치시킨다.
                 }
             }
 
+            // 최대값 원소를 가지는 이터레이터를 한 칸 전진시킨다. 그리고 그 최대값을 가진 원소를 기반으로 OCC 객체를 만들어 삽입한다.
+            // 이 때 최대값을 가지는 원소가 여럿 있을 수 있다. (공동 1위)
             catID = 0;
             for (ListIterator<Map.Entry<Long, Double>> iter : iterator_vector) {
                 if (iter.hasNext()) {
@@ -320,6 +339,7 @@ public class SearchActivity extends AppCompatActivity {
             }
         }
 
+        // 이제는 더 이상 비교작업은 필요하지 않다. 남은 리스트의 맴버에 대해 일괄적으로 순차 삽입한다.
         catID = 0;
         for (ListIterator<Map.Entry<Long, Double>> iter : iterator_vector) {
             while (iter.hasNext()) {
@@ -329,10 +349,13 @@ public class SearchActivity extends AppCompatActivity {
         }
     }
 
+    // OCC 객체를 생성하는 메소드.
     protected void addOCC(int catID, Map.Entry<Long, Double> entry) {
         ActionItem actionItem = actionMain.itemChain[catID];
         ActionItem.onClickClass occ;
         AACGroupContainer container = actionMain.getReferrer().get(getIntent().getIntExtra("AACGC_ID", -1));
+
+        // 그룹의 OCC 객체를 생성해야 할 때에는 추가 동작이 필요하므로 특별히 따로 구분해서 처리한다.
         if (catID == ActionMain.item.ID_Group) {
             occ = new GroupOCCWrapper(context, container);
         }
@@ -340,6 +363,8 @@ public class SearchActivity extends AppCompatActivity {
             occ = actionItem.allocOCC(context, container);
         }
 
+        // TODO: OCC의 초기화 메소드를 이용하는 것이 더 좋지 않을까?
+        // OCC를 초기화한다.
         occ.rank = entry.getValue();
         long key = entry.getKey();
         occ.itemID = key;
@@ -356,13 +381,13 @@ public class SearchActivity extends AppCompatActivity {
         c.moveToFirst();
         occ.phonetic = c.getString(c.getColumnIndexOrThrow(ActionItem.SQL.COLUMN_NAME_WORD));
         occ.message = occ.phonetic + " " + occ.rank;
-
         c.close();
-        suggestionOCCList.add(occ);
 
+        // 마지막으로 쿼리결과 OCC 리스트에 추가한다.
+        suggestionOCCList.add(occ);
     }
 
-    // 그룹 아이템 클릭시에는 액티비티를 벗어나는 추가 동작이 필요하므로 서브클래스를 하나 정의한다.
+    // 그룹 아이템 클릭시에는 기존 그룹의 onClick()의 동작 외에 추가 동작이 필요하므로 서브클래스를 하나 정의한다.
     protected class GroupOCCWrapper extends ActionGroup.onClickClass {
         public GroupOCCWrapper(Context context, AACGroupContainer container) {
             super(context, container);
@@ -373,18 +398,36 @@ public class SearchActivity extends AppCompatActivity {
             Intent i = new Intent();
             setResult(RESULT_OK, i);
             super.onClick(v);
-            send_feedback();
+            send_feedback(); // 액티비티를 종료하게 되므로 쿼리결과 조회는 자동으로 종료된다. 따라서 피드백을 보낸다.
 
-            finish();
+            finish(); // 이 액티비티를 종료하고, 기존의 탐색 화면으로 돌아간다.
         }
     }
 
+    // 피드백 정보를 적용하도록 ActionMain 객체를 콜한다.
     protected void send_feedback() {
         if (clickedList.isEmpty()) return;
 
+        /*
+         * 피드백 방법 : 묵시적 피드백 (Implicit feedback)
+         * 주어진 쿼리로 나온 검색 결과를, 그 쿼리를 사용자가 변경하기 이전에 클릭한 정보를 토대로 피드백한다.
+         * 여기서 "변경하기 이전"이란 것은, 사용자가 입력한 텍스트 그 자체의 변경을 의미하지 않는다.
+         * 텍스트-쿼리 해쉬맵은 1:1 대응관계가 아니기 때문이다.
+         * 입력된 텍스트를 처리해서 만들어진 id-count 해쉬맵 결과물이 변경되는 경우에만 변경된 것으로 간주된다.
+         *
+         * 피드백의 범위
+         * 사용자가 클릭한 아이템 중 가장 아래쪽의 아이템이 n번째라면, 가장 위에서부터 그 n번째까지의 아이템만을 피드백한다.
+         * 그 이하에 대해서는 사용자가 검색 결과를 읽지 않고 종료한 것으로 간주해, 피드백이 없는 것으로 본다.
+         *
+         * 관련-비관련성의 결정
+         * 1~n번째 아이템 중 사용자가 클릭한 것은 쿼리와 관련있는 문서로 간주, 그렇지 않은 것은 관련없는 문서로 간주한다.
+         */
+
+        // position_max : n번째 아이템의 위치. 인덱스는 0부터 시작한다.
         ActionMain.SearchFeedbackInfo[] feedbackInfos = new ActionMain.SearchFeedbackInfo[position_max + 1];
         for (int i = 0; i <= position_max; i++) {
             ActionItem.onClickClass occ = suggestionOCCList.get(i);
+            // clickedList - 클릭된 아이템의 위치 목록 객체
             feedbackInfos[i] = new ActionMain.SearchFeedbackInfo(occ.getItemCategoryID(), occ.getItemID(), clickedList.contains(i));
         }
         actionMain.applyFeedback(query_id_map, feedbackInfos);
@@ -392,7 +435,4 @@ public class SearchActivity extends AppCompatActivity {
         clickedList.clear();
         position_max = 0;
     }
-
-
-    // TODO: 그룹을 클릭해서 다시 넘어갈 때에도 반드시 피드백이 진행되게 할 것
 }
