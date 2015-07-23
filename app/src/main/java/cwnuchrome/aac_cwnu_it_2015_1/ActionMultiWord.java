@@ -94,7 +94,7 @@ public abstract class ActionMultiWord extends ActionItem {
         ArrayList<Long> wordList = listBundle.itemVector.get(ActionMain.item.ID_Word);
         ArrayList<Long> itemList = listBundle.itemVector.get(itemClassID);
         ArrayList<ContentValues> itemMissingPrintList = listBundle.missingDependencyPrintVector.get(itemClassID);
-        ArrayList<Integer> itemMissingList = listBundle.missingDependencyVector.get(itemClassID);
+        ArrayList<Long> itemMissingList = listBundle.missingDependencyVector.get(itemClassID);
 
         if (wordList.size() == 0) return true;
 
@@ -166,7 +166,7 @@ public abstract class ActionMultiWord extends ActionItem {
         boolean dependencyProper = true;
 
         if (c_count > 0) {
-            int c_id = c.getInt(c_id_col);
+            long c_id = c.getLong(c_id_col);
 
             Collections.sort(itemList); // 선택된 멀티워드 아이템 목록도 오름차순으로 정렬
 

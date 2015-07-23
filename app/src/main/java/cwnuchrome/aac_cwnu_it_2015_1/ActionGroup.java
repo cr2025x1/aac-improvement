@@ -5,11 +5,14 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.provider.BaseColumns;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.view.View;
 import android.widget.Toast;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.ListIterator;
+import java.util.Vector;
 
 /**
  * Created by Chrome on 5/5/15.
@@ -97,7 +100,7 @@ public class ActionGroup extends ActionMultiWord {
 
     }
 
-    protected void addToRemovalList(Context context, AACGroupContainer.RemovalListBundle listBundle, int id) {
+    protected void addToRemovalList(Context context, AACGroupContainer.RemovalListBundle listBundle, long id) {
         ActionMain actionMain = ActionMain.getInstance();
         SQLiteDatabase db = actionMain.getDB();
         String[] projection = new String[] { ActionItem.SQL._ID };
@@ -154,8 +157,8 @@ public class ActionGroup extends ActionMultiWord {
             }
 
             int cat_id = 0;
-            for (ArrayList<Integer> l : listBundle.missingDependencyVector) {
-                for (int i : l) {
+            for (ArrayList<Long> l : listBundle.missingDependencyVector) {
+                for (long i : l) {
                     actionMain.itemChain[cat_id].addToRemovalList(context, listBundle, i);
                 }
                 l.clear();
@@ -265,4 +268,37 @@ public class ActionGroup extends ActionMultiWord {
             message = "그룹 " + values.get(ActionWord.SQL.COLUMN_NAME_WORD) + "," + values.get(ActionWord.SQL.COLUMN_NAME_PRIORITY);
         }
     }
+
+    @NonNull
+    public Vector<ArrayList<Long>> expand_item_vector(long id, @Nullable Vector<ArrayList<Long>> itemVector) {
+        ActionMain actionMain = ActionMain.getInstance();
+        SQLiteDatabase db = actionMain.getDB();
+
+        Vector<ArrayList<Long>> v = super.expand_item_vector(id, itemVector);
+
+        for (ActionItem actionItem : actionMain.itemChain) {
+            Cursor c = db.query(
+                    actionItem.TABLE_NAME,
+                    new String[] {SQL._ID},
+                    SQL.COLUMN_NAME_PARENT_ID + "=" + id,
+                    null,
+                    null,
+                    null,
+                    null
+            );
+            c.moveToFirst();
+            int col_id = c.getColumnIndexOrThrow(SQL._ID);
+
+            for (int j = 0; j < c.getCount(); j++) {
+                actionItem.expand_item_vector(c.getLong(col_id), v);
+                c.moveToNext();
+            }
+
+            c.close();
+        }
+
+        return v;
+    }
+
+
 }

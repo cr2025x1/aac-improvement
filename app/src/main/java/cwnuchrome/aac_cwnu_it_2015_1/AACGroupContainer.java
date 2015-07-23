@@ -572,7 +572,6 @@ public class AACGroupContainer {
     // 아이템 삭제 명령 수행
     public void invokeRemoval() {
         removalListBundle.execRemoval();
-        ((MainActivity)context).revertMenu();
         exploreGroup(currentGroupID);
     }
 
@@ -581,7 +580,9 @@ public class AACGroupContainer {
 
         protected Vector<ArrayList<Long>> itemVector;
         protected Vector<ArrayList<ContentValues>> missingDependencyPrintVector;
-        protected Vector<ArrayList<Integer>> missingDependencyVector;
+        protected Vector<ArrayList<Long>> missingDependencyVector;
+
+        protected ActionMain actionMain;
 
         public RemovalListBundle() {
             projection = new String[] { ActionItem.SQL._ID };
@@ -593,11 +594,14 @@ public class AACGroupContainer {
             for (int i = 0; i < ActionMain.item.ITEM_COUNT; i++) missingDependencyPrintVector.add(new ArrayList<ContentValues>());
 
             missingDependencyVector = new Vector<>(ActionMain.item.ITEM_COUNT);
-            for (int i = 0; i < ActionMain.item.ITEM_COUNT; i++) missingDependencyVector.add(new ArrayList<Integer>());
+            for (int i = 0; i < ActionMain.item.ITEM_COUNT; i++) missingDependencyVector.add(new ArrayList<Long>());
+
+            actionMain = ActionMain.getInstance();
         }
 
         public void add(int category_id, long id) {
-            itemVector.get(category_id).add(id);
+//            itemVector.get(category_id).add(id);
+            itemVector = actionMain.itemChain[category_id].expand_item_vector(id, itemVector);
         }
 
         public void addByOCC(ActionItem.onClickClass occ) {
@@ -608,7 +612,7 @@ public class AACGroupContainer {
         // 의존성 여부 검사
         public boolean checkNoDependencyLeft() {
             for (ArrayList<ContentValues> l : missingDependencyPrintVector) l.clear();
-            for (ArrayList<Integer> l : missingDependencyVector) l.clear();
+            for (ArrayList<Long> l : missingDependencyVector) l.clear();
 
             boolean result = true;
             for (ActionItem i : actionMain.itemChain) {
@@ -643,8 +647,8 @@ public class AACGroupContainer {
 
             // 선택 리스트에는 없으나 삭제 대상에 의존성을 가지는 아이템들을 모두 삭제 대상 리스트에 포함
             cat_id = 0;
-            for (ArrayList<Integer> l : missingDependencyVector) {
-                for (int i : l) {
+            for (ArrayList<Long> l : missingDependencyVector) {
+                for (long i : l) {
                     actionMain.itemChain[cat_id].addToRemovalList(context, this, i);
                 }
                 l.clear();
@@ -757,5 +761,9 @@ public class AACGroupContainer {
             }
             return;
         }
+    }
+
+    public void moveSelected() {
+
     }
 }

@@ -1,0 +1,23 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools" tools:context=".MainActivity">
+
+    <group
+        android:id="@+id/menu_group_item_select_mode" >
+
+        <item android:id="@+id/action_item_select_cancel" android:title="@string/menu_item_select_cancel"
+            android:orderInCategory="100" app:showAsAction="never" />
+        <item android:id="@+id/action_item_select_select_all" android:title="@string/menu_item_select_select_all"
+            android:orderInCategory="100" app:showAsAction="never" />
+        <item android:id="@+id/action_item_select_deselect_all" android:title="@string/menu_item_select_deselect_all"
+            android:orderInCategory="100" app:showAsAction="never" />
+        <item android:id="@+id/action_item_select_set_image" android:title="@string/menu_item_select_set_image"
+            android:orderInCategory="100" app:showAsAction="never" />
+        <item android:id="@+id/action_item_select_move" android:title="@string/menu_item_select_move"
+            android:orderInCategory="100" app:showAsAction="never" />
+        <item android:id="@+id/action_item_select_remove" android:title="@string/menu_item_select_remove"
+            android:orderInCategory="100" app:showAsAction="never" />
+
+    </group>
+
+</menu>

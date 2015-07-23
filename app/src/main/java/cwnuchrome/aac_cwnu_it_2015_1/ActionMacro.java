@@ -69,7 +69,7 @@ public class ActionMacro extends ActionMultiWord {
         return result;
     }
 
-    protected void addToRemovalList(Context context, AACGroupContainer.RemovalListBundle list, int id) {
+    protected void addToRemovalList(Context context, AACGroupContainer.RemovalListBundle list, long id) {
         list.add(ActionMain.item.ID_Macro, id);
     }
 

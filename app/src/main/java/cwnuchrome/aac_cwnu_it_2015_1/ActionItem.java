@@ -7,6 +7,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.graphics.drawable.Drawable;
 import android.provider.BaseColumns;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
@@ -15,8 +16,10 @@ import android.widget.LinearLayout;
 
 import java.io.File;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.Vector;
 
 /**
  * Created by Chrome on 5/2/15.
@@ -137,9 +140,9 @@ public abstract class ActionItem implements Serializable {
 
         Cursor c = db.query(
                 TABLE_NAME,
-                new String[] {ActionWord.SQL._ID},
+                new String[]{ActionWord.SQL._ID},
                 ActionWord.SQL.COLUMN_NAME_WORD + "=?",
-                new String[] {word},
+                new String[]{word},
                 null,
                 null,
                 null
@@ -258,7 +261,7 @@ public abstract class ActionItem implements Serializable {
         return true;
     }
 
-    abstract protected void addToRemovalList(Context context, AACGroupContainer.RemovalListBundle listBundle, int id);
+    abstract protected void addToRemovalList(Context context, AACGroupContainer.RemovalListBundle listBundle, long id);
     abstract protected boolean verifyAndCorrectDependencyRemoval(Context context, AACGroupContainer.RemovalListBundle listBundle);
 
     protected void printRemovalList(AACGroupContainer.RemovalListBundle listBundle) {
@@ -446,4 +449,17 @@ public abstract class ActionItem implements Serializable {
     }
 
     @NonNull public abstract HashMap<Long, Long> get_id_count_map(long id);
+
+    @NonNull public Vector<ArrayList<Long>> expand_item_vector(long id, @Nullable Vector<ArrayList<Long>> itemVector) {
+        Vector<ArrayList<Long>> v;
+        if (itemVector == null) {
+            v = new Vector<>(ActionMain.item.ITEM_COUNT);
+            for (int i = 0; i < ActionMain.item.ITEM_COUNT; i++) v.add(new ArrayList<Long>());
+        }
+        else v = itemVector;
+
+        v.get(itemClassID).add(id);
+
+        return v;
+    }
 }

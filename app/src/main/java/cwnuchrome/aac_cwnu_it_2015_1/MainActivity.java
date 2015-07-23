@@ -66,7 +66,7 @@ public class MainActivity extends AppCompatActivity {
                 break;
 
             case STATUS_ITEM_REMOVAL:
-                getMenuInflater().inflate(R.menu.menu_main_item_removal, menu);
+                getMenuInflater().inflate(R.menu.menu_main_item_selection_mode, menu);
                 break;
 
             case STATUS_ITEM_RENAMING:
@@ -139,28 +139,28 @@ public class MainActivity extends AppCompatActivity {
         /* 아이템 제거 메뉴 선택 시의 메뉴들 */
 
         if (id == R.id.action_remove_item) {
-            set_menu(R.string.title_select_item, STATUS_ITEM_REMOVAL);
+            set_menu(R.string.title_item_select, STATUS_ITEM_REMOVAL);
             container.toggleFold();
             return true;
         }
 
-        if (id == R.id.action_remove_item_cancel) {
+        if (id == R.id.action_item_select_cancel) {
             revert_menu_to_main();
             container.toggleFold();
             return true;
         }
 
-        if (id == R.id.action_remove_item_select_all) {
+        if (id == R.id.action_item_select_select_all) {
             container.selectAll();
             return true;
         }
 
-        if (id == R.id.action_remove_item_deselect_all) {
+        if (id == R.id.action_item_select_deselect_all) {
             container.deselectAll();
             return true;
         }
 
-        if (id == R.id.action_remove_item_remove) {
+        if (id == R.id.action_item_select_remove) {
             if (container.selectedList.size() == 0) {
                 Toast.makeText(getBaseContext(), "Nothing is selected.", Toast.LENGTH_SHORT)
                         .show();
@@ -168,11 +168,12 @@ public class MainActivity extends AppCompatActivity {
             }
 
             container.removeSelected();
+            revert_menu_to_main();
 
             return true;
         }
 
-        if (id == R.id.action_remove_item_set_image) {
+        if (id == R.id.action_item_select_set_image) {
             if (container.selectedList.size() == 0) {
                 Toast.makeText(getBaseContext(), "Nothing is selected.", Toast.LENGTH_SHORT)
                         .show();
@@ -183,6 +184,19 @@ public class MainActivity extends AppCompatActivity {
             i.putExtra("currentGroupID", container.getCurrentGroupID());
             startActivityForResult(i, ACTIVITY_IMAGE_SELECTION);
 
+            return true;
+        }
+
+        if (id == R.id.action_item_select_move) {
+            if (container.selectedList.size() == 0) {
+                Toast.makeText(getBaseContext(), "Nothing is selected.", Toast.LENGTH_SHORT)
+                        .show();
+                return true;
+            }
+
+            // TODO: 액티비티 추가 - 트리 구조 출력 액티비티
+            // container.moveSelected();
+            revert_menu_to_main();
             return true;
         }
 

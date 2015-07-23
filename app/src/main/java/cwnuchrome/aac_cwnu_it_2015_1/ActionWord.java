@@ -226,7 +226,7 @@ public class ActionWord extends ActionItem {
         );
     }
 
-    protected void addToRemovalList(Context context, AACGroupContainer.RemovalListBundle list, int id) {
+    protected void addToRemovalList(Context context, AACGroupContainer.RemovalListBundle list, long id) {
         list.add(ActionMain.item.ID_Word, id);
     }
 

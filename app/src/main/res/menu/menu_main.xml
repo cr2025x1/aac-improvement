@@ -9,7 +9,7 @@
             android:orderInCategory="100" app:showAsAction="never" />
         <item android:id="@+id/action_search" android:title="@string/menu_search"
             android:orderInCategory="100" app:showAsAction="never" />
-        <item android:id="@+id/action_remove_item" android:title="@string/menu_select_item"
+        <item android:id="@+id/action_remove_item" android:title="@string/menu_item_select"
             android:orderInCategory="100" app:showAsAction="never" />
         <item android:id="@+id/action_rename_item" android:title="@string/menu_select_item_to_modify"
             android:orderInCategory="100" app:showAsAction="never" />

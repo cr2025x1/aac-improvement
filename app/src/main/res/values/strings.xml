@@ -34,13 +34,14 @@
     <string name="toast_dialog_item_rename_failure">Failed to change item</string>
 
     <!-- 아이템 선택 메뉴 관련 -->
-    <string name="menu_select_item">Select Item</string>
-    <string name="title_select_item">Selection mode</string>
-    <string name="menu_select_item_cancel">Cancel</string>
-    <string name="menu_select_item_remove">Remove</string>
-    <string name="menu_select_item_select_all">Select All</string>
-    <string name="menu_select_item_deselect_all">Deselect All</string>
-    <string name="menu_select_item_set_image">Set Image</string>
+    <string name="menu_item_select">Select Item</string>
+    <string name="title_item_select">Selection mode</string>
+    <string name="menu_item_select_cancel">Cancel</string>
+    <string name="menu_item_select_remove">Remove</string>
+    <string name="menu_item_select_move">Move</string>
+    <string name="menu_item_select_select_all">Select All</string>
+    <string name="menu_item_select_deselect_all">Deselect All</string>
+    <string name="menu_item_select_set_image">Set Image</string>
 
     <!-- 의존성 경고창 관련 -->
     <string name="menu_remove_item_dependency_warning_title">Dependency Warning</string>
