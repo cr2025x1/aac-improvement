@@ -32,6 +32,7 @@ public class MainActivity extends AppCompatActivity {
     protected final int ACTIVITY_ADD = 0;
     protected final int ACTIVITY_SEARCH = 1;
     protected final int ACTIVITY_IMAGE_SELECTION = 2;
+    protected final int ACTIVITY_MOVE = 3;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -194,9 +195,11 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             }
 
-            // TODO: 액티비티 추가 - 트리 구조 출력 액티비티
-            // container.moveSelected();
-            revert_menu_to_main();
+            Intent i = new Intent(this, ItemMoveActivity.class);
+            i.putExtra("AACGC_ID", container.getContainerID());
+            i.putExtra("blacklist", actionMain.getIDReferrer().attach(container.getSelectedGroups()));
+            startActivityForResult(i, ACTIVITY_MOVE);
+
             return true;
         }
 
@@ -257,15 +260,27 @@ public class MainActivity extends AppCompatActivity {
                     else v.put(ActionItem.SQL.COLUMN_NAME_PICTURE, pictureFilename);
 
                     container.setImageForSelected(v);
-
                     revertMenu();
-
                     container.exploreGroup(container.getCurrentGroupID());
-
-
                     break;
             }
 
+        }
+
+        if (requestCode == ACTIVITY_MOVE) {
+            switch (resultCode) {
+                case RESULT_CANCELED:
+                    break;
+
+                case RESULT_OK:
+                    long id = data.getLongExtra("new_group_id", -1);
+                    if (id == -1) throw new IllegalStateException("Getting data from Intent's extra has failed.");
+
+                    container.moveSelected(id);
+                    revertMenu();
+                    container.exploreGroup(container.getCurrentGroupID());
+                    break;
+            }
         }
     }
 

@@ -17,6 +17,8 @@ import android.widget.TextView;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
+import java.util.ListIterator;
 import java.util.Vector;
 
 /**
@@ -763,7 +765,43 @@ public class AACGroupContainer {
         }
     }
 
-    public void moveSelected() {
+    public void moveSelected(long new_parent_id) {
+        if (currentGroupID == new_parent_id) return;
 
+        Vector<ArrayList<Long>> itemVector = new Vector<>(ActionMain.item.ITEM_COUNT);
+        for (int i = 0; i < ActionMain.item.ITEM_COUNT; i++) itemVector.add(new ArrayList<Long>());
+
+        for (View v : selectedList) {
+            ActionItem.onClickClass occ = ((ActionItem.Button)v.findViewById(R.id.aac_item_button_id)).onClickObj;
+            itemVector.get(occ.getItemCategoryID()).add(occ.getItemID());
+        }
+
+        ContentValues values = new ContentValues();
+        values.put(ActionItem.SQL.COLUMN_NAME_PARENT_ID, new_parent_id);
+
+        int cat_id = 0;
+        for (ArrayList<Long> list : itemVector) {
+            if (list.isEmpty()) continue;
+
+            long[] array = new long[list.size()];
+            int i = 0;
+            for (long l : list) {
+                array[i] = l;
+                i++;
+            }
+            actionMain.itemChain[cat_id].updateWithIDs(context, values, array);
+
+            cat_id++;
+        }
+    }
+
+    public ArrayList<Long> getSelectedGroups() {
+        ArrayList<Long> list  = new ArrayList<>();
+        for (View v : selectedList) {
+            ActionItem.onClickClass occ = ((ActionItem.Button)v.findViewById(R.id.aac_item_button_id)).onClickObj;
+            if (occ.getItemCategoryID() == ActionMain.item.ID_Group) list.add(occ.getItemID());
+        }
+
+        return list;
     }
 }

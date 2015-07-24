@@ -9,9 +9,16 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.view.View;
 import android.widget.Toast;
+
+import net.vivin.GenericTree;
+import net.vivin.GenericTreeNode;
+import net.vivin.GenericTreeTraversalOrderEnum;
+
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.ListIterator;
+import java.util.Map;
 import java.util.Vector;
 
 /**
@@ -300,5 +307,112 @@ public class ActionGroup extends ActionMultiWord {
         return v;
     }
 
+    @NonNull
+    public GenericTree<Info> get_sub_tree(long id, @Nullable Collection<Long> blacklist) {
+        ActionMain actionMain = ActionMain.getInstance();
+        SQLiteDatabase db = actionMain.getDB();
+
+        String id_name;
+        Cursor c = db.query(
+                TABLE_NAME,
+                new String[]{SQL.COLUMN_NAME_WORD},
+                SQL._ID + "=" + id,
+                null,
+                null,
+                null,
+                null
+        );
+        c.moveToFirst();
+
+        if (c.getCount() > 0) {
+            id_name = c.getString(c.getColumnIndexOrThrow(SQL.COLUMN_NAME_WORD));
+            c.close();
+        }
+        else {
+            c.close();
+            throw new IllegalArgumentException("No group exists with that ID.");
+        }
+
+        String blacklist_clause = null;
+        if (blacklist != null) {
+            StringBuilder sb = new StringBuilder();
+            for (long l : blacklist) {
+                sb
+                        .append(SQL._ID)
+                        .append("=")
+                        .append(l)
+                        .append(" OR ");
+            }
+            sb.setLength(sb.length() - 4);
+            blacklist_clause = sb.toString();
+        }
+
+        GenericTreeNode<Info> root = get_sub_tree_node(new Info(id, id_name), blacklist_clause);
+        GenericTree<Info> tree = new GenericTree<>();
+        tree.setRoot(root);
+        return tree;
+    }
+
+    @NonNull
+    private GenericTreeNode<Info> get_sub_tree_node(Info info, String blacklist_clause) {
+        ActionMain actionMain = ActionMain.getInstance();
+        SQLiteDatabase db = actionMain.getDB();
+
+        GenericTreeNode<Info> root = new GenericTreeNode<>(info);
+
+        StringBuilder wcb = new StringBuilder();
+        wcb
+                .append(SQL.COLUMN_NAME_PARENT_ID)
+                .append("=")
+                .append(info.id)
+                .append(" AND ")
+                .append(SQL._ID)
+                .append("!=")
+                .append(1); // 루트 그룹의 아이디
+
+        if (blacklist_clause != null) {
+            wcb
+                    .append(" AND NOT (")
+                    .append(blacklist_clause)
+                    .append(")");
+        }
+
+        String whereClause = wcb.toString();
+        Cursor c = db.query(
+                TABLE_NAME,
+                new String[]{SQL._ID, SQL.COLUMN_NAME_WORD},
+                whereClause,
+                null,
+                null,
+                null,
+                null
+        );
+        c.moveToFirst();
+        int col_id = c.getColumnIndexOrThrow(SQL._ID);
+        int col_name = c.getColumnIndexOrThrow(SQL.COLUMN_NAME_WORD);
+
+        Info[] info_list = new Info[c.getCount()];
+        for (int i = 0; i < c.getCount(); i++) {
+            info_list[i] = new Info(c.getLong(col_id), c.getString(col_name));
+            c.moveToNext();
+        }
+        c.close();
+
+        for (Info i : info_list) {
+            root.addChild(get_sub_tree_node(i, blacklist_clause));
+        }
+
+        return root;
+    }
+
+    public class Info {
+        final long id;
+        final String name;
+
+        public Info(long id, String name) {
+            this.id = id;
+            this.name = name;
+        }
+    }
 
 }

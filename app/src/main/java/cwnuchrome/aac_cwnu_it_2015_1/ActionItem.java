@@ -17,6 +17,7 @@ import android.widget.LinearLayout;
 import java.io.File;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Vector;
@@ -165,7 +166,8 @@ public abstract class ActionItem implements Serializable {
             sb.append(i);
             sb.append(" OR ");
         }
-        sb.delete(sb.length() - 4, sb.length() - 1); // 맨 마지막 " OR "를 삭제
+        sb.setLength(sb.length() - 4); // 맨 마지막 " OR "를 삭제
+//        sb.delete(sb.length() - 4, sb.length() - 1);
         String whereClause = sb.toString();
 
         // TODO: 집합 필터링보다 그냥 word와 같이 레퍼런스 카운팅을 통한 제거가 좀 더 효율적이지 않을까?

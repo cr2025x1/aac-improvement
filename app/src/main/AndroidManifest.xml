@@ -36,6 +36,10 @@
             android:name=".SearchActivity"
             android:label="@string/title_activity_search" >
         </activity>
+        <activity
+            android:name=".ItemMoveActivity"
+            android:label="@string/title_activity_item_move" >
+        </activity>
     </application>
 
 </manifest>

@@ -65,4 +65,8 @@
     <string name="title_activity_preset_image_selection">Select Preset Image</string>
     <string name="button_preset_image_selection">Next</string>
 
+    <!-- 아이템 이동 관련 -->
+    <string name="title_activity_item_move">Select Group</string>
+    <string name="button_item_move_cancel">Cancel</string>
+
 </resources>

@@ -81,47 +81,47 @@ public class PresetImageSelectionActivity extends AppCompatActivity {
     }
 
     public class ImageAdapter extends BaseAdapter {
-        private Context mContext;
-        private int[] mThumbIds;
+            private Context mContext;
+            private int[] mThumbIds;
 
-        public ImageAdapter(Context c, int[] mThumbIds) {
-            mContext = c;
-            this.mThumbIds = mThumbIds;
-        }
-
-        public int getCount() {
-            return mThumbIds.length;
-        }
-
-        public Object getItem(int position) {
-            return null;
-        }
-
-        public long getItemId(int position) {
-            return 0;
-        }
-
-        // create a new ImageView for each item referenced by the Adapter
-        public View getView(int position, View convertView, ViewGroup parent) {
-            ImageView imageView;
-            if (convertView == null) {
-                // if it's not recycled, initialize some attributes
-                imageView = new ImageView(mContext);
-                imageView.setLayoutParams(new GridView.LayoutParams(preset_image_selection_column_width, preset_image_selection_column_width));
-                imageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
-                imageView.setPadding(
-                        preset_image_selection_image_padding_pixel,
-                        preset_image_selection_image_padding_pixel,
-                        preset_image_selection_image_padding_pixel,
-                        preset_image_selection_image_padding_pixel
-                );
-            } else {
-                imageView = (ImageView) convertView;
+            public ImageAdapter(Context c, int[] mThumbIds) {
+                mContext = c;
+                this.mThumbIds = mThumbIds;
             }
 
-            imageView.setImageResource(mThumbIds[position]);
-            return imageView;
-        }
+            public int getCount() {
+                return mThumbIds.length;
+            }
+
+            public Object getItem(int position) {
+                return null;
+            }
+
+            public long getItemId(int position) {
+                return 0;
+            }
+
+            // create a new ImageView for each item referenced by the Adapter
+            public View getView(int position, View convertView, ViewGroup parent) {
+                ImageView imageView;
+                if (convertView == null) {
+                    // if it's not recycled, initialize some attributes
+                    imageView = new ImageView(mContext);
+                    imageView.setLayoutParams(new GridView.LayoutParams(preset_image_selection_column_width, preset_image_selection_column_width));
+                    imageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
+                    imageView.setPadding(
+                            preset_image_selection_image_padding_pixel,
+                            preset_image_selection_image_padding_pixel,
+                            preset_image_selection_image_padding_pixel,
+                            preset_image_selection_image_padding_pixel
+                    );
+                } else {
+                    imageView = (ImageView) convertView;
+                }
+
+                imageView.setImageResource(mThumbIds[position]);
+                return imageView;
+            }
     }
 
     protected int preset_image_selection_column_width;

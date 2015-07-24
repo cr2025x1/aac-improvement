@@ -38,6 +38,7 @@ public final class ActionMain {
     private ActionMain() {
         rand = new Random();
         referrer = new InterActivityReferrer<>();
+        id_referrer = new InterActivityReferrer<>();
 
         itemChain = new ActionItem[item.ITEM_COUNT];
         itemChain[item.ID_Group] = new ActionGroup();
@@ -55,6 +56,7 @@ public final class ActionMain {
     private SQLiteDatabase db;
     AACGroupContainer containerRef;
     private InterActivityReferrer<AACGroupContainer> referrer;
+    private InterActivityReferrer<ArrayList<Long>> id_referrer;
     Kryo kryo;
     byte[] buffer;
     Context context;
@@ -299,6 +301,9 @@ public final class ActionMain {
 
     public InterActivityReferrer<AACGroupContainer> getReferrer() {
         return referrer;
+    }
+    public InterActivityReferrer<ArrayList<Long>> getIDReferrer() {
+        return id_referrer;
     }
 
     // 주어진 문장을 받아 해쉬맵으로 만들어 반환함.
