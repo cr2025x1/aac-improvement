@@ -43,7 +43,8 @@ public abstract class ActionMultiWord extends ActionItem {
         if (id != -1) {
             ActionMain actionMain = ActionMain.getInstance();
             ActionWord actionWord = (ActionWord) actionMain.itemChain[ActionMain.item.ID_Word];
-            long doc_length = -1;
+            long doc_length = 0;
+//            long doc_length = -1;
             for (Map.Entry<Long, Long> entry : map.entrySet()) {
                 actionWord.update_reference_count(entry.getKey(), 1);
                 doc_length += entry.getValue();
@@ -74,7 +75,8 @@ public abstract class ActionMultiWord extends ActionItem {
 
             boolean effected = super.removeWithID(context, id);
 
-            long doc_length = 1;
+            long doc_length = 0;
+//            long doc_length = 1;
             ActionWord actionWord = (ActionWord) actionMain.itemChain[ActionMain.item.ID_Word];
             for (Map.Entry<Long, Long> entry : map.entrySet()) {
                 actionWord.update_reference_count(entry.getKey(), -1);

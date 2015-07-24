@@ -350,7 +350,10 @@ public final class ActionMain {
 
         int i = 0;
         while (i < lhs_split.length && i < rhs_split.length) {
-            cs_sum += cos_sim_frag(lhs_split[i], rhs_split[i]);
+            cs_sum += cos_sim_frag(
+                    Normalizer.normalize(lhs_split[i], Normalizer.Form.NFD),
+                    Normalizer.normalize(rhs_split[i], Normalizer.Form.NFD)
+            );
             i++;
         }
 
