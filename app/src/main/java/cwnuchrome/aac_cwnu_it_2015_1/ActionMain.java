@@ -14,6 +14,7 @@ import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
 
+import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -155,7 +156,7 @@ public final class ActionMain {
         return count;
     }
 
-    public long get_db_avg_doc_length() {
+    public double get_db_avg_doc_length() {
         Cursor c = db.query(
                 SQL.TABLE_NAME,
                 new String[]{SQL.COLUMN_NAME_AVERAGE_DOCUMENT_LENGTH},
@@ -167,7 +168,7 @@ public final class ActionMain {
         );
         c.moveToFirst();
 
-        Long avg_doc_length = c.getLong(c.getColumnIndexOrThrow(SQL.COLUMN_NAME_AVERAGE_DOCUMENT_LENGTH));
+        double avg_doc_length = c.getDouble(c.getColumnIndexOrThrow(SQL.COLUMN_NAME_AVERAGE_DOCUMENT_LENGTH));
         c.close();
         return avg_doc_length;
     }
@@ -341,6 +342,24 @@ public final class ActionMain {
 
     // 주어진 두 문자열의 코사인 유사도를 반환
     public static double cos_sim(@NonNull String lhs, @NonNull String rhs) {
+        double denominator = lhs.length() > rhs.length() ? lhs.length() : rhs.length();
+
+        double cs_sum = 0.0d;
+        String[] lhs_split = lhs.split("(?<=.)");
+        String[] rhs_split = rhs.split("(?<=.)");
+
+        int i = 0;
+        while (i < lhs_split.length && i < rhs_split.length) {
+            cs_sum += cos_sim_frag(lhs_split[i], rhs_split[i]);
+            i++;
+        }
+
+        return cs_sum / denominator;
+    }
+
+    // 주어진 두 문자(NFD 형태)의 코사인 유사도를 반환
+//    public static double cos_sim(@NonNull String lhs, @NonNull String rhs) {
+    public static double cos_sim_frag(@NonNull String lhs, @NonNull String rhs) {
         HashMap<String, Long> lhs_map = reduce_to_map_for_cos_sim(lhs);
         HashMap<String, Long> rhs_map = reduce_to_map_for_cos_sim(rhs);
 
@@ -370,7 +389,7 @@ public final class ActionMain {
     @NonNull public Evaluation allocEvaluation() { return new Evaluation(); }
     class Evaluation {
         long entire_collection_count;
-        long average_document_length;
+        double average_document_length;
 
         public Evaluation() {
             entire_collection_count = get_db_collection_count();
@@ -590,11 +609,11 @@ public final class ActionMain {
             double word_feedback_weight,
             long word_count_in_document,
             long document_length,
-            long average_document_length,
+            double average_document_length,
             long collection_count,
             long document_with_word_count_in_collection
     ) {
-        return (word_count_in_query + word_feedback_weight) * Math.log1p(Math.log1p(word_count_in_document)) / (1 - AACGroupContainerPreferences.RANKING_FUNCTION_CONSTANT_B + AACGroupContainerPreferences.RANKING_FUNCTION_CONSTANT_B * document_length / average_document_length) * Math.log(collection_count + 1 / document_with_word_count_in_collection);
+        return (word_count_in_query + word_feedback_weight) * Math.log1p(Math.log1p(word_count_in_document)) / (1 - AACGroupContainerPreferences.RANKING_FUNCTION_CONSTANT_B + AACGroupContainerPreferences.RANKING_FUNCTION_CONSTANT_B * document_length / average_document_length) * Math.log((collection_count + 1) / document_with_word_count_in_collection);
     }
 
     public void applyFeedback(HashMap<Long, QueryWordInfo> query_id_map, SearchFeedbackInfo[] infos) {

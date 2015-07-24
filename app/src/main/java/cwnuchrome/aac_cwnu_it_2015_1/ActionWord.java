@@ -484,7 +484,7 @@ public class ActionWord extends ActionItem {
             @NonNull HashMap<Long, QueryWordInfo> queryMap,
             @NonNull HashMap<Long, Double> eval_map,
             long entire_collection_count,
-            long average_document_length) {
+            double average_document_length) {
 
         for (Map.Entry<Long, QueryWordInfo> entry : queryMap.entrySet()) {
             QueryWordInfo info = entry.getValue();

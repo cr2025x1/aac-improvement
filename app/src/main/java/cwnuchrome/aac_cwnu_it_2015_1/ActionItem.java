@@ -420,7 +420,7 @@ public abstract class ActionItem implements Serializable {
             @NonNull HashMap<Long, QueryWordInfo> queryMap,
             @NonNull HashMap<Long, Double> eval_map,
             long entire_collection_count,
-            long average_document_length);
+            double average_document_length);
 
     // 이 아이템의 테이블의 모든 행에 대응하는 1:1 대응하는 키를 모두 가지는 해쉬맵을 만들어 반환한다.
     @NonNull protected HashMap<Long, Double> alloc_evaluation_map(SQLiteDatabase db) {
