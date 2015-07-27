@@ -19,7 +19,7 @@ import java.util.HashMap;
 public class ActionMacro extends ActionMultiWord {
 
     public ActionMacro() {
-        super(ActionMain.item.ID_Macro, "");
+        super(ActionMain.item.ID_Macro, "", false);
 
         TABLE_NAME = "LocalMacro";
         SQL_DELETE_ENTRIES = "DROP TABLE IF EXISTS " + TABLE_NAME;

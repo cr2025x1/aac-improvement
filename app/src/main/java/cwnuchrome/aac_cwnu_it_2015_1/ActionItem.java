@@ -17,9 +17,9 @@ import android.widget.LinearLayout;
 import java.io.File;
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Vector;
 
 /**
@@ -31,10 +31,12 @@ public abstract class ActionItem implements Serializable {
 
     protected int itemClassID;
     protected int[] reservedID;
+    protected final boolean is_transparent;
 
-    protected ActionItem(int itemID, String className) {
+    protected ActionItem(int itemID, String className, boolean is_transparent) {
         this.itemClassID = itemID;
         this.CLASS_NAME = className;
+        this.is_transparent = is_transparent;
     }
 
     public abstract int execute(); // 버튼 클릭 시 수행되는 메소드
@@ -380,7 +382,7 @@ public abstract class ActionItem implements Serializable {
         protected double rank;
         protected long priority;
 
-        public abstract void onClick(View v);
+//        public abstract void onClick(View v);
         public onClickClass(Context context, AACGroupContainer container) {
             this.context = context;
             isOnline = true;
@@ -414,23 +416,67 @@ public abstract class ActionItem implements Serializable {
     }
 
     // 주어진 쿼리 해시맵에 대해 이 카테고리 아이템의 레코드 전체의 평가값이 담긴 해시맵을 반환.
-    @NonNull
-    public abstract HashMap<Long, Double> evaluate_by_query_map(
-            @NonNull SQLiteDatabase db,
+    @NonNull abstract public HashMap<Long, Double> evaluate_by_query_map(
+            @NonNull final SQLiteDatabase db,
             @NonNull HashMap<Long, QueryWordInfo> queryMap,
             @NonNull HashMap<Long, Double> eval_map,
-            long entire_collection_count,
-            double average_document_length);
+            final long entire_collection_count,
+            final double average_document_length);
+
+    // 주어진 쿼리 해시맵에 대해 이 카테고리 아이템의 레코드 전체의 평가값이 담긴 해시맵을 반환. 익명 함수를 둘러싼 루프를 제공하는 Wrapper.
+    @NonNull protected HashMap<Long, Double> evaluate_by_query_map_by_query_processor(
+            @NonNull final HashMap<Long, QueryWordInfo> queryMap,
+            @NonNull final HashMap<Long, Double> eval_map,
+            final QueryProcessor queryProcessor) {
+
+        if (eval_map.size() == 0) {
+            return eval_map;
+        }
+
+        // 해당 eval_map 내 아이템들의 범위를 명확히 규정짓는 쿼리의 조건문을 줘야 한다.
+        StringBuilder sb = new StringBuilder();
+        for (Map.Entry<Long, Double> entry : eval_map.entrySet()) {
+            sb
+                    .append(SQL._ID)
+                    .append("=")
+                    .append(entry.getKey())
+                    .append(" OR ");
+        }
+        sb.setLength(sb.length() - 4);
+        String eval_map_id_where_clause = sb.toString();
+
+        // 각 카테고리별로 달리 구현해야 할 부분은 인터페이스에 맞긴다.
+        for (Map.Entry<Long, QueryWordInfo> entry : queryMap.entrySet()) {
+            queryProcessor.process_query_id(entry.getKey(), entry.getValue(), eval_map_id_where_clause, eval_map);
+        }
+
+        return eval_map;
+    }
+
+    // evaluate_by_query_map_by_query_processor() 내에서 쿼리 해시맵 키값 별 for loop 내에서 사용되는 인터페이스
+    public interface QueryProcessor {
+        void process_query_id(
+                long id,
+                final QueryWordInfo qwi,
+                @NonNull final String eval_map_id_clause,
+                @NonNull final HashMap<Long, Double> eval_map
+        );
+    }
+
 
     // 이 아이템의 테이블의 모든 행에 대응하는 1:1 대응하는 키를 모두 가지는 해쉬맵을 만들어 반환한다.
-    @NonNull protected HashMap<Long, Double> alloc_evaluation_map(SQLiteDatabase db) {
+    @NonNull protected HashMap<Long, Double> alloc_evaluation_map(@NonNull SQLiteDatabase db, @Nullable String selection, @Nullable String[] selectionArgs) {
         HashMap<Long, Double> eval_map = new HashMap<>();
+
+        if (is_transparent) {
+            return eval_map;
+        }
 
         Cursor entire_item_cursor = db.query(
                 TABLE_NAME,
                 new String[] {ActionItem.SQL._ID},
-                null,
-                null,
+                selection,
+                selectionArgs,
                 null,
                 null,
                 null
@@ -463,5 +509,26 @@ public abstract class ActionItem implements Serializable {
         v.get(itemClassID).add(id);
 
         return v;
+    }
+
+    @Nullable public String getWord(long id) {
+        Cursor c = ActionMain.getInstance().getDB().query(
+                TABLE_NAME,
+                new String[]{SQL.COLUMN_NAME_WORD},
+                SQL._ID + "=" + id,
+                null,
+                null,
+                null,
+                null
+        );
+        c.moveToFirst();
+
+        String word;
+        if (c.getCount() > 0) {
+            word = c.getString(c.getColumnIndexOrThrow(SQL.COLUMN_NAME_WORD));
+        }
+        else word = null;
+        c.close();
+        return word;
     }
 }

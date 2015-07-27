@@ -30,7 +30,7 @@ import java.util.Vector;
 public class ActionGroup extends ActionMultiWord {
 
     public ActionGroup() {
-        super(ActionMain.item.ID_Group, "Group");
+        super(ActionMain.item.ID_Group, "Group", false);
 
         reservedID = new int[] {1};
         TABLE_NAME = "LocalGroup";

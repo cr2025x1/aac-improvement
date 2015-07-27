@@ -7,7 +7,6 @@ import android.database.sqlite.SQLiteDatabase;
 import android.support.annotation.NonNull;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -23,8 +22,8 @@ public abstract class ActionMultiWord extends ActionItem {
 
     protected final InterActivityReferrer<HashMap<Long, Long>> map_carrier;
 
-    protected ActionMultiWord(int itemID, String className) {
-        super(itemID, className);
+    protected ActionMultiWord(int itemID, String className, boolean is_transparent) {
+        super(itemID, className, is_transparent);
         map_carrier = new InterActivityReferrer<>();
     }
 
@@ -374,55 +373,129 @@ public abstract class ActionMultiWord extends ActionItem {
         void onParse(long itemID);
     }
 
+    // 주어진 평가값 해시맵에 있는 문서들을 대상으로 주어진 쿼리 해시맵에 따른 관련도를 평가하여 기록하고, 이 해시맵을 반환한다.
+    // TODO: 레퍼런스받은 평가값 해시맵에 작업한 후 그 해시맵을 다시 반환한다. 이거 약간 고쳐야 할지도? 어쩌면 이 함수 내에서 평가값 해시맵을 생성해 반환하는 것이 나을지도 모른다.
     @NonNull
     public HashMap<Long, Double> evaluate_by_query_map(
-            @NonNull SQLiteDatabase db,
+            @NonNull final SQLiteDatabase db,
             @NonNull HashMap<Long, QueryWordInfo> queryMap,
             @NonNull HashMap<Long, Double> eval_map,
-            long entire_collection_count,
-            double average_document_length
-    ) {
+            final long entire_collection_count,
+            final double average_document_length) {
+        return evaluate_by_query_map_by_query_processor(
+                queryMap,
+                eval_map,
+                new QueryProcessor() {
+                    @Override
+                    public void process_query_id(
+                            long id,
+                            final QueryWordInfo qwi,
+                            @NonNull final String eval_map_id_clause,
+                            @NonNull final HashMap<Long, Double> eval_map
+                    ) {
+                        Cursor c = db.query(
+                                TABLE_NAME,
+                                new String[]{SQL._ID, SQL.COLUMN_NAME_ELEMENT_ID_TAG},
+                                SQL.COLUMN_NAME_WORDCHAIN + " LIKE ? AND (" + eval_map_id_clause + ")",
+                                new String[]{"%:" + id + ":%"},
+                                null,
+                                null,
+                                null
+                        );
+                        c.moveToFirst();
 
-        for (Map.Entry<Long, QueryWordInfo> entry : queryMap.entrySet()) {
-            QueryWordInfo info = entry.getValue();
-            long query_word_id = entry.getKey();
+                        int multiword_id_col = c.getColumnIndexOrThrow(SQL._ID);
+                        int id_tag_col = c.getColumnIndexOrThrow(SQL.COLUMN_NAME_ELEMENT_ID_TAG);
+                        for (int i = 0; i < c.getCount(); i++) {
+                            HashMap<Long, Long> map = parse_element_id_count_tag(c.getString(id_tag_col));
+                            long doc_ref_count = map.get(id);
 
-            Cursor c = db.query(
-                    TABLE_NAME,
-                    new String[]{SQL._ID, SQL.COLUMN_NAME_ELEMENT_ID_TAG},
-                    SQL.COLUMN_NAME_WORDCHAIN + " LIKE '%:" + query_word_id + ":%'",
-                    null,
-                    null,
-                    null,
-                    null
-            );
-            c.moveToFirst();
+                            double eval = ActionMain.ranking_function(
+                                    qwi.count,
+                                    qwi.feedback_weight,
+                                    doc_ref_count,
+                                    map.size(),
+                                    average_document_length,
+                                    entire_collection_count,
+                                    qwi.ref_count
+                            );
 
-            int multiword_id_col = c.getColumnIndexOrThrow(SQL._ID);
-            int id_tag_col = c.getColumnIndexOrThrow(SQL.COLUMN_NAME_ELEMENT_ID_TAG);
-            for (int i = 0; i < c.getCount(); i++) {
-                HashMap<Long, Long> map = parse_element_id_count_tag(c.getString(id_tag_col));
-                long doc_ref_count = map.get(query_word_id);
-
-                double eval = ActionMain.ranking_function(
-                        info.count,
-                        info.feedback_weight,
-                        doc_ref_count,
-                        map.size(),
-                        average_document_length,
-                        entire_collection_count,
-                        info.ref_count
-                );
-
-                long id = c.getLong(multiword_id_col);
-                eval_map.put(id, eval_map.get(id) + eval);
-                c.moveToNext();
-            }
-            c.close();
-        }
-
-        return eval_map;
+                            long multiword_item_id = c.getLong(multiword_id_col);
+                            // TODO: 혹은 여기에서 필터링을 하거나. 하지만 이렇게 되면 데이터베이스에서 쓸모없이 데이터를 추가로 읽는 상황이 생긴다.
+                            eval_map.put(multiword_item_id, eval_map.get(multiword_item_id) + eval);
+                            c.moveToNext();
+                        }
+                        c.close();
+                    }
+                }
+        );
     }
+
+
+
+    // 주어진 평가값 해시맵에 있는 문서들을 대상으로 주어진 쿼리 해시맵에 따른 관련도를 평가하여 기록하고, 이 해시맵을 반환한다.
+    // TODO: 레퍼런스받은 평가값 해시맵에 작업한 후 그 해시맵을 다시 반환한다. 이거 약간 고쳐야 할지도? 어쩌면 이 함수 내에서 평가값 해시맵을 생성해 반환하는 것이 나을지도 모른다.
+//    @NonNull
+//    public HashMap<Long, Double> evaluate_by_query_map(
+//            @NonNull SQLiteDatabase db,
+//            @NonNull HashMap<Long, QueryWordInfo> queryMap,
+//            @NonNull HashMap<Long, Double> eval_map,
+//            long entire_collection_count,
+//            double average_document_length
+//    ) {
+//        StringBuilder sb = new StringBuilder();
+//        for (Map.Entry<Long, Double> entry : eval_map.entrySet()) {
+//            sb
+//                    .append(SQL._ID)
+//                    .append("=")
+//                    .append(entry.getKey())
+//                    .append(" OR ");
+//        }
+//        sb.setLength(sb.length() - 4);
+//        String query_id_where_clause = sb.toString();
+//
+//        for (Map.Entry<Long, QueryWordInfo> entry : queryMap.entrySet()) {
+//            QueryWordInfo info = entry.getValue();
+//            long query_word_id = entry.getKey();
+//
+//            // TODO: 요 쿼리 부분에서 전체 문서가 아닌 부분 쿼리 해시맵 대상으로도 동작하게 하려면 whereClause를 좀 조작해야할듯하다.
+//            Cursor c = db.query(
+//                    TABLE_NAME,
+//                    new String[]{SQL._ID, SQL.COLUMN_NAME_ELEMENT_ID_TAG},
+//                    SQL.COLUMN_NAME_WORDCHAIN + " LIKE ? AND (" + query_id_where_clause + ")",
+//                    new String[]{"%:" + query_word_id + ":%"},
+//                    null,
+//                    null,
+//                    null
+//            );
+//            c.moveToFirst();
+//
+//            int multiword_id_col = c.getColumnIndexOrThrow(SQL._ID);
+//            int id_tag_col = c.getColumnIndexOrThrow(SQL.COLUMN_NAME_ELEMENT_ID_TAG);
+//            for (int i = 0; i < c.getCount(); i++) {
+//                HashMap<Long, Long> map = parse_element_id_count_tag(c.getString(id_tag_col));
+//                long doc_ref_count = map.get(query_word_id);
+//
+//                double eval = ActionMain.ranking_function(
+//                        info.count,
+//                        info.feedback_weight,
+//                        doc_ref_count,
+//                        map.size(),
+//                        average_document_length,
+//                        entire_collection_count,
+//                        info.ref_count
+//                );
+//
+//                long id = c.getLong(multiword_id_col);
+//                // TODO: 혹은 여기에서 필터링을 하거나. 하지만 이렇게 되면 데이터베이스에서 쓸모없이 데이터를 추가로 읽는 상황이 생긴다.
+//                eval_map.put(id, eval_map.get(id) + eval);
+//                c.moveToNext();
+//            }
+//            c.close();
+//        }
+//
+//        return eval_map;
+//    }
 
     @NonNull
     public HashMap<Long, Long> get_id_count_map(long id) {

@@ -7,42 +7,31 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
  *
  * 쿼리를 구성하는 각 단어들의 정보 구조체
  */
-public class QueryWordInfo {
-    long count;
+public class QueryWordInfo extends QueryWordInfoRaw {
     long ref_count;
-    double weight;
     double feedback_weight;
 
     public QueryWordInfo(long count, long ref_count, double weight, double feedback_weight) {
-        this.count = count;
+        super(count, weight);
         this.ref_count = ref_count;
-        this.weight = weight;
         this.feedback_weight = feedback_weight;
     }
 
-    // 참조 출처 링크:
-    // http://stackoverflow.com/questions/27581/what-issues-should-be-considered-when-overriding-equals-and-hashcode-in-java
     @Override
-    public int hashCode() {
-        return new HashCodeBuilder(3119, 149). // two randomly chosen prime numbers
-                // if deriving: appendSuper(super.hashCode()).
-                append(count).
-                append(ref_count).
-                append(weight).
-                append(feedback_weight).
-                toHashCode();
+    protected HashCodeBuilder hashCode_seed() {
+        return super.hashCode_seed()
+                .append(ref_count)
+                .append(feedback_weight);
     }
 
     @Override
     public boolean equals(Object o) {
-        if (o == this)
-            return true;
+        boolean result = super.equals(o);
+        if (!result) return false;
         if (!(o instanceof QueryWordInfo))
             return false;
         QueryWordInfo qwi = (QueryWordInfo)o;
-        return qwi.count == count
-                && qwi.ref_count  == ref_count
-                && qwi.weight == weight
+        return qwi.ref_count  == ref_count
                 && qwi.feedback_weight == feedback_weight;
     }
 }

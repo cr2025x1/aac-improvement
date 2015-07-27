@@ -25,7 +25,7 @@ public class ActionWord extends ActionItem {
     String MAP_SQL_DELETE_ENTRIES;
 
     public ActionWord () {
-        super(ActionMain.item.ID_Word, "Word");
+        super(ActionMain.item.ID_Word, "Word", true);
 
         reservedID = new int[] {1};
 
@@ -434,7 +434,7 @@ public class ActionWord extends ActionItem {
 
     // 주어진 문자열-문자열 수 쿼리 해시맵에 대응되는 워드의 ID와 그 워드의 참조 횟수의 해시맵을 제공한다.
     @NonNull
-    public HashMap<Long, QueryWordInfo> convert_to_id_ref_map(@NonNull HashMap<String, Long> queryMap) {
+    public HashMap<Long, QueryWordInfo> convert_query_map_to_qwi_map(@NonNull HashMap<String, Long> queryMap) {
         HashMap<Long, QueryWordInfo> id_ref_map = new HashMap<>();
         SQLiteDatabase db = ActionMain.getInstance().getDB();
 
@@ -478,33 +478,77 @@ public class ActionWord extends ActionItem {
     }
 
 
+
     @NonNull
-    public HashMap<Long, Double> evaluate_by_query_map(
-            @NonNull SQLiteDatabase db,
-            @NonNull HashMap<Long, QueryWordInfo> queryMap,
-            @NonNull HashMap<Long, Double> eval_map,
-            long entire_collection_count,
-            double average_document_length) {
+    public HashMap<Long, QueryWordInfo> convert_id_map_to_qwi_map(@NonNull HashMap<Long, Long> queryMap) {
+        HashMap<Long, QueryWordInfo> id_ref_map = new HashMap<>();
+        SQLiteDatabase db = ActionMain.getInstance().getDB();
 
-        for (Map.Entry<Long, QueryWordInfo> entry : queryMap.entrySet()) {
-            QueryWordInfo info = entry.getValue();
+        for (Map.Entry<Long, Long> entry : queryMap.entrySet()) {
+            Long entry_id = entry.getKey();
+            Cursor entry_word_cursor = db.query(
+                    TABLE_NAME,
+                    new String[] {SQL.COLUMN_NAME_REFERENCE_COUNT},
+                    ActionItem.SQL._ID + "=" + entry_id,
+                    null,
+                    null,
+                    null,
+                    null
+            );
+            entry_word_cursor.moveToFirst();
 
-            double eval = ActionMain.ranking_function(
-                    info.count,
-                    info.feedback_weight,
-                    1,
-                    1,
-                    average_document_length,
-                    entire_collection_count,
-                    info.ref_count
+            QueryWordInfo info = new QueryWordInfo(
+                    entry.getValue(),
+                    entry_word_cursor.getLong(entry_word_cursor.getColumnIndexOrThrow(SQL.COLUMN_NAME_REFERENCE_COUNT)),
+                    1l,
+                    0.0d
             );
 
-            long key = entry.getKey();
-            eval_map.put(key, eval_map.get(key) + eval);
+            id_ref_map.put(
+                    entry_id,
+                    info
+            );
 
+            entry_word_cursor.close();
         }
+        return id_ref_map;
+    }
 
-        return eval_map;
+
+    // 주어진 평가값 해시맵에 있는 문서들을 대상으로 주어진 쿼리 해시맵에 따른 관련도를 평가하여 기록하고, 이 해시맵을 반환한다.
+    // TODO: 레퍼런스받은 평가값 해시맵에 작업한 후 그 해시맵을 다시 반환한다. 이거 약간 고쳐야 할지도? 어쩌면 이 함수 내에서 평가값 해시맵을 생성해 반환하는 것이 나을지도 모른다.
+    @NonNull
+    public HashMap<Long, Double> evaluate_by_query_map(
+            @NonNull final SQLiteDatabase db,
+            @NonNull HashMap<Long, QueryWordInfo> queryMap,
+            @NonNull HashMap<Long, Double> eval_map,
+            final long entire_collection_count,
+            final double average_document_length) {
+        return evaluate_by_query_map_by_query_processor(
+                queryMap,
+                eval_map,
+                new QueryProcessor() {
+                    @Override
+                    public void process_query_id(
+                            long id,
+                            final QueryWordInfo qwi,
+                            @NonNull final String eval_map_id_clause,
+                            @NonNull final HashMap<Long, Double> eval_map
+                    ) {
+                        double eval = ActionMain.ranking_function(
+                                qwi.count,
+                                qwi.feedback_weight,
+                                1,
+                                1,
+                                average_document_length,
+                                entire_collection_count,
+                                qwi.ref_count
+                        );
+
+                        eval_map.put(id, eval_map.get(id) + eval);
+                    }
+                }
+        );
     }
 
     @NonNull public HashMap<Long, Long> get_id_count_map(long id) {
@@ -565,4 +609,10 @@ public class ActionWord extends ActionItem {
         return wordIDs;
     }
 
+    // 이 아이템의 테이블의 모든 행에 대응하는 1:1 대응하는 키를 모두 가지는 해쉬맵을 만들어 반환한다.
+    // 그러나 ActionWord는 불가시 아이템 카테고리이므로 빈 해시맵 객체를 반환한다.
+//    @Override
+//    @NonNull protected HashMap<Long, Double> alloc_evaluation_map(@NonNull SQLiteDatabase db, @Nullable String selection, @Nullable String[] selectionArgs) {
+//        return new HashMap<>();
+//    }
 }

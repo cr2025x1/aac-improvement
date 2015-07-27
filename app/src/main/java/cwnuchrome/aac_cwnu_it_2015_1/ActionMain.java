@@ -173,18 +173,6 @@ public final class ActionMain {
         return avg_doc_length;
     }
 
-    public static class SearchFeedbackInfo {
-        final public long id;
-        final public int cat_id;
-        final boolean relevance;
-
-        public SearchFeedbackInfo(int cat_id, long id, boolean relevance) {
-            this.id = id;
-            this.cat_id = cat_id;
-            this.relevance = relevance;
-        }
-    }
-
     private class ActionDBHelper extends SQLiteOpenHelper {
         // If you change the database schema, you must increment the database version.
         public static final int DATABASE_VERSION = 1;
@@ -388,11 +376,17 @@ public final class ActionMain {
         return scalar_product / lhs_vector_size / rhs_vector_size;
     }
 
-    // 쿼리에 따른 아이템들의 관련성 평가를 위한 내부 클래스
     @NonNull public Evaluation allocEvaluation() { return new Evaluation(); }
-    class Evaluation {
-        long entire_collection_count;
-        double average_document_length;
+
+    // 쿼리에 따른 아이템들의 관련성 평가를 위한 내부 클래스
+    public class Evaluation {
+        /*
+         * 쿼리 해시맵 정보를 받아 주어진 모든 자료들에 대해 쿼리와의 관계도를 평가하는 메소드의 집합 클래스
+         */
+
+        // 각 메소드들을 위한 공통 인수들
+        long entire_collection_count; // 전체 문서 집합의 문서의 총 수
+        double average_document_length; // 평균 문서의 길이 (여기서의 길이는 철자의 숫자가 아니라, 각 문서를 구성하고 있는 단어 아이템의 수를 일컫는다.)
 
         public Evaluation() {
             entire_collection_count = get_db_collection_count();
@@ -400,38 +394,65 @@ public final class ActionMain {
         }
 
         @SuppressLint("UseSparseArrays")
-        @NonNull private Vector<HashMap<Long, Double>> alloc_eval_map_vector() {
+        @NonNull private Vector<HashMap<Long, Double>> alloc_eval_map_vector(@Nullable String selection, @Nullable String[] selectionArgs) {
+            /*
+                모든 자료에 대한 평가값을 기록할 해쉬맵의 벡터를 생성한다.
+                모든 자료는 카테고리 별로 분류된다.
+                모든 자료는 각각 대응하는 숫자로 표현된다.
+                그 자료의 평가값 수치는 0으로 초기화된다.
+             */
+
             Vector<HashMap<Long, Double>> eval_map_vector = new Vector<>();
             for (ActionItem item : itemChain) {
-                /* ****************************************************************************** */
-                // 워드는 불가시화되었으므로 평가하지 않고 넘긴다. 만일 워드를 다시 되살린다 할 경우 다음의 if 블록을 제거해야 한다.
-                // 이외에도 영향받은 검색 엔진 로직 쪽 코드:
-                // evaluate_by_query_map()
-                /* ****************************************************************************** */
-//                if (item.itemClassID == ActionMain.item.ID_Word) {
-//                    eval_map_vector.add(new HashMap<Long, Double>());
-//                    continue;
-//                }
-
-                eval_map_vector.add(item.alloc_evaluation_map(db));
+                eval_map_vector.add(item.alloc_evaluation_map(db, selection, selectionArgs));
+                // TODO: 여기서 쿼리에 줄 clause를 줘서, 평가 대상을 제한할 수 있지 않을까?
             }
             return eval_map_vector;
         }
 
         @SuppressLint("UseSparseArrays")
-        @NonNull public Vector<ArrayList<Map.Entry<Long, Double>>> evaluate_by_query_map(@NonNull HashMap<Long, QueryWordInfo> query_id_map) {
-            // 피드백 파트
+        @NonNull public Vector<HashMap<Long, Double>> evaluate_by_query_map(
+                @NonNull HashMap<Long, QueryWordInfo> query_id_map,
+                @Nullable String selection,
+                @Nullable String[] selectionArgs
+        ) {
+
+            /*
+                피드백 파트 : 주어진 쿼리의 해시맵을 피드백 정보를 더해 확장한다.
+             */
             HashMap<Long, QueryWordInfo> query_id_map_feedbacked = new HashMap<>();
             for (Map.Entry<Long, QueryWordInfo> e : query_id_map.entrySet()) {
                 long key = e.getKey();
                 QueryWordInfo e_qwi = e.getValue();
+                // 만일 엔트리 e의 ID값에 대한 정보가 이미 query_id_map_feedbacked 정보에 있다면?
                 if (query_id_map_feedbacked.containsKey(key)) {
-                    QueryWordInfo old_qwi = query_id_map_feedbacked.get(key);
-                    e_qwi.feedback_weight += old_qwi.feedback_weight;
-                    query_id_map_feedbacked.put(key, e_qwi);
-                }
-                else query_id_map_feedbacked.put(key, e_qwi);
+                    /*
+                        실제로 원 쿼리 해시맵 query_id_map에서 가져온 정보를 적용할 때는 이 루프를 그 정보의 엔트리 e에 대해서 돌 뿐이다.
+                        그런데 이미 이 루프의 결과물인 query_id_map_feedbacked에서 이 엔트리 e의 key값이 이미 존재한다는 말은,
+                        이 for 루프의 현재 이터레이션의 이전 이터레이션이 이 엔트리 e가 가진 ID에 대한 피드백 정보가 더해졌음을 의미한다.
+                        그런데 아래쪽에서 보면 알겠지만, 피드백 맵에서는 QueryWordInfo는 특이한 구성을 가진다.
 
+                        "
+                        QueryWordInfo 내에는 쿼리 내 해당 ID의 개수, 참조 횟수, 쿼리 내 가중치, 그리고 마지막으로 피드백 내 가중치를 가진다.
+                        그런데 여기서 **쿼리 내에 원래 존재하지 않는** ID 정보를 쿼리에 추가할 때는, 두 가지 정보가 없다는 상황에 처한다.
+                        쿼리 내 해당 ID의 개수, 쿼리 내의 가중치이다.
+                        쿼리 내에 해당 ID가 없는데 이 값들을 구할 수 있을 리가 없다.
+                        따라서 이 때에는 Ranking Function 내에서 해당 값들이 관계되는 연산의 **항등원**으로 대체 입력해서, 이 문제를 해결한다.
+                        "
+
+                        이렇게 대체입력된 값들로 매꾸어진 QueryWordInfo 객체라는 뜻이다.
+                        이 객체에서 중요한 값은 피드백 가중치 뿐으로, 나머지는 모두 현재 엔트리 e에 담긴 정보를 이용하면 된다.
+                        대체 입력된 값은 없는 정보를 메우기 위한 대체 값에 불과하기 때문에, 버린다.
+                        참조 횟수는 어차피 두 QueryWordInfo 객체의 값이 같다.
+                     */
+                    QueryWordInfo old_qwi = query_id_map_feedbacked.get(key);
+                    // 이미 query_id_map_feedbacked에 있는 QueryWordInfo 객체에서 해당 값만을 가져와서 이번 이터레이션의 엔트리 e의 QueryWordInfo 객체에 넣는다.
+                    e_qwi.feedback_weight += old_qwi.feedback_weight;
+                    query_id_map_feedbacked.put(key, e_qwi); // 그리고 그 QueryWordInfo 객체로 저장된 매핑을 대체한다.
+                }
+                else query_id_map_feedbacked.put(key, e_qwi); // 저장된 값이 없었다면 그냥 이번 엔트리 e의 QWI 객체를 그대로 가져와서 넣는다.
+
+                // 해당 워드 ID의 피드백 맵을 데이터베이스에서 쿼리한다.
                 ActionWord actionWord = (ActionWord)itemChain[item.ID_Word];
                 Cursor c = db.query(
                         actionWord.MAP_TABLE_NAME,
@@ -445,17 +466,20 @@ public final class ActionMain {
                 c.moveToFirst();
                 byte[] frozen_map = c.getBlob(c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_FEEDBACK_MAP));
                 if (frozen_map != null) {
+                    // 해당 워드 ID에 부속된 피드맥 맵 정보가 있다. 그렇다면 이 맵 정보를 해동해 쿼리에 적용한다.
                     HashMap<Long, Double> feedback_map = thaw_map(frozen_map);
                     for (Map.Entry<Long, Double> fb_e : feedback_map.entrySet()) {
                         long fb_key = fb_e.getKey();
                         long ref_count = 0;
 
+                        // 먼저 해당 워드 ID에 대한 매핑이 query_id_map_feedbacked에 있는지 확인한다.
                         if (query_id_map_feedbacked.containsKey(fb_key)) {
+                            // 있다. 그렇다면 피드백 정보만 그 매핑된 QWI 객체에 더해주기만 하면 된다.
                             QueryWordInfo fb_qwi = query_id_map_feedbacked.get(fb_key);
                             fb_qwi.feedback_weight += fb_e.getValue();
-                            query_id_map_feedbacked.put(fb_key, fb_qwi);
                         }
                         else {
+                            // 해당 매핑이 없다. 그렇다면 해당 워드 ID에 대한 QWI 정보를 만들어서 넣어주어야 한다.
                             if (!query_id_map.containsKey(fb_key)) {
                                 Cursor key_c = db.query(
                                         actionWord.TABLE_NAME,
@@ -471,6 +495,13 @@ public final class ActionMain {
                                 key_c.close();
                             }
 
+                            /*
+                                QueryWordInfo 내에는 쿼리 내 해당 ID의 개수, 참조 횟수, 쿼리 내 가중치, 그리고 마지막으로 피드백 내 가중치를 가진다.
+                                그런데 여기서 **쿼리 내에 원래 존재하지 않는** ID 정보를 쿼리에 추가할 때는, 두 가지 정보가 없다는 상황에 처한다.
+                                쿼리 내 해당 ID의 개수, 쿼리 내의 가중치이다.
+                                쿼리 내에 해당 ID가 없는데 이 값들을 구할 수 있을 리가 없다.
+                                따라서 이 때에는 Ranking Function 내에서 해당 값들이 관계되는 연산의 **항등원**으로 대체 입력해서, 이 문제를 해결한다.
+                             */
                             QueryWordInfo fb_qwi = new QueryWordInfo(
                                     1l,
                                     ref_count,
@@ -485,20 +516,11 @@ public final class ActionMain {
                 c.close();
             }
 
-            Vector<HashMap<Long, Double>> eval_map_vector = alloc_eval_map_vector();
-            Vector<HashMap<Long, Double>> rank_vector = new Vector<>();
+            // 모든 문서에 대한 평가값 해시맵을 생성하고, 그 해쉬맵들을 묶을 벡터를 생성한다.
+            Vector<HashMap<Long, Double>> eval_map_vector = alloc_eval_map_vector(selection, selectionArgs); // TODO: 여기서도 손볼 수 있는 가능성이?
+            Vector<HashMap<Long, Double>> rank_vector = new Vector<>(); // TODO: 여기는?
             int i = 0;
             for (ActionItem item : itemChain) {
-                /* ****************************************************************************** */
-                // 워드는 불가시화되었으므로 평가하지 않고 넘긴다. 만일 워드를 다시 되살린다 할 경우 다음의 if 블록을 제거해야 한다.
-                // 이외에도 영향받은 검색 엔진 로직 쪽 코드:
-                // alloc_eval_map_vector()
-                /* ****************************************************************************** */
-//                if (item.itemClassID == ActionMain.item.ID_Word) {
-//                    rank_vector.add(new HashMap<Long, Double>());
-//                    continue;
-//                }
-
                 rank_vector.add(item.evaluate_by_query_map(
                         db,
                         query_id_map_feedbacked,
@@ -509,25 +531,26 @@ public final class ActionMain {
                 i++;
             }
 
-            return filter_rank_vector(rank_vector);
+            return rank_vector;
         }
 
     }
 
-    @NonNull public Vector<ArrayList<Map.Entry<Long, Double>>> filter_rank_vector(@NonNull Vector<HashMap<Long, Double>> rank_vector) {
-        Vector<ArrayList<Map.Entry<Long, Double>>> filtered_rank_vector = new Vector<>(item.ITEM_COUNT);
-        for (int i = 0; i < item.ITEM_COUNT; i++) filtered_rank_vector.add(new ArrayList<Map.Entry<Long, Double>>(rank_vector.get(i).size())); // 왜인지는 모르나 <> 형식을 쓰면 에러가 난다.
+    static final int NO_FILTER = 0;
+    static final int FILTER_BY_THRESHOLD = 1;
 
-        // 워드 아이템 목록에서 지우기 - 워드 불가시화로 인함.
-        // TODO: 최적화가 좀 더 가능한 ad-hoc 방안은 아닌지 추후 제정신일 때 재검토하기.
-        rank_vector.get(item.ID_Word).clear();
+    @NonNull public Vector<ArrayList<Map.Entry<Long, Double>>> filter_rank_vector(@NonNull Vector<HashMap<Long, Double>> rank_vector, int mode) {
+        Vector<ArrayList<Map.Entry<Long, Double>>> filtered_rank_vector = new Vector<>(item.ITEM_COUNT);
+        for (int i = 0; i < item.ITEM_COUNT; i++) {
+            filtered_rank_vector.add(new ArrayList<Map.Entry<Long, Double>>(rank_vector.get(i).size())); // 왜인지는 모르나 <> 형식을 쓰면 에러가 난다.
+        }
 
         // 기준값 이하의 엔트리들은 모두 소거
         int i = 0;
         for (HashMap<Long, Double> map : rank_vector) {
             ArrayList<Map.Entry<Long, Double>> filtered_list = filtered_rank_vector.get(i);
             for (Map.Entry<Long, Double> e : map.entrySet()) {
-                if (e.getValue() > AACGroupContainerPreferences.RANKING_FUNCTION_CUTOFF_THRESHOLD) {
+                if (mode == NO_FILTER || e.getValue() > AACGroupContainerPreferences.RANKING_FUNCTION_CUTOFF_THRESHOLD) {
                     filtered_list.add(e);
                 }
             }
@@ -546,6 +569,8 @@ public final class ActionMain {
 
             iterator_vector.add(list.listIterator());
         }
+
+        if (mode == NO_FILTER) return filtered_rank_vector;
 
         int count = 0;
         int iter_end_count = 0;
@@ -619,39 +644,41 @@ public final class ActionMain {
         return (word_count_in_query + word_feedback_weight) * Math.log1p(Math.log1p(word_count_in_document)) / (1 - AACGroupContainerPreferences.RANKING_FUNCTION_CONSTANT_B + AACGroupContainerPreferences.RANKING_FUNCTION_CONSTANT_B * document_length / average_document_length) * Math.log((collection_count + 1) / document_with_word_count_in_collection);
     }
 
-    public void applyFeedback(HashMap<Long, QueryWordInfo> query_id_map, SearchFeedbackInfo[] infos) {
+//    public void apply_feedback(HashMap<Long, QueryWordInfo> query_id_map, SearchImplicitFeedback feedback) {
+    public void apply_feedback(HashMap<Long, ? extends QueryWordInfoRaw> query_id_map, SearchImplicitFeedback feedback) {
         long query_size = 0;
-        for (Map.Entry<Long, QueryWordInfo> qwi : query_id_map.entrySet()) {
+        for (Map.Entry<Long, ? extends QueryWordInfoRaw> qwi : query_id_map.entrySet()) {
             query_size += qwi.getValue().count;
         }
 
-        long irrelevant_doc_count = 0;
-        long relevant_doc_count = 0;
-        for (SearchFeedbackInfo info : infos) {
-            if (info.relevance) relevant_doc_count++;
-            else irrelevant_doc_count++;
-        }
+        long relevant_doc_count = feedback.rel_doc_count;
+        long irrelevant_doc_count = feedback.pos_max + 1 - relevant_doc_count;
 
-        HashMap<Long, Double> feedback = new HashMap<>();
-        for (SearchFeedbackInfo info : infos) {
-            double coefficient;
-            if (info.relevance) coefficient = AACGroupContainerPreferences.FEEDBACK_ROCCHIO_COEFFICIENT_RELEVANT_DOC / relevant_doc_count;
-            else coefficient = (-1) * AACGroupContainerPreferences.FEEDBACK_ROCCHIO_COEFFICIENT_IRRELEVANT_DOC / irrelevant_doc_count;
+        HashMap<Long, Double> feedback_combined = new HashMap<>();
+        for (int i = 0; i < item.ITEM_COUNT; i++) {
+            HashMap<Long, SearchFeedbackInfo> feedback_info_map = feedback.fb_info_v.get(i);
+            for (Map.Entry<Long, SearchFeedbackInfo> e : feedback_info_map.entrySet()) {
+                SearchFeedbackInfo info = e.getValue();
+                long id = e.getKey();
+                double coefficient;
+                if (info.relevance) coefficient = AACGroupContainerPreferences.FEEDBACK_ROCCHIO_COEFFICIENT_RELEVANT_DOC / relevant_doc_count;
+                else coefficient = (-1) * AACGroupContainerPreferences.FEEDBACK_ROCCHIO_COEFFICIENT_IRRELEVANT_DOC / irrelevant_doc_count;
 
-            HashMap<Long, Long> itemMap = itemChain[info.cat_id].get_id_count_map(info.id);
-            for (Map.Entry<Long, Long> e : itemMap.entrySet()) {
-                long key = e.getKey();
-                double mod = (double)e.getValue() * coefficient;
+                HashMap<Long, Long> itemMap = itemChain[i].get_id_count_map(id);
+                for (Map.Entry<Long, Long> item_e : itemMap.entrySet()) {
+                    long key = item_e.getKey();
+                    double mod = (double)item_e.getValue() * coefficient * (double)info.call_count;
 
-                if (feedback.containsKey(key)) feedback.put(key, feedback.get(key) + mod);
-                else feedback.put(key, mod);
+                    if (feedback_combined.containsKey(key)) feedback_combined.put(key, feedback_combined.get(key) + mod);
+                    else feedback_combined.put(key, mod);
+                }
             }
         }
 
         ActionWord actionWord = (ActionWord)itemChain[item.ID_Word];
-        for (Map.Entry<Long, QueryWordInfo> e : query_id_map.entrySet()) {
+        for (Map.Entry<Long, ? extends QueryWordInfoRaw> e : query_id_map.entrySet()) {
             long query_word_key = e.getKey();
-            QueryWordInfo qwi = e.getValue();
+            QueryWordInfoRaw qwi = e.getValue();
             Cursor c = db.query(
                     actionWord.MAP_TABLE_NAME,
                     new String[]{ActionWord.SQL.COLUMN_NAME_FEEDBACK_MAP},
@@ -672,7 +699,7 @@ public final class ActionMain {
             if (frozen_map == null) map = new HashMap<>();
             else map = thaw_map(frozen_map);
 
-            for (Map.Entry<Long, Double> fb_e : feedback.entrySet()) {
+            for (Map.Entry<Long, Double> fb_e : feedback_combined.entrySet()) {
                 Long key = fb_e.getKey();
                 Double mod = fb_e.getValue() * qwi.count / query_size * qwi.weight;
                 if (map.containsKey(key)) map.put(key, map.get(key) + mod);
@@ -680,11 +707,75 @@ public final class ActionMain {
             }
 
             actionWord.update_feedback(query_word_key, map);
-
         }
-
-
     }
+
+//    public void apply_feedback(HashMap<Long, QueryWordInfo> query_id_map, SearchImplicitFeedback.SearchFeedbackInfo[] infos) {
+//        long query_size = 0;
+//        for (Map.Entry<Long, QueryWordInfo> qwi : query_id_map.entrySet()) {
+//            query_size += qwi.getValue().count;
+//        }
+//
+//        long irrelevant_doc_count = 0;
+//        long relevant_doc_count = 0;
+//        for (SearchImplicitFeedback.SearchFeedbackInfo info : infos) {
+//            if (info.relevance) relevant_doc_count++;
+//            else irrelevant_doc_count++;
+//        }
+//
+//        HashMap<Long, Double> feedback = new HashMap<>();
+//        for (SearchImplicitFeedback.SearchFeedbackInfo info : infos) {
+//            double coefficient;
+//            if (info.relevance) coefficient = AACGroupContainerPreferences.FEEDBACK_ROCCHIO_COEFFICIENT_RELEVANT_DOC / relevant_doc_count;
+//            else coefficient = (-1) * AACGroupContainerPreferences.FEEDBACK_ROCCHIO_COEFFICIENT_IRRELEVANT_DOC / irrelevant_doc_count;
+//
+//            HashMap<Long, Long> itemMap = itemChain[info.cat_id].get_id_count_map(info.id);
+//            for (Map.Entry<Long, Long> e : itemMap.entrySet()) {
+//                long key = e.getKey();
+//                double mod = (double)e.getValue() * coefficient;
+//
+//                if (feedback.containsKey(key)) feedback.put(key, feedback.get(key) + mod);
+//                else feedback.put(key, mod);
+//            }
+//        }
+//
+//        ActionWord actionWord = (ActionWord)itemChain[item.ID_Word];
+//        for (Map.Entry<Long, QueryWordInfo> e : query_id_map.entrySet()) {
+//            long query_word_key = e.getKey();
+//            QueryWordInfo qwi = e.getValue();
+//            Cursor c = db.query(
+//                    actionWord.MAP_TABLE_NAME,
+//                    new String[]{ActionWord.SQL.COLUMN_NAME_FEEDBACK_MAP},
+//                    ActionWord.SQL.COLUMN_NAME_OWNER_ID + "=" + query_word_key,
+//                    null,
+//                    null,
+//                    null,
+//                    null
+//            );
+//            c.moveToFirst();
+//
+//            byte[] frozen_map = null;
+//            HashMap<Long, Double> map;
+//            if (c.getCount() > 0) {
+//                frozen_map = c.getBlob(c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_FEEDBACK_MAP));
+//            }
+//            c.close();
+//            if (frozen_map == null) map = new HashMap<>();
+//            else map = thaw_map(frozen_map);
+//
+//            for (Map.Entry<Long, Double> fb_e : feedback.entrySet()) {
+//                Long key = fb_e.getKey();
+//                Double mod = fb_e.getValue() * qwi.count / query_size * qwi.weight;
+//                if (map.containsKey(key)) map.put(key, map.get(key) + mod);
+//                else map.put(key, mod);
+//            }
+//
+//            actionWord.update_feedback(query_word_key, map);
+//
+//        }
+//
+//
+//    }
 
     // Kryo 라이브러리를 이용, 피드백 정보가 담긴 해쉬맵을 직렬화한다. *냉동 보관을 위해 꽁꽁 얼린다*
     @NonNull public byte[] freeze_map(@NonNull HashMap<Long, Double> feedbackMap) {

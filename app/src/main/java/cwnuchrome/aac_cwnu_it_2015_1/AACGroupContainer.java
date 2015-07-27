@@ -17,8 +17,9 @@ import android.widget.TextView;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.List;
-import java.util.ListIterator;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Vector;
 
 /**
@@ -55,6 +56,16 @@ public class AACGroupContainer {
 
     protected int container_id;
 
+    protected SearchImplicitFeedback feedbackHelper = new SearchImplicitFeedback(
+            new SearchImplicitFeedback.DocumentProcessor() {
+                @Override
+                public SearchImplicitFeedback.ItemIDInfo get_doc_id(int pos) {
+                    ActionItem.onClickClass occ = ((ActionItem.Button)contentList.get(pos).findViewById(R.id.aac_item_button_id)).onClickObj;
+                    return new SearchImplicitFeedback.ItemIDInfo(occ.getItemCategoryID(), occ.getItemID());
+                }
+            }
+    );
+
     public AACGroupContainer(LinearLayout mainLayout) {
         this.context = mainLayout.getContext();
         this.mainLayout = mainLayout;
@@ -79,12 +90,14 @@ public class AACGroupContainer {
     }
 
     public void exploreGroup(long id) {
+        long old_current_group_ID = currentGroupID;
         currentGroupID = id;
 
         for (View item : contentList) menuLayout.removeView(item);
         contentList.clear();
         checkBoxes.clear();
         selectedList.clear();
+//        feedbackHelper.send_feedback();
 
         isFolded = false;
 
@@ -102,7 +115,8 @@ public class AACGroupContainer {
                         ActionGroup.SQL.COLUMN_NAME_WORD,
                         ActionGroup.SQL.COLUMN_NAME_PARENT_ID,
                         ActionGroup.SQL.COLUMN_NAME_PICTURE,
-                        ActionGroup.SQL.COLUMN_NAME_PICTURE_IS_PRESET
+                        ActionGroup.SQL.COLUMN_NAME_PICTURE_IS_PRESET,
+                        ActionGroup.SQL.COLUMN_NAME_ELEMENT_ID_TAG
                 },
                 ActionGroup.SQL._ID + " = ?",
                 new String[] {Long.toString(id)},
@@ -113,7 +127,17 @@ public class AACGroupContainer {
         c.moveToFirst();
         groupName = c.getString(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_WORD));
         parentGroupID = c.getLong(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_PARENT_ID));
+        HashMap<Long, Long> group_id_map = ActionMultiWord.parse_element_id_count_tag(c.getString(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_ELEMENT_ID_TAG)));
         c.close();
+
+        if (old_current_group_ID != currentGroupID) {
+            HashMap<Long, QueryWordInfoRaw> qwir_map = new HashMap<>(group_id_map.size());
+            for (Map.Entry<Long, Long> e : group_id_map.entrySet()) {
+                QueryWordInfoRaw qwir = new QueryWordInfoRaw(e.getValue(), 1);
+                qwir_map.put(e.getKey(), qwir);
+            }
+            feedbackHelper.set_query_id_map(qwir_map);
+        }
 
         // 그룹 제목 출력
         titleView.setText(groupName + " 그룹");
@@ -192,8 +216,10 @@ public class AACGroupContainer {
             values.put(ActionWord.SQL.COLUMN_NAME_PICTURE_IS_PRESET, c.getInt(c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_PICTURE_IS_PRESET)));
 
             addMenuWithCheckBox(
-                    new ActionWord.Button(context, new ActionWord.onClickClass(context, this), this),
-                    values);
+                    new ActionWord.Button(context, new ActionWordOCCWrapper(context, this), this),
+//                    new ActionWord.Button(context, new ActionWord.onClickClass(context, this), this),
+                    values
+            );
 
             values.clear();
             c.moveToNext();
@@ -247,7 +273,8 @@ public class AACGroupContainer {
             values.put(ActionMacro.SQL.COLUMN_NAME_PICTURE_IS_PRESET, c.getInt(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_PICTURE_IS_PRESET)));
 
             addMenuWithCheckBox(
-                    new ActionMacro.Button(context, new ActionMacro.onClickClass(context, this), this),
+                    new ActionMacro.Button(context, new ActionMacroOCCWrapper(context, this), this),
+//                    new ActionMacro.Button(context, new ActionMacro.onClickClass(context, this), this),
                     values);
 
             values.clear();
@@ -306,12 +333,43 @@ public class AACGroupContainer {
             values.put(ActionGroup.SQL.COLUMN_NAME_PICTURE_IS_PRESET, c.getInt(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_PICTURE_IS_PRESET)));
 
             addMenuWithCheckBox(
-                    new ActionGroup.Button(context, new ActionGroup.onClickClass(context, this), this),
+                    new ActionGroup.Button(context, new ActionGroupOCCWrapper(context, this), this),
+//                    new ActionGroup.Button(context, new ActionGroup.onClickClass(context, this), this),
                     values);
 
             values.clear();
             c.moveToNext();
         }
+
+
+
+        // TODO: 비교자 다시 쓰기, 피드백 적용하기
+        ActionWord actionWord = (ActionWord)actionMain.itemChain[ActionMain.item.ID_Word];
+        HashMap<Long, QueryWordInfo> group_qwi_map = actionWord.convert_id_map_to_qwi_map(group_id_map);
+        final Vector<HashMap<Long, Double>> rank_vector =
+                actionMain.allocEvaluation().evaluate_by_query_map(
+                        group_qwi_map,
+                        ActionItem.SQL.COLUMN_NAME_PARENT_ID + "=" + currentGroupID,
+//                        ActionItem.SQL.COLUMN_NAME_PARENT_ID + "=" + currentGroupID + " AND " + ActionItem.SQL._ID + "!=" + currentGroupID,
+//                        ActionItem.SQL.COLUMN_NAME_PARENT_ID + "=" + currentGroupID + " AND " + ActionItem.SQL._ID + "!=" + 1,
+                        null);
+
+
+        Collections.sort(
+                contentList,
+                new Comparator<View>() {
+                    @Override
+                    public int compare(View lhs, View rhs) {
+                        ActionItem.onClickClass lhs_occ = ((ActionItem.Button)lhs.findViewById(R.id.aac_item_button_id)).onClickObj;
+                        ActionItem.onClickClass rhs_occ = ((ActionItem.Button)rhs.findViewById(R.id.aac_item_button_id)).onClickObj;
+
+                        return rank_vector.get(lhs_occ.getItemCategoryID()).get(lhs_occ.getItemID())
+                                > rank_vector.get(rhs_occ.getItemCategoryID()).get(rhs_occ.getItemID())
+                                ? -1 : 1;
+                    }
+                }
+        );
+
 
         // 마지막으로 상위 그룹에 대한 버튼 형성 (단 최상위 그룹은 패스)
         if (id != 1) {
@@ -326,6 +384,7 @@ public class AACGroupContainer {
             );
             c.moveToFirst();
 
+//            ActionGroup.Button parentGroupButton = new ActionGroup.Button(context, new ActionGroupOCCWrapper(context, this), this);
             ActionGroup.Button parentGroupButton = new ActionGroup.Button(context, new ActionGroup.onClickClass(context, this), this);
 
             System.out.print("HashMap regenerated --> ");
@@ -346,7 +405,8 @@ public class AACGroupContainer {
         }
 
 
-        Collections.sort(contentList, new ActionItem.Button.itemComparator()); // 정렬된 두 리스트의 병합 알고리즘은 내가 짜야 할지도?
+
+//        Collections.sort(contentList, new ActionItem.Button.itemComparator()); // 정렬된 두 리스트의 병합 알고리즘은 내가 짜야 할지도?
 
         for (View btn : contentList) {
             menuLayout.addView(btn);
@@ -406,6 +466,7 @@ public class AACGroupContainer {
 
     public void onDestroy() {
         TTS.shutdown();
+        feedbackHelper.send_feedback();
     }
 
     public void refresh() { exploreGroup(currentGroupID); }
@@ -803,5 +864,49 @@ public class AACGroupContainer {
         }
 
         return list;
+    }
+
+    // 제네릭 타입이 안 됨... ㅡㅡ
+    protected class ActionWordOCCWrapper extends ActionWord.onClickClass {
+        public ActionWordOCCWrapper(Context context, AACGroupContainer container) {
+            super(context, container);
+        }
+
+        @Override
+        public void onClick(View v) {
+            add_feedback_info(this, v);
+            super.onClick(v);
+        }
+    }
+
+    protected class ActionMacroOCCWrapper extends ActionMacro.onClickClass {
+        public ActionMacroOCCWrapper(Context context, AACGroupContainer container) {
+            super(context, container);
+        }
+
+        @Override
+        public void onClick(View v) {
+            add_feedback_info(this, v);
+            super.onClick(v);
+        }
+    }
+
+    protected class ActionGroupOCCWrapper extends ActionGroup.onClickClass {
+        public ActionGroupOCCWrapper(Context context, AACGroupContainer container) {
+            super(context, container);
+        }
+
+        @Override
+        public void onClick(View v) {
+            add_feedback_info(this, v);
+            feedbackHelper.send_feedback();
+            super.onClick(v);
+        }
+    }
+
+    protected void add_feedback_info(ActionItem.onClickClass occ, View v) {
+        SearchImplicitFeedback.ItemIDInfo idInfo = new SearchImplicitFeedback.ItemIDInfo(occ.getItemCategoryID(), occ.getItemID());
+        View item_layout = (View)v.getParent();
+        feedbackHelper.add_rel(idInfo, contentList.indexOf(item_layout));
     }
 }
