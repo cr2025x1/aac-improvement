@@ -405,7 +405,6 @@ public final class ActionMain {
             Vector<HashMap<Long, Double>> eval_map_vector = new Vector<>();
             for (ActionItem item : itemChain) {
                 eval_map_vector.add(item.alloc_evaluation_map(db, selection, selectionArgs));
-                // TODO: 여기서 쿼리에 줄 clause를 줘서, 평가 대상을 제한할 수 있지 않을까?
             }
             return eval_map_vector;
         }
@@ -517,8 +516,8 @@ public final class ActionMain {
             }
 
             // 모든 문서에 대한 평가값 해시맵을 생성하고, 그 해쉬맵들을 묶을 벡터를 생성한다.
-            Vector<HashMap<Long, Double>> eval_map_vector = alloc_eval_map_vector(selection, selectionArgs); // TODO: 여기서도 손볼 수 있는 가능성이?
-            Vector<HashMap<Long, Double>> rank_vector = new Vector<>(); // TODO: 여기는?
+            Vector<HashMap<Long, Double>> eval_map_vector = alloc_eval_map_vector(selection, selectionArgs);
+            Vector<HashMap<Long, Double>> rank_vector = new Vector<>();
             int i = 0;
             for (ActionItem item : itemChain) {
                 rank_vector.add(item.evaluate_by_query_map(

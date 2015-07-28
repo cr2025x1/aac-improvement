@@ -342,16 +342,12 @@ public class AACGroupContainer {
         }
 
 
-
-        // TODO: 비교자 다시 쓰기, 피드백 적용하기
         ActionWord actionWord = (ActionWord)actionMain.itemChain[ActionMain.item.ID_Word];
         HashMap<Long, QueryWordInfo> group_qwi_map = actionWord.convert_id_map_to_qwi_map(group_id_map);
         final Vector<HashMap<Long, Double>> rank_vector =
                 actionMain.allocEvaluation().evaluate_by_query_map(
                         group_qwi_map,
                         ActionItem.SQL.COLUMN_NAME_PARENT_ID + "=" + currentGroupID,
-//                        ActionItem.SQL.COLUMN_NAME_PARENT_ID + "=" + currentGroupID + " AND " + ActionItem.SQL._ID + "!=" + currentGroupID,
-//                        ActionItem.SQL.COLUMN_NAME_PARENT_ID + "=" + currentGroupID + " AND " + ActionItem.SQL._ID + "!=" + 1,
                         null);
 
 

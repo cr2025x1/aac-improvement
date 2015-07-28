@@ -186,7 +186,6 @@ public class ActionWord extends ActionItem {
 
     }
 
-    // TODO: 오로지 디버깅용. 나중에는 삭제해야 할 메소드임.
     long add(
             long parentID,
             int priority,
@@ -516,7 +515,6 @@ public class ActionWord extends ActionItem {
 
 
     // 주어진 평가값 해시맵에 있는 문서들을 대상으로 주어진 쿼리 해시맵에 따른 관련도를 평가하여 기록하고, 이 해시맵을 반환한다.
-    // TODO: 레퍼런스받은 평가값 해시맵에 작업한 후 그 해시맵을 다시 반환한다. 이거 약간 고쳐야 할지도? 어쩌면 이 함수 내에서 평가값 해시맵을 생성해 반환하는 것이 나을지도 모른다.
     @NonNull
     public HashMap<Long, Double> evaluate_by_query_map(
             @NonNull final SQLiteDatabase db,

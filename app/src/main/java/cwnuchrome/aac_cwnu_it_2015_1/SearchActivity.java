@@ -31,8 +31,6 @@ public class SearchActivity extends AppCompatActivity {
 
     HashMap<String, Long> queryMap;
     HashMap<Long, QueryWordInfo> query_id_map;
-//    int position_max;
-//    ArrayList<Integer> clickedList;
 
     ArrayList<ActionItem.onClickClass> suggestionOCCList;
 
@@ -47,8 +45,6 @@ public class SearchActivity extends AppCompatActivity {
         suggestionList = new ArrayList<>();
         suggestionOCCList = new ArrayList<>(ActionMain.item.ITEM_COUNT);
 
-//        position_max = -1;
-//        clickedList = new ArrayList<>(AACGroupContainerPreferences.RANKING_FUNCTION_BEST_MATCH_N);
         query_id_map = null;
         queryMap = null;
         feedbackHelper = new SearchImplicitFeedback(
@@ -95,11 +91,6 @@ public class SearchActivity extends AppCompatActivity {
                         position
                 );
 
-                // TODO: 삭제?
-//                if (position_max < position) position_max = position;
-//                clickedList.add(position);
-
-//                suggestionOCCList.get(position).onClick(view);
                 occ.onClick(view);
 
             }
@@ -246,8 +237,6 @@ public class SearchActivity extends AppCompatActivity {
             if ((new_query_map.size() == 0 && queryMap == null)||
                     (queryMap != null && new_query_map.equals(queryMap))) return false;
             if (new_query_map.size() == 0 && queryMap != null) {
-                // TODO: 삭제 예정
-//                send_feedback();
                 feedbackHelper.send_feedback();
 
                 suggestionOCCList.clear();
@@ -260,8 +249,6 @@ public class SearchActivity extends AppCompatActivity {
             if ((new_query_id_map.size() == 0 && query_id_map == null) ||
                     (query_id_map != null && new_query_id_map.equals(query_id_map))) return false;
 
-            // TODO: 삭제 예정
-//            send_feedback();
             feedbackHelper.send_feedback();
 
             suggestionOCCList.clear();
@@ -305,8 +292,6 @@ public class SearchActivity extends AppCompatActivity {
     @Override
     public void onBackPressed() {
         // 피드백을 보내고 액티비티 종료 결과를 알린다.
-        // TODO: 삭제 예정
-//        send_feedback();
         feedbackHelper.send_feedback();
 
         setResult(RESULT_CANCELED);
@@ -430,43 +415,10 @@ public class SearchActivity extends AppCompatActivity {
             setResult(RESULT_OK, i);
             super.onClick(v);
 
-            // TODO: 삭제 예정
-//            send_feedback(); // 액티비티를 종료하게 되므로 쿼리결과 조회는 자동으로 종료된다. 따라서 피드백을 보낸다.
-            feedbackHelper.send_feedback();
+            feedbackHelper.send_feedback(); // 액티비티를 종료하게 되므로 쿼리결과 조회는 자동으로 종료된다. 따라서 피드백을 보낸다.
 
             finish(); // 이 액티비티를 종료하고, 기존의 탐색 화면으로 돌아간다.
         }
     }
 
-    // 피드백 정보를 적용하도록 ActionMain 객체를 콜한다.
-//    protected void send_feedback() {
-//        if (clickedList.isEmpty()) return;
-//
-//        /*
-//         * 피드백 방법 : 묵시적 피드백 (Implicit feedback)
-//         * 주어진 쿼리로 나온 검색 결과를, 그 쿼리를 사용자가 변경하기 이전에 클릭한 정보를 토대로 피드백한다.
-//         * 여기서 "변경하기 이전"이란 것은, 사용자가 입력한 텍스트 그 자체의 변경을 의미하지 않는다.
-//         * 텍스트-쿼리 해쉬맵은 1:1 대응관계가 아니기 때문이다.
-//         * 입력된 텍스트를 처리해서 만들어진 id-count 해쉬맵 결과물이 변경되는 경우에만 변경된 것으로 간주된다.
-//         *
-//         * 피드백의 범위
-//         * 사용자가 클릭한 아이템 중 가장 아래쪽의 아이템이 n번째라면, 가장 위에서부터 그 n번째까지의 아이템만을 피드백한다.
-//         * 그 이하에 대해서는 사용자가 검색 결과를 읽지 않고 종료한 것으로 간주해, 피드백이 없는 것으로 본다.
-//         *
-//         * 관련-비관련성의 결정
-//         * 1~n번째 아이템 중 사용자가 클릭한 것은 쿼리와 관련있는 문서로 간주, 그렇지 않은 것은 관련없는 문서로 간주한다.
-//         */
-//
-//        // position_max : n번째 아이템의 위치. 인덱스는 0부터 시작한다.
-//        SearchImplicitFeedback.SearchFeedbackInfo[] feedbackInfos = new SearchImplicitFeedback.SearchFeedbackInfo[position_max + 1];
-//        for (int i = 0; i <= position_max; i++) {
-//            ActionItem.onClickClass occ = suggestionOCCList.get(i);
-//            // clickedList - 클릭된 아이템의 위치 목록 객체
-//            feedbackInfos[i] = new SearchImplicitFeedback.SearchFeedbackInfo(occ.getItemCategoryID(), occ.getItemID(), clickedList.contains(i));
-//        }
-//        actionMain.apply_feedback(query_id_map, feedbackInfos);
-//
-//        clickedList.clear();
-//        position_max = -1;
-//    }
 }

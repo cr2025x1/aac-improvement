@@ -115,8 +115,6 @@ public class AddItemActivity extends AppCompatActivity {
         updater.execute(); // Initializing Updater thread
     }
 
-    // TODO: 단일 단어 길이의 워드도 매크로로 취급하도록 만들기
-    // TODO: 작업 시 워드가 자동 삭제되게 만들어야 한다.
     protected void add(String itemText, int mod) {
         ActionMain.log("*** ", "started ***");
         long currentGroupID = getIntent().getLongExtra("currentGroupID", 0);

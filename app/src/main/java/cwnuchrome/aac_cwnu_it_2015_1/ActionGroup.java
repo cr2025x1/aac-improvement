@@ -87,8 +87,6 @@ public class ActionGroup extends ActionMultiWord {
         ActionMain.update_db_collection_count(db, 1, 1); // 워드체인의 길이가 1이므로 문서 길이 1임. 워드체인이 더 길어지면 변경 필요.
     }
 
-    // TODO: 그룹 추가 기능 넣기... 아직도 안 넣고 있었다니!
-
     /**
      * Created by Chrome on 5/8/15.
      */
