@@ -23,6 +23,9 @@ import java.util.ListIterator;
 import java.util.Map;
 import java.util.Random;
 import java.util.Vector;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * Created by Chrome on 5/5/15.
@@ -61,6 +64,9 @@ public final class ActionMain {
     Kryo kryo;
     byte[] buffer;
     Context context;
+    ReadWriteLock lock = new ReentrantReadWriteLock();
+    Lock read_lock = lock.readLock();
+    Lock write_lock = lock.writeLock();
 
     public void setContext(Context context) {
         this.context = context;

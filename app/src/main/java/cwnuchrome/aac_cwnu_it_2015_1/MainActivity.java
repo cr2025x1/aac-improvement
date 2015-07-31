@@ -51,7 +51,7 @@ public class MainActivity extends AppCompatActivity {
         menu_prep_command_status = STATUS_MAIN;
 
         isInited = false;
-        container.exploreGroup(1);
+        container.explore_group(1);
     }
 
     @Override
@@ -116,7 +116,7 @@ public class MainActivity extends AppCompatActivity {
             ActionDebug.getInstance().insertTestRecords(this);
 
             isInited = false;
-            container.exploreGroup(1);
+            container.explore_group(1);
 
             return true;
         }
@@ -126,7 +126,7 @@ public class MainActivity extends AppCompatActivity {
             ActionPreset.getInstance().revert_to_default(this);
 
             isInited = false;
-            container.exploreGroup(1);
+            container.explore_group(1);
 
             return true;
         }
@@ -261,7 +261,7 @@ public class MainActivity extends AppCompatActivity {
 
                     container.setImageForSelected(v);
                     revertMenu();
-                    container.exploreGroup(container.getCurrentGroupID());
+                    container.explore_group(container.getCurrentGroupID());
                     break;
             }
 
@@ -278,7 +278,7 @@ public class MainActivity extends AppCompatActivity {
 
                     container.moveSelected(id);
                     revertMenu();
-                    container.exploreGroup(container.getCurrentGroupID());
+                    container.explore_group(container.getCurrentGroupID());
                     break;
             }
         }
@@ -348,7 +348,7 @@ public class MainActivity extends AppCompatActivity {
 
                                 if (actionMain.itemChain[category_id_wrapper].updateWithIDs(getBaseContext(), values, new long[]{item_id_wrapper}) > 0) {
                                     // TODO: 아니면 버튼 텍스트만 업데이트하게 변경?
-                                    container.exploreGroup(container.getCurrentGroupID());
+                                    container.explore_group(container.getCurrentGroupID());
                                     Toast
                                             .makeText(getBaseContext(), R.string.toast_dialog_item_rename_success, Toast.LENGTH_SHORT)
                                             .show();

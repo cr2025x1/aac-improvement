@@ -12,13 +12,11 @@ import android.widget.Toast;
 
 import net.vivin.GenericTree;
 import net.vivin.GenericTreeNode;
-import net.vivin.GenericTreeTraversalOrderEnum;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.ListIterator;
-import java.util.Map;
 import java.util.Vector;
 
 /**
@@ -266,7 +264,7 @@ public class ActionGroup extends ActionMultiWord {
             if (!isOnline) return;
 
             Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
-            container.exploreGroup(itemID);
+            container.explore_group(itemID);
         }
         public void init(ContentValues values) {
             super.init(values);

@@ -89,7 +89,7 @@ public class AACGroupContainer {
         menuLayout = (GridLayout)(mainLayout.findViewById(R.id.AACMenuLayout));
     }
 
-    public void exploreGroup(long id) {
+    public void explore_group(long id) {
         long old_current_group_ID = currentGroupID;
         currentGroupID = id;
 
@@ -98,6 +98,8 @@ public class AACGroupContainer {
         checkBoxes.clear();
         selectedList.clear();
 //        feedbackHelper.send_feedback();
+        rootGroupElement.ids.clear();
+        rootGroupElement.words.clear();
 
         isFolded = false;
 
@@ -465,7 +467,7 @@ public class AACGroupContainer {
         feedbackHelper.send_feedback();
     }
 
-    public void refresh() { exploreGroup(currentGroupID); }
+    public void refresh() { explore_group(currentGroupID); }
 
     public void setFoldAnimation() {
         isFolded = false;
@@ -631,7 +633,7 @@ public class AACGroupContainer {
     // 아이템 삭제 명령 수행
     public void invokeRemoval() {
         removalListBundle.execRemoval();
-        exploreGroup(currentGroupID);
+        explore_group(currentGroupID);
     }
 
     protected class RemovalListBundle {
