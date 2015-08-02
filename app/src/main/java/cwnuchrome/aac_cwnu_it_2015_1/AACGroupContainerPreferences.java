@@ -58,4 +58,8 @@ public class AACGroupContainerPreferences {
 
     // 데이터베이스
     public static final boolean DATABASE_REMOVE_WORD_WITH_NO_REFERENCE = true; // 레퍼런스 카운트가 0에 도달한 워드 아이템을 자동 제거? 제거된 워드 아이템에 대한 정보는 피드백 정보를 포함, 영구히 데이터베이스에서 소실된다.
+
+    // 형태소 분석기 서버
+    public static final String MORPHEME_SERVER_HOSTNAME = "cr2025x1-dorm.ddns.net"; // 서버의 주소
+    public static final int MORPHEME_SERVER_PORT = 59002; // 서버의 포트
 }

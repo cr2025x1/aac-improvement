@@ -14,6 +14,11 @@ import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
 
+import java.io.DataInputStream;
+import java.io.IOException;
+import java.io.PrintStream;
+import java.net.Socket;
+import java.net.UnknownHostException;
 import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -23,6 +28,8 @@ import java.util.ListIterator;
 import java.util.Map;
 import java.util.Random;
 import java.util.Vector;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -32,6 +39,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  *
  * 각 아이템에 대한 핵심 정보가 담긴 싱글턴 객체.
  * 많은 클래스가 이 클래스에 대한 의존성을 가지므로 조심히 다룰 것.
+ *
+ * static 메소드들은 thread-safe하지 않음.
  *
  */
 public final class ActionMain {
@@ -51,7 +60,13 @@ public final class ActionMain {
 
         kryo = new Kryo();
         buffer = new byte[8192];
+        socket_buffer = new byte[4096];
         kryo.register(HashMap.class);
+
+        morpheme_analysis_executor = Executors.newFixedThreadPool(1);
+        write_lock = new DBWriteLockWrapper(this, lock.writeLock());
+
+        for (ActionItem i : itemChain) i.setActionMain(this);
     }
 
     Random rand;
@@ -61,12 +76,14 @@ public final class ActionMain {
     AACGroupContainer containerRef;
     private InterActivityReferrer<AACGroupContainer> referrer;
     private InterActivityReferrer<ArrayList<Long>> id_referrer;
-    Kryo kryo;
+    final Kryo kryo;
     byte[] buffer;
     Context context;
     ReadWriteLock lock = new ReentrantReadWriteLock();
     Lock read_lock = lock.readLock();
-    Lock write_lock = lock.writeLock();
+    DBWriteLockWrapper write_lock;
+    byte[] socket_buffer;
+    ExecutorService morpheme_analysis_executor;
 
     public void setContext(Context context) {
         this.context = context;
@@ -86,6 +103,7 @@ public final class ActionMain {
     public void initDBHelper (Context context) {
         actionDBHelper = new ActionDBHelper(context);
         db = actionDBHelper.getWritableDatabase(); // TODO: 언젠가는 멀티스레딩 형식으로 바꾸기.
+        activate_morpheme_analyzer();
     }
 
     public void initTables() {
@@ -101,6 +119,7 @@ public final class ActionMain {
     public SQLiteDatabase getDB() { return db; }
 
     public void update_db_collection_count(long diff, long doc_length) {
+        write_lock.lock();
         log("***", "starts, diff=" + diff + ", doc_length=" + doc_length + " ***");
         long collection_count = get_db_collection_count();
         long updated_collection_count = collection_count + diff;
@@ -112,6 +131,7 @@ public final class ActionMain {
                         "/" + updated_collection_count
         );
         log("***", "ends ***");
+        write_lock.unlock();
     }
 
     public static void update_db_collection_count(@NonNull SQLiteDatabase db, long diff, long doc_length) {
@@ -129,6 +149,7 @@ public final class ActionMain {
     }
 
     public long get_db_collection_count() {
+        read_lock.lock();
         Cursor c = db.query(
                 SQL.TABLE_NAME,
                 new String[]{SQL.COLUMN_NAME_COLLECTION_COUNT},
@@ -142,6 +163,7 @@ public final class ActionMain {
 
         Long count = c.getLong(c.getColumnIndexOrThrow(SQL.COLUMN_NAME_COLLECTION_COUNT));
         c.close();
+        read_lock.unlock();
         return count;
     }
 
@@ -163,6 +185,7 @@ public final class ActionMain {
     }
 
     public double get_db_avg_doc_length() {
+        read_lock.lock();
         Cursor c = db.query(
                 SQL.TABLE_NAME,
                 new String[]{SQL.COLUMN_NAME_AVERAGE_DOCUMENT_LENGTH},
@@ -176,6 +199,7 @@ public final class ActionMain {
 
         double avg_doc_length = c.getDouble(c.getColumnIndexOrThrow(SQL.COLUMN_NAME_AVERAGE_DOCUMENT_LENGTH));
         c.close();
+        read_lock.unlock();
         return avg_doc_length;
     }
 
@@ -395,6 +419,15 @@ public final class ActionMain {
         double average_document_length; // 평균 문서의 길이 (여기서의 길이는 철자의 숫자가 아니라, 각 문서를 구성하고 있는 단어 아이템의 수를 일컫는다.)
 
         public Evaluation() {
+            /*
+                *************************
+                 Evaluation 객체 생성시 바로 읽기 락이 걸리지만 풀리지는 않음!!!!!!!!!
+                 이를 해제하는 방법은 evaluate_by_query_map()을 호출해서 평가를 마무리짓는 방법밖에 없음!!!!!!!!
+                 즉 Evaluation 객체는 생성 직후 바로 소모하는 것을 추천함.
+                *************************
+             */
+            read_lock.lock();
+
             entire_collection_count = get_db_collection_count();
             average_document_length = get_db_avg_doc_length();
         }
@@ -408,10 +441,12 @@ public final class ActionMain {
                 그 자료의 평가값 수치는 0으로 초기화된다.
              */
 
+            read_lock.lock();
             Vector<HashMap<Long, Double>> eval_map_vector = new Vector<>();
             for (ActionItem item : itemChain) {
                 eval_map_vector.add(item.alloc_evaluation_map(db, selection, selectionArgs));
             }
+            read_lock.unlock();
             return eval_map_vector;
         }
 
@@ -425,6 +460,7 @@ public final class ActionMain {
             /*
                 피드백 파트 : 주어진 쿼리의 해시맵을 피드백 정보를 더해 확장한다.
              */
+            read_lock.lock();
             HashMap<Long, QueryWordInfo> query_id_map_feedbacked = new HashMap<>();
             for (Map.Entry<Long, QueryWordInfo> e : query_id_map.entrySet()) {
                 long key = e.getKey();
@@ -536,6 +572,8 @@ public final class ActionMain {
                 i++;
             }
 
+            read_lock.unlock();
+            read_lock.unlock(); // 이 언락은 생성자의 lock()과 쌍을 이룸!
             return rank_vector;
         }
 
@@ -651,6 +689,7 @@ public final class ActionMain {
 
 //    public void apply_feedback(HashMap<Long, QueryWordInfo> query_id_map, SearchImplicitFeedback feedback) {
     public void apply_feedback(HashMap<Long, ? extends QueryWordInfoRaw> query_id_map, SearchImplicitFeedback feedback) {
+        write_lock.lock();
         long query_size = 0;
         for (Map.Entry<Long, ? extends QueryWordInfoRaw> qwi : query_id_map.entrySet()) {
             query_size += qwi.getValue().count;
@@ -713,81 +752,17 @@ public final class ActionMain {
 
             actionWord.update_feedback(query_word_key, map);
         }
-    }
 
-//    public void apply_feedback(HashMap<Long, QueryWordInfo> query_id_map, SearchImplicitFeedback.SearchFeedbackInfo[] infos) {
-//        long query_size = 0;
-//        for (Map.Entry<Long, QueryWordInfo> qwi : query_id_map.entrySet()) {
-//            query_size += qwi.getValue().count;
-//        }
-//
-//        long irrelevant_doc_count = 0;
-//        long relevant_doc_count = 0;
-//        for (SearchImplicitFeedback.SearchFeedbackInfo info : infos) {
-//            if (info.relevance) relevant_doc_count++;
-//            else irrelevant_doc_count++;
-//        }
-//
-//        HashMap<Long, Double> feedback = new HashMap<>();
-//        for (SearchImplicitFeedback.SearchFeedbackInfo info : infos) {
-//            double coefficient;
-//            if (info.relevance) coefficient = AACGroupContainerPreferences.FEEDBACK_ROCCHIO_COEFFICIENT_RELEVANT_DOC / relevant_doc_count;
-//            else coefficient = (-1) * AACGroupContainerPreferences.FEEDBACK_ROCCHIO_COEFFICIENT_IRRELEVANT_DOC / irrelevant_doc_count;
-//
-//            HashMap<Long, Long> itemMap = itemChain[info.cat_id].get_id_count_map(info.id);
-//            for (Map.Entry<Long, Long> e : itemMap.entrySet()) {
-//                long key = e.getKey();
-//                double mod = (double)e.getValue() * coefficient;
-//
-//                if (feedback.containsKey(key)) feedback.put(key, feedback.get(key) + mod);
-//                else feedback.put(key, mod);
-//            }
-//        }
-//
-//        ActionWord actionWord = (ActionWord)itemChain[item.ID_Word];
-//        for (Map.Entry<Long, QueryWordInfo> e : query_id_map.entrySet()) {
-//            long query_word_key = e.getKey();
-//            QueryWordInfo qwi = e.getValue();
-//            Cursor c = db.query(
-//                    actionWord.MAP_TABLE_NAME,
-//                    new String[]{ActionWord.SQL.COLUMN_NAME_FEEDBACK_MAP},
-//                    ActionWord.SQL.COLUMN_NAME_OWNER_ID + "=" + query_word_key,
-//                    null,
-//                    null,
-//                    null,
-//                    null
-//            );
-//            c.moveToFirst();
-//
-//            byte[] frozen_map = null;
-//            HashMap<Long, Double> map;
-//            if (c.getCount() > 0) {
-//                frozen_map = c.getBlob(c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_FEEDBACK_MAP));
-//            }
-//            c.close();
-//            if (frozen_map == null) map = new HashMap<>();
-//            else map = thaw_map(frozen_map);
-//
-//            for (Map.Entry<Long, Double> fb_e : feedback.entrySet()) {
-//                Long key = fb_e.getKey();
-//                Double mod = fb_e.getValue() * qwi.count / query_size * qwi.weight;
-//                if (map.containsKey(key)) map.put(key, map.get(key) + mod);
-//                else map.put(key, mod);
-//            }
-//
-//            actionWord.update_feedback(query_word_key, map);
-//
-//        }
-//
-//
-//    }
+        write_lock.unlock();
+    }
 
     // Kryo 라이브러리를 이용, 피드백 정보가 담긴 해쉬맵을 직렬화한다. *냉동 보관을 위해 꽁꽁 얼린다*
     @NonNull public byte[] freeze_map(@NonNull HashMap<Long, Double> feedbackMap) {
         Output output = new Output(buffer);
-        kryo.writeObject(output, feedbackMap);
+        synchronized (kryo) {
+            kryo.writeObject(output, feedbackMap);
+        }
         output.close();
-
         return output.toBytes();
     }
 
@@ -795,8 +770,10 @@ public final class ActionMain {
     @SuppressWarnings("unchecked")
     @NonNull public HashMap<Long, Double> thaw_map(@NonNull byte[] frozen_map) {
         Input input = new Input(frozen_map);
-
-        HashMap<Long, Double> thawed_map = kryo.readObject(input, HashMap.class);
+        HashMap<Long, Double> thawed_map;
+        synchronized (kryo) {
+            thawed_map = kryo.readObject(input, HashMap.class);
+        }
         input.close();
         return thawed_map;
     }
@@ -818,5 +795,206 @@ public final class ActionMain {
         else {
             return trimmed.split("\\s");
         }
+    }
+
+    private class WordRefiner implements Runnable {
+        @Override
+        public void run() {
+            for (int i = 0; i < item.ITEM_COUNT; i++) if (ActionMultiWord.class.isAssignableFrom(itemChain[i].getClass())) while (true) {
+                read_lock.lock();
+
+                /* DB에서 업데이트할 대상을 질의하는 파트 */
+                Cursor c = db.query(
+                        itemChain[i].getTableName(),
+                        new String[]{
+                                ActionMultiWord.SQL._ID,
+                                ActionMultiWord.SQL.COLUMN_NAME_WORD,
+                                ActionMultiWord.SQL.COLUMN_NAME_WORDCHAIN,
+                                ActionMultiWord.SQL.COLUMN_NAME_ELEMENT_ID_TAG},
+                        ActionMultiWord.SQL.COLUMN_NAME_IS_REFINED + "=" + 0,
+                        null,
+                        null,
+                        null,
+                        null,
+                        "1"
+                        );
+                c.moveToFirst();
+
+                if (c.getCount() == 0) {
+                    c.close();
+                    read_lock.unlock();
+                    break;
+                }
+
+                long id = c.getLong(c.getColumnIndexOrThrow(ActionMultiWord.SQL._ID));
+                String word = c.getString(c.getColumnIndexOrThrow(ActionMultiWord.SQL.COLUMN_NAME_WORD));
+                String wordchain = c.getString(c.getColumnIndexOrThrow(ActionMultiWord.SQL.COLUMN_NAME_WORDCHAIN));
+                String id_tag = c.getString(c.getColumnIndexOrThrow(ActionMultiWord.SQL.COLUMN_NAME_ELEMENT_ID_TAG));
+                c.close();
+
+                read_lock.unlock(); // 인터넷 통신이 중간에 있으므로 시간이 오래 걸릴 수 있음. 추후 다시 체크하더라도 언락해야함.
+
+                /* 인터넷을 통해 서버에 데이터를 맞겨 처리받는 파트 */
+                HashMap<Long, Long> id_map = ActionMultiWord.parse_element_id_count_tag(id_tag);
+                Socket morphemeSocket;
+                PrintStream out;
+                DataInputStream in;
+
+                try {
+                    log(null, "Trying to connect to morpheme analysis server...");
+                    morphemeSocket = new Socket(
+                            AACGroupContainerPreferences.MORPHEME_SERVER_HOSTNAME,
+                            AACGroupContainerPreferences.MORPHEME_SERVER_PORT
+                    );
+                    out = new PrintStream(morphemeSocket.getOutputStream());
+                    in = new DataInputStream(morphemeSocket.getInputStream());
+                } catch (UnknownHostException e) {
+                    // TODO: 로그의 사용법에 대해서 추후에 좀 더 연구해보기?
+                    log(null, "Cannot resolve host.");
+                    return;
+                } catch (IOException e) {
+                    log(null, "Couldn't get I/O for the connection.");
+                    return;
+                }
+                log(null, "Connection established.");
+
+                out.println(word);
+                HashMap<String, Long> map = null;
+                try {
+                    map = null;
+                    if (in.read(socket_buffer) > 0) {
+                        map = thaw_morpheme_map(socket_buffer);
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                if (map != null) log(null, "Response = " + map.toString());
+                else {
+                    log(null, "Response = " + null + ". Ending the thread.");
+                    return;
+                }
+
+                try {
+                    morphemeSocket.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+//                try {
+//                    Thread.sleep(1000);
+//                } catch (InterruptedException e) {
+//                    e.printStackTrace();
+//                }
+
+                /* 업데이트 부분: 처리된 데이터를 받아와서 그 정보가 지금도 유효한지 확인하고, 유효하다면 그대로 업데이트.*/
+                write_lock.lock();
+                // 먼저 결과를 받아온 사이에 데이터가 바뀌지 않았는지 재차 확인.
+                c = db.query(
+                        itemChain[i].getTableName(),
+                        new String[]{
+                                ActionMultiWord.SQL._ID,
+                                ActionMultiWord.SQL.COLUMN_NAME_WORD,
+                                ActionMultiWord.SQL.COLUMN_NAME_WORDCHAIN,
+                                ActionMultiWord.SQL.COLUMN_NAME_ELEMENT_ID_TAG},
+                        ActionMultiWord.SQL._ID + "=" + id,
+                        null,
+                        null,
+                        null,
+                        null,
+                        "1"
+                );
+                c.moveToFirst();
+
+                String word_after = c.getString(c.getColumnIndexOrThrow(ActionMultiWord.SQL.COLUMN_NAME_WORD));
+                String wordchain_after = c.getString(c.getColumnIndexOrThrow(ActionMultiWord.SQL.COLUMN_NAME_WORDCHAIN));
+                String id_tag_after = c.getString(c.getColumnIndexOrThrow(ActionMultiWord.SQL.COLUMN_NAME_ELEMENT_ID_TAG));
+                c.close();
+
+                if (!(word.equals(word_after) && wordchain.equals(wordchain_after) && id_tag.equals(id_tag_after))) {
+                    log(null, "Item changed. Dumping received analysis result.");
+                    write_lock.unlock();
+                    continue;
+                }
+
+                // 데이터의 동일성이 확인되었다. 이제 적용 작업을 시작한다.
+                String[] words = new String[map.size()];
+                long[] word_counts = new long[map.size()];
+                int j = 0;
+                for (Map.Entry<String, Long> e : map.entrySet()) {
+                    words[j] = e.getKey();
+                    word_counts[j] = e.getValue();
+                    j++;
+                }
+                ActionWord actionWord = (ActionWord)itemChain[item.ID_Word];
+                long[] word_ids = actionWord.add_multi(words);
+
+                // 적용 시작
+
+                HashMap<Long, Long> diff_map = new HashMap<>(word_ids.length + map.size()); // 아이템의 레퍼런스 차를 기록하는 해시맵
+                for (int k = 0; k < word_ids.length; k++) {
+                    // 해시맵 병합. 단, 이미 기존 맵에 아이템이 있는 경우에는 기존 양을 초과하는 양만큼만 추가한다.
+                    if (id_map.containsKey(word_ids[k])) {
+                        long value = id_map.get(word_ids[k]);
+                        if (value < word_counts[k]) {
+                            id_map.put(word_ids[k], word_counts[k]);
+                            diff_map.put(word_ids[k], word_counts[k] - value);
+                        }
+                    }
+                    else {
+                        id_map.put(word_ids[k], word_counts[k]);
+                        diff_map.put(word_ids[k], word_counts[k]);
+                    }
+                }
+
+                String updated_id_tag = ActionMultiWord.create_element_id_count_tag(id_map);
+                ContentValues values = new ContentValues();
+                values.put(ActionMultiWord.SQL.COLUMN_NAME_ELEMENT_ID_TAG, updated_id_tag);
+                values.put(ActionMultiWord.SQL.COLUMN_NAME_IS_REFINED, 1);
+
+                // 차이나는 아이템의 레퍼런스 카운트를 업데이트한다.
+                itemChain[i].updateWithIDs(context, values, new long[]{id});
+                for (Map.Entry<Long, Long> e : diff_map.entrySet()) {
+                    actionWord.update_reference_count(e.getKey(), e.getValue());
+                }
+
+//                StackTraceElement[] stacktrace = Thread.currentThread().getStackTrace();
+                write_lock.unlock();
+            }
+        }
+    }
+
+    // Kryo 라이브러리를 이용, 피드백 정보가 담긴 해쉬맵을 바이트 배열 상태에서 살아있는 객체로 병렬화한다. *얼렸던 것을 꺼내 쓰기 위해 해동한다*
+    @SuppressWarnings("unchecked")
+    @NonNull public HashMap<String, Long> thaw_morpheme_map(@NonNull byte[] frozen_map) {
+        Input input = new Input(frozen_map);
+        HashMap<String, Long> thawed_map;
+        synchronized (kryo) {
+            thawed_map = kryo.readObject(input, HashMap.class);
+        }
+        input.close();
+        return thawed_map;
+    }
+
+    public void activate_morpheme_analyzer() {
+        boolean is_analyzer_thread = false;
+        StackTraceElement[] stacktrace = Thread.currentThread().getStackTrace();
+        for (StackTraceElement element : stacktrace) {
+            if (element.getClassName().equals(ActionMain.WordRefiner.class.getName())) {
+                is_analyzer_thread = true;
+                break;
+            }
+        }
+
+        if (!is_analyzer_thread) {
+            morpheme_analysis_executor.execute(new WordRefiner());
+        }
+    }
+
+    public Lock getReadLock() {
+        return read_lock;
+    }
+
+    public DBWriteLockWrapper getWriteLock() {
+        return write_lock;
     }
 }

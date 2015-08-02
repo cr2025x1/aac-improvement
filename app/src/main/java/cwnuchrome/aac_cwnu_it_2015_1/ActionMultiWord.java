@@ -31,12 +31,16 @@ public abstract class ActionMultiWord extends ActionItem {
         String COLUMN_NAME_WORDCHAIN = "wordchain";
         String COLUMN_NAME_ELEMENT_ID_TAG = "element_id_tag";
         String ATTACHMENT_ID_MAP = "attached_id_map";
+        String COLUMN_NAME_IS_REFINED = "is_refined";
     }
 
     @Override
     public long raw_add(ContentValues values) {
         HashMap<Long, Long> map = map_carrier.detach(values.getAsInteger(SQL.ATTACHMENT_ID_MAP));
         values.remove(SQL.ATTACHMENT_ID_MAP);
+
+        values.put(SQL.COLUMN_NAME_IS_REFINED, 0);
+
         long id = super.raw_add(values);
 
         if (id != -1) {
@@ -107,10 +111,12 @@ public abstract class ActionMultiWord extends ActionItem {
 
         final String OR = " OR ";
         final String LIKE_AND_HEAD = " LIKE '%:";
-        final String TAIL = ":%'";
+        final String TAIL = ",%'";
+//        final String TAIL = ":%'";
 
         StringBuilder qBuilder = new StringBuilder("(");
-        qBuilder.append(SQL.COLUMN_NAME_WORDCHAIN);
+        qBuilder.append(SQL.COLUMN_NAME_ELEMENT_ID_TAG);
+//        qBuilder.append(SQL.COLUMN_NAME_WORDCHAIN); // TODO: 교체 고려 대상
         qBuilder.append(LIKE_AND_HEAD);
         qBuilder.append(id);
         qBuilder.append(TAIL);
@@ -119,7 +125,8 @@ public abstract class ActionMultiWord extends ActionItem {
         while (i.hasNext()) {
             id = i.next();
             qBuilder.append(OR);
-            qBuilder.append(SQL.COLUMN_NAME_WORDCHAIN);
+            qBuilder.append(SQL.COLUMN_NAME_ELEMENT_ID_TAG);
+//            qBuilder.append(SQL.COLUMN_NAME_WORDCHAIN); // TODO: 교체 고려 대상
             qBuilder.append(LIKE_AND_HEAD);
             qBuilder.append(id);
             qBuilder.append(TAIL);
@@ -395,8 +402,10 @@ public abstract class ActionMultiWord extends ActionItem {
                         Cursor c = db.query(
                                 TABLE_NAME,
                                 new String[]{SQL._ID, SQL.COLUMN_NAME_ELEMENT_ID_TAG},
-                                SQL.COLUMN_NAME_WORDCHAIN + " LIKE ? AND (" + eval_map_id_clause + ")",
-                                new String[]{"%:" + id + ":%"},
+                                SQL.COLUMN_NAME_ELEMENT_ID_TAG + " LIKE ? AND (" + eval_map_id_clause + ")",
+                                new String[]{"%:" + id + ",%"},
+//                                SQL.COLUMN_NAME_WORDCHAIN + " LIKE ? AND (" + eval_map_id_clause + ")", // TODO: 교체 고려 대상
+//                                new String[]{"%:" + id + ":%"}, // TODO: 교체 고려 대상
                                 null,
                                 null,
                                 null
@@ -479,14 +488,19 @@ public abstract class ActionMultiWord extends ActionItem {
                 HashMap<Long, Long> new_map = create_element_id_count_map(wordIDs);
                 HashMap<Long, Long> diff_map = new HashMap<>(new_map);
 
+                long doc_length_diff = 0;
                 for (Map.Entry<Long, Long> e : old_map.entrySet()) {
                     long key = e.getKey();
                     long value = e.getValue();
                     if (diff_map.containsKey(key)) {
-                        diff_map.put(key, diff_map.get(key) - value);
+                        long diff = diff_map.get(key) - value;
+                        diff_map.put(key, diff);
+                        doc_length_diff += diff;
                     }
                     else {
-                        diff_map.put(key, (-1) * value);
+                        long diff = (-1) * value;
+                        diff_map.put(key, diff);
+                        doc_length_diff += diff;
                     }
                 }
 
@@ -501,6 +515,9 @@ public abstract class ActionMultiWord extends ActionItem {
                 values.put(SQL.COLUMN_NAME_WORDCHAIN, new_wordchain);
                 values.put(SQL.COLUMN_NAME_STEM, values.getAsString(SQL.COLUMN_NAME_WORD)); // TODO: 언젠가는 바뀌어야 한다.
                 values.put(SQL.COLUMN_NAME_ELEMENT_ID_TAG, new_id_tag);
+
+                actionMain.update_db_collection_count(0, doc_length_diff);
+                // TODO: 기존 형태소 어펜딕스는 보존하게 변경?
             }
         }
 

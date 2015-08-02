@@ -43,7 +43,8 @@ public class ActionGroup extends ActionMultiWord {
                         SQL.COLUMN_NAME_WORDCHAIN + SQL.TEXT_TYPE + SQL.COMMA_SEP +
                         SQL.COLUMN_NAME_PICTURE + SQL.TEXT_TYPE + SQL.COMMA_SEP +
                         SQL.COLUMN_NAME_PICTURE_IS_PRESET + SQL.INTEGER_TYPE + SQL.COMMA_SEP +
-                        SQL.COLUMN_NAME_ELEMENT_ID_TAG + SQL.TEXT_TYPE +
+                        SQL.COLUMN_NAME_ELEMENT_ID_TAG + SQL.TEXT_TYPE + SQL.COMMA_SEP +
+                        SQL.COLUMN_NAME_IS_REFINED + SQL.INTEGER_TYPE +
                         " )";
     }
 
@@ -80,6 +81,7 @@ public class ActionGroup extends ActionMultiWord {
         values.put(SQL.COLUMN_NAME_PICTURE, R.drawable.btn_default);
         values.put(SQL.COLUMN_NAME_PICTURE_IS_PRESET, 1);
         values.put(SQL.COLUMN_NAME_ELEMENT_ID_TAG, create_element_id_count_tag(map));
+        values.put(SQL.COLUMN_NAME_IS_REFINED, 0);
         db.insert(TABLE_NAME, null, values);
 
         ActionMain.update_db_collection_count(db, 1, 1); // 워드체인의 길이가 1이므로 문서 길이 1임. 워드체인이 더 길어지면 변경 필요.

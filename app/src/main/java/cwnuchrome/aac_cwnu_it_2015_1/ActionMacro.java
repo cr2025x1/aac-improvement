@@ -33,7 +33,8 @@ public class ActionMacro extends ActionMultiWord {
                         SQL.COLUMN_NAME_WORDCHAIN + SQL.TEXT_TYPE + SQL.COMMA_SEP +
                         SQL.COLUMN_NAME_PICTURE + SQL.TEXT_TYPE + SQL.COMMA_SEP +
                         SQL.COLUMN_NAME_PICTURE_IS_PRESET + SQL.INTEGER_TYPE + SQL.COMMA_SEP +
-                        SQL.COLUMN_NAME_ELEMENT_ID_TAG + SQL.TEXT_TYPE +
+                        SQL.COLUMN_NAME_ELEMENT_ID_TAG + SQL.TEXT_TYPE + SQL.COMMA_SEP +
+                        SQL.COLUMN_NAME_IS_REFINED + SQL.INTEGER_TYPE +
                         " )";
     }
 
@@ -45,27 +46,12 @@ public class ActionMacro extends ActionMultiWord {
     }
 
     @Override
-    // TODO: 객체 리패킹 제거
     public long raw_add(ContentValues values) {
         String word = values.getAsString(ActionWord.SQL.COLUMN_NAME_WORD);
         long result = exists(word);
         if (result != -1) return result;
 
-        ContentValues record = new ContentValues();
-        record.put(SQL.COLUMN_NAME_PARENT_ID, values.getAsString(SQL.COLUMN_NAME_PARENT_ID));
-        record.put(SQL.COLUMN_NAME_PRIORITY, ActionMain.getInstance().rand.nextInt(100)); // TODO: 임시. 언젠가 지워야 할 라인.
-        record.put(SQL.COLUMN_NAME_WORD, word);
-        record.put(SQL.COLUMN_NAME_STEM, word);
-        record.put(SQL.COLUMN_NAME_WORDCHAIN, values.getAsString(SQL.COLUMN_NAME_WORDCHAIN));
-        record.put(SQL.COLUMN_NAME_PICTURE, values.getAsString(SQL.COLUMN_NAME_PICTURE));
-        record.put(SQL.COLUMN_NAME_PICTURE_IS_PRESET, values.getAsInteger(SQL.COLUMN_NAME_PICTURE_IS_PRESET));
-
-        record.put(SQL.COLUMN_NAME_ELEMENT_ID_TAG, values.getAsString(SQL.COLUMN_NAME_ELEMENT_ID_TAG));
-        record.put(SQL.ATTACHMENT_ID_MAP, values.getAsInteger(SQL.ATTACHMENT_ID_MAP));
-
-        result = super.raw_add(record);
-        record.clear();
-
+        result = super.raw_add(values);
         return result;
     }
 

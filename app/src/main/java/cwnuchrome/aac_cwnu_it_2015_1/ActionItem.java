@@ -21,6 +21,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Vector;
+import java.util.concurrent.locks.Lock;
 
 /**
  * Created by Chrome on 5/2/15.
@@ -32,11 +33,20 @@ public abstract class ActionItem implements Serializable {
     protected int itemClassID;
     protected int[] reservedID;
     protected final boolean is_transparent;
+    ActionMain actionMain;
+    Lock read_lock;
+    DBWriteLockWrapper write_lock;
 
     protected ActionItem(int itemID, String className, boolean is_transparent) {
         this.itemClassID = itemID;
         this.CLASS_NAME = className;
         this.is_transparent = is_transparent;
+    }
+
+    public void setActionMain(ActionMain actionMain) {
+        this.actionMain = actionMain;
+        read_lock = actionMain.getReadLock();
+        write_lock = actionMain.getWriteLock();
     }
 
     public abstract int execute(); // 버튼 클릭 시 수행되는 메소드
@@ -83,8 +93,9 @@ public abstract class ActionItem implements Serializable {
     public String getTableName() { return TABLE_NAME; }
 
     protected long exists(String word) {
+        read_lock.lock();
         // 워드 쿼리
-        Cursor c = ActionMain.getInstance().getDB().query(
+        Cursor c = actionMain.getDB().query(
                 TABLE_NAME, // The table to query
                 new String[]{SQL._ID}, // The columns to return
                 SQL.COLUMN_NAME_WORD + "=?", // The columns for the WHERE clause
@@ -99,15 +110,18 @@ public abstract class ActionItem implements Serializable {
         if (cursorCount > 0) {
             long result = c.getLong(c.getColumnIndexOrThrow(SQL._ID));
             c.close();
+            read_lock.unlock();
             return result;
         }
         c.close();
+        read_lock.unlock();
         return -1;
     }
 
     protected long exists(long id) {
+        read_lock.lock();
         // 워드 쿼리
-        Cursor c = ActionMain.getInstance().getDB().query(
+        Cursor c = actionMain.getDB().query(
                 TABLE_NAME, // The table to query
                 new String[]{SQL._ID}, // The columns to return
                 SQL._ID + " = " + id, // The columns for the WHERE clause
@@ -120,26 +134,31 @@ public abstract class ActionItem implements Serializable {
         long cursorCount = c.getCount();
 
         c.close();
-        if (cursorCount > 0) return id;
+        if (cursorCount > 0) {
+            read_lock.unlock();
+            return id;
+        }
+        read_lock.unlock();
         return -1;
     }
 
     public long raw_add(ContentValues values) {
-        ActionMain actionMain = ActionMain.getInstance();
-        values = ActionMain.getInstance().process_external_images(values);
+        write_lock.lock();
+        values = actionMain.process_external_images(values);
         long id = actionMain.getDB().insert(TABLE_NAME, null, values);
 
         // 워드의 불가시화로 인해 공통 코드 부분에서 콜렉션 업데이트를 하면 안 되게 됐음.
 //        if (id != -1) {
 //            actionMain.update_db_collection_count(1, 1);
 //        }
-
+        write_lock.unlock();
         return id;
    }
 
     public long find_id_by_word(String word) {
+        read_lock.lock();
         long id;
-        SQLiteDatabase db = ActionMain.getInstance().getDB();
+        SQLiteDatabase db = actionMain.getDB();
 
         Cursor c = db.query(
                 TABLE_NAME,
@@ -156,10 +175,12 @@ public abstract class ActionItem implements Serializable {
         else id = -1;
         c.close();
 
+        read_lock.unlock();
         return id;
     }
 
     public long updateWithIDs(Context context, ContentValues values, long[] idArray) {
+        write_lock.lock();
         SQLiteDatabase db = ActionMain.getInstance().getDB();
         StringBuilder sb = new StringBuilder();
         for (long i : idArray) {
@@ -187,10 +208,12 @@ public abstract class ActionItem implements Serializable {
 
         int t = db.update(TABLE_NAME, values, whereClause, null);
         System.out.println("Result value = " + t + " Table = " + TABLE_NAME);
+        write_lock.unlock();
         return t;
     }
 
     protected int removeExclusiveImage(Context context, String whereClause) {
+        write_lock.lock();
         SQLiteDatabase db = ActionMain.getInstance().getDB();
         String pictureWhereClause = whereClause + " AND "
                 + SQL.COLUMN_NAME_PICTURE_IS_PRESET + "=0";
@@ -244,11 +267,16 @@ public abstract class ActionItem implements Serializable {
         else System.out.println("*** No image file is exclusive ***");
 
         c.close();
+        write_lock.lock();
         return count;
     }
 
     public boolean removeWithID(Context context, long id) {
-        if (exists(id) == -1) return false;
+        write_lock.lock();
+        if (exists(id) == -1) {
+            write_lock.unlock();
+            return false;
+        }
 
         removeExclusiveImage(context, SQL._ID + "=" + id);
 
@@ -261,6 +289,7 @@ public abstract class ActionItem implements Serializable {
 
 //        actionMain.update_db_collection_count(-1, -1); // 워드의 불가시화로 인해 더 이상 공통 코드에서 콜렉션 카운트 업그레이드가 있으면 안 됨.
 
+        write_lock.unlock();
         return true;
     }
 
@@ -511,7 +540,8 @@ public abstract class ActionItem implements Serializable {
     }
 
     @Nullable public String getWord(long id) {
-        Cursor c = ActionMain.getInstance().getDB().query(
+        read_lock.lock();
+        Cursor c = actionMain.getDB().query(
                 TABLE_NAME,
                 new String[]{SQL.COLUMN_NAME_WORD},
                 SQL._ID + "=" + id,
@@ -528,6 +558,7 @@ public abstract class ActionItem implements Serializable {
         }
         else word = null;
         c.close();
+        read_lock.unlock();
         return word;
     }
 }
