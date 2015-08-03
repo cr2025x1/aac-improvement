@@ -263,6 +263,8 @@ public class ActionWord extends ActionItem {
     // TODO: 데이터베이스의 부하를 해결하기 위해 한 번에 여러 id를 받아 한 번에 처리하도록 만들기? 하지만 만일 그렇게 할 경우 작업 도중 중단시에는 어떤 일이 발생할까? transaction -> commit 구조 흉내내기?
     @Override
     public boolean removeWithID(Context context, long id) {
+        write_lock.lock();
+
         ActionMain actionMain = ActionMain.getInstance();
         SQLiteDatabase db = actionMain.getDB();
 
@@ -285,6 +287,7 @@ public class ActionWord extends ActionItem {
 //            return effected;
 //            return updateWithIDs(context, values, new long[]{id}) > 0;
 
+            write_lock.unlock();
             return true;
         }
         else {
@@ -331,7 +334,9 @@ public class ActionWord extends ActionItem {
                     null
             );
 
-            return super.removeWithID(context, id);
+            boolean result = super.removeWithID(context, id);
+            write_lock.unlock();
+            return result;
         }
     }
 
@@ -587,7 +592,7 @@ public class ActionWord extends ActionItem {
             if (is_hidden_word(s) || id == -1) {
 //                ActionMain.log(null, "adding word \"" + s + "\"");
                 id = add(
-//                        currentGroupID,
+//                        current_group_ID,
                         0,
                         0,
                         s,

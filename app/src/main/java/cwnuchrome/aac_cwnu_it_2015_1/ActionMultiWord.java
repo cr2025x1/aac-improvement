@@ -61,6 +61,7 @@ public abstract class ActionMultiWord extends ActionItem {
 
     @Override
     public boolean removeWithID(Context context, long id) {
+        write_lock.lock();
         if (exists(id) != -1) {
             ActionMain actionMain = ActionMain.getInstance();
             Cursor c = actionMain.getDB().query(
@@ -88,21 +89,27 @@ public abstract class ActionMultiWord extends ActionItem {
 //            actionMain.update_db_collection_count(0, doc_length); // 문서 수 변화량이 0인 이유 : super.raw_add()에서 -1이 이미 적용됐기 때문.
             actionMain.update_db_collection_count(-1, doc_length);
 
+            write_lock.unlock();
             return effected;
         }
 
+        write_lock.unlock();
         return false;
     }
 
     // 의존성 검사... 이것 때문에 단순하게 생각했던 아이템 제거에서 지옥문이 열렸다.
     protected boolean verifyAndCorrectDependencyRemoval(Context context, AACGroupContainer.RemovalListBundle listBundle) {
-        ActionMain actionMain = ActionMain.getInstance();
+        read_lock.lock();
+
         ArrayList<Long> wordList = listBundle.itemVector.get(ActionMain.item.ID_Word);
         ArrayList<Long> itemList = listBundle.itemVector.get(itemClassID);
         ArrayList<ContentValues> itemMissingPrintList = listBundle.missingDependencyPrintVector.get(itemClassID);
         ArrayList<Long> itemMissingList = listBundle.missingDependencyVector.get(itemClassID);
 
-        if (wordList.size() == 0) return true;
+        if (wordList.size() == 0) {
+            read_lock.unlock();
+            return true;
+        }
 
         /* 지울 단어들에 대해 의존성을 가지는 멀티워드 아이템들을 찾기 위한 쿼리문의 작성 */
 
@@ -235,6 +242,7 @@ public abstract class ActionMultiWord extends ActionItem {
         }
 
         c.close();
+        read_lock.unlock();
         return dependencyProper;
     }
 

@@ -15,6 +15,7 @@ import android.widget.LinearLayout;
 import android.widget.Toast;
 
 
+
 public class MainActivity extends AppCompatActivity {
     protected AACGroupContainer container;
 
@@ -51,7 +52,8 @@ public class MainActivity extends AppCompatActivity {
         menu_prep_command_status = STATUS_MAIN;
 
         isInited = false;
-        container.explore_group(1);
+//        container.explore_group(1);
+        container.explore_group_MT(1, null);
     }
 
     @Override
@@ -95,7 +97,7 @@ public class MainActivity extends AppCompatActivity {
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_add_word_macro) {
             Intent i = new Intent(this, AddItemActivity.class);
-            i.putExtra("currentGroupID", container.getCurrentGroupID());
+            i.putExtra("current_group_ID", container.getCurrentGroupID());
             startActivityForResult(i, ACTIVITY_ADD);
 
             return true;
@@ -103,7 +105,7 @@ public class MainActivity extends AppCompatActivity {
 
         if (id == R.id.action_search) {
             Intent i = new Intent(this, SearchActivity.class);
-            i.putExtra("currentGroupID", container.getCurrentGroupID());
+            i.putExtra("current_group_ID", container.getCurrentGroupID());
             i.putExtra("AACGC_ID", container.getContainerID());
             startActivityForResult(i, ACTIVITY_SEARCH);
 
@@ -116,7 +118,8 @@ public class MainActivity extends AppCompatActivity {
             ActionDebug.getInstance().insertTestRecords(this);
 
             isInited = false;
-            container.explore_group(1);
+//            container.explore_group(1);
+            container.explore_group_MT(1, null);
 
             return true;
         }
@@ -126,7 +129,8 @@ public class MainActivity extends AppCompatActivity {
             ActionPreset.getInstance().revert_to_default(this);
 
             isInited = false;
-            container.explore_group(1);
+//            container.explore_group(1);
+            container.explore_group_MT(1, null);
 
             return true;
         }
@@ -168,8 +172,19 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             }
 
-            container.removeSelected();
-            revert_menu_to_main();
+//            container.removeSelected();
+//            revert_menu_to_main();
+            container.remove_selected_MT(new Runnable() {
+                @Override
+                public void run() {
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            revert_menu_to_main();
+                        }
+                    });
+                }
+            });
 
             return true;
         }
@@ -182,7 +197,7 @@ public class MainActivity extends AppCompatActivity {
             }
 
             Intent i = new Intent(this, ImageSelectionActivity.class);
-            i.putExtra("currentGroupID", container.getCurrentGroupID());
+            i.putExtra("current_group_ID", container.getCurrentGroupID());
             startActivityForResult(i, ACTIVITY_IMAGE_SELECTION);
 
             return true;
@@ -259,9 +274,22 @@ public class MainActivity extends AppCompatActivity {
                     }
                     else v.put(ActionItem.SQL.COLUMN_NAME_PICTURE, pictureFilename);
 
-                    container.setImageForSelected(v);
-                    revertMenu();
-                    container.explore_group(container.getCurrentGroupID());
+                    container.set_image_for_selected_MT(v, new Runnable() {
+                        @Override
+                        public void run() {
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    revertMenu();
+                                    container.explore_group_MT(container.getCurrentGroupID(), null);
+                                }
+                            });
+                        }
+                    });
+//                    container.setImageForSelected(v);
+//                    revertMenu();
+//                    container.explore_group(container.getCurrentGroupID());
+//                    container.explore_group_MT(container.getCurrentGroupID());
                     break;
             }
 
@@ -276,9 +304,22 @@ public class MainActivity extends AppCompatActivity {
                     long id = data.getLongExtra("new_group_id", -1);
                     if (id == -1) throw new IllegalStateException("Getting data from Intent's extra has failed.");
 
-                    container.moveSelected(id);
-                    revertMenu();
-                    container.explore_group(container.getCurrentGroupID());
+//                    container.moveSelected(id);
+                    container.move_selected_runnable_MT(id, new Runnable() {
+                        @Override
+                        public void run() {
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    revertMenu();
+                                    container.explore_group_MT(container.getCurrentGroupID(), null);
+                                }
+                            });
+                        }
+                    });
+//                    revertMenu();
+//                    container.explore_group(container.getCurrentGroupID());
+//                    container.explore_group_MT(container.getCurrentGroupID());
                     break;
             }
         }
@@ -348,10 +389,20 @@ public class MainActivity extends AppCompatActivity {
 
                                 if (actionMain.itemChain[category_id_wrapper].updateWithIDs(getBaseContext(), values, new long[]{item_id_wrapper}) > 0) {
                                     // TODO: 아니면 버튼 텍스트만 업데이트하게 변경?
-                                    container.explore_group(container.getCurrentGroupID());
-                                    Toast
-                                            .makeText(getBaseContext(), R.string.toast_dialog_item_rename_success, Toast.LENGTH_SHORT)
-                                            .show();
+//                                    container.explore_group(container.getCurrentGroupID());
+                                    container.explore_group_MT(container.getCurrentGroupID(), new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            runOnUiThread(new Runnable() {
+                                                @Override
+                                                public void run() {
+                                                    Toast
+                                                            .makeText(getBaseContext(), R.string.toast_dialog_item_rename_success, Toast.LENGTH_SHORT)
+                                                            .show();
+                                                }
+                                            });
+                                        }
+                                    });
                                 }
                                 else {
                                     Toast

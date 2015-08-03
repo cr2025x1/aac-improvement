@@ -117,7 +117,7 @@ public class AddItemActivity extends AppCompatActivity {
 
     protected void add(String itemText, int mod) {
         ActionMain.log("*** ", "started ***");
-        long currentGroupID = getIntent().getLongExtra("currentGroupID", 0);
+        long currentGroupID = getIntent().getLongExtra("current_group_ID", 0);
 
         String[] textTokens = ActionMain.tokenize(itemText);
 

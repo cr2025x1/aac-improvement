@@ -47,11 +47,16 @@ public class ActionMacro extends ActionMultiWord {
 
     @Override
     public long raw_add(ContentValues values) {
+        write_lock.lock();
+
         String word = values.getAsString(ActionWord.SQL.COLUMN_NAME_WORD);
         long result = exists(word);
         if (result != -1) return result;
 
         result = super.raw_add(values);
+
+        write_lock.unlock();
+
         return result;
     }
 
@@ -148,6 +153,7 @@ public class ActionMacro extends ActionMultiWord {
         }
 
         public void init(ContentValues values) {
+            actionMain.getReadLock().lock();
             super.init(values);
             message = values.get(SQL.COLUMN_NAME_WORD) + "," + values.get(SQL.COLUMN_NAME_PRIORITY);
             phonetic = values.getAsString(SQL.COLUMN_NAME_WORD);
@@ -185,6 +191,7 @@ public class ActionMacro extends ActionMultiWord {
                             c.close();
                         }
                     });
+            actionMain.getReadLock().unlock();
         }
     }
 }

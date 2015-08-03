@@ -1,6 +1,8 @@
 package cwnuchrome.aac_cwnu_it_2015_1;
 
 import android.annotation.SuppressLint;
+import android.app.Activity;
+import android.app.ProgressDialog;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
@@ -79,7 +81,7 @@ public final class ActionMain {
     final Kryo kryo;
     byte[] buffer;
     Context context;
-    ReadWriteLock lock = new ReentrantReadWriteLock();
+    ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     Lock read_lock = lock.readLock();
     DBWriteLockWrapper write_lock;
     byte[] socket_buffer;

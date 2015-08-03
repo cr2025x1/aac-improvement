@@ -3,6 +3,7 @@ package cwnuchrome.aac_cwnu_it_2015_1;
 import android.animation.Animator;
 import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
+import android.app.Activity;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
@@ -21,6 +22,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Vector;
+import java.util.concurrent.locks.Lock;
 
 /**
  * Created by Chrome on 5/9/15.
@@ -33,10 +35,10 @@ public class AACGroupContainer {
     protected GridLayout menuLayout;
     protected Context context;
     protected TextView titleView;
-    protected ArrayList<View> contentList;
+    protected ArrayList<View> item_list;
     protected ArrayList<View> selectedList;
     protected ActionMain actionMain;
-    protected long currentGroupID;
+    protected long current_group_ID;
     protected TextToSpeech TTS;
 
     protected ArrayList<CheckBox> checkBoxes;
@@ -56,11 +58,20 @@ public class AACGroupContainer {
 
     protected int container_id;
 
+    Lock read_lock;
+    DBWriteLockWrapper write_lock;
+    protected ArrayList<View> old_item_list;
+    String parent_group_name;
+    Activity activity;
+
+    final Object explore_group_runnable;
+    boolean is_on_progress;
+
     protected SearchImplicitFeedback feedbackHelper = new SearchImplicitFeedback(
             new SearchImplicitFeedback.DocumentProcessor() {
                 @Override
                 public SearchImplicitFeedback.ItemIDInfo get_doc_id(int pos) {
-                    ActionItem.onClickClass occ = ((ActionItem.Button)contentList.get(pos).findViewById(R.id.aac_item_button_id)).onClickObj;
+                    ActionItem.onClickClass occ = ((ActionItem.Button) item_list.get(pos).findViewById(R.id.aac_item_button_id)).onClickObj;
                     return new SearchImplicitFeedback.ItemIDInfo(occ.getItemCategoryID(), occ.getItemID());
                 }
             }
@@ -69,7 +80,7 @@ public class AACGroupContainer {
     public AACGroupContainer(LinearLayout mainLayout) {
         this.context = mainLayout.getContext();
         this.mainLayout = mainLayout;
-        contentList = new ArrayList<>();
+        item_list = new ArrayList<>();
         actionMain = ActionMain.getInstance();
         actionMain.setContext(context.getApplicationContext());
         TTS = new TextToSpeech(context, new TTSListener());
@@ -87,331 +98,686 @@ public class AACGroupContainer {
 
         // 메뉴 레이아웃 설정
         menuLayout = (GridLayout)(mainLayout.findViewById(R.id.AACMenuLayout));
+
+        read_lock = actionMain.getReadLock();
+        write_lock = actionMain.getWriteLock();
+        activity = (Activity)context;
+
+        explore_group_runnable = new Object();
+        is_on_progress = false;
     }
 
-    public void explore_group(long id) {
-        long old_current_group_ID = currentGroupID;
-        currentGroupID = id;
+    // 참고: http://examples.javacodegeeks.com/android/core/ui/progressdialog/android-progressdialog-example/
+//    public void load(Activity activity, final Runnable run) {
+//        if (!is_on_progress) {
+//            is_on_progress = true;
+//            final ProgressDialog dialog = ProgressDialog.show(activity, "Please wait...", "Loading...", true);
+//            dialog.setCancelable(false);
+//            new Thread(new Runnable() {
+//                @Override
+//                public void run() {
+//                    run.run();
+//                    dialog.dismiss();
+//                    is_on_progress = false;
+//                }
+//            }).start();
+//        }
+//        else {
+//            run.run();
+//        }
+//    }
 
-        for (View item : contentList) menuLayout.removeView(item);
-        contentList.clear();
-        checkBoxes.clear();
-        selectedList.clear();
-//        feedbackHelper.send_feedback();
-        rootGroupElement.ids.clear();
-        rootGroupElement.words.clear();
+    // TODO: 작업 중... 백그라운드 스레드에서 실행되는 것을 전제로 깐 메소드임.
+    public void explore_group_MT(long id, Runnable after) {
+//        run_off_ui_thread(activity, new explore_group_runnable(id));
+        ConcurrentLibrary.run_off_ui_thread(activity, new explore_group_runnable(id), after);
+    }
 
-        isFolded = false;
-
-        SQLiteDatabase db = actionMain.getDB();
-        Cursor c;
-        String groupName;
-        long parentGroupID;
-        long cursorCount;
-        ContentValues values = new ContentValues();
-
-        // 그룹 이름 가져오기
-        c = db.query(
-                actionMain.itemChain[ActionMain.item.ID_Group].TABLE_NAME,
-                new String[] {
-                        ActionGroup.SQL.COLUMN_NAME_WORD,
-                        ActionGroup.SQL.COLUMN_NAME_PARENT_ID,
-                        ActionGroup.SQL.COLUMN_NAME_PICTURE,
-                        ActionGroup.SQL.COLUMN_NAME_PICTURE_IS_PRESET,
-                        ActionGroup.SQL.COLUMN_NAME_ELEMENT_ID_TAG
-                },
-                ActionGroup.SQL._ID + " = ?",
-                new String[] {Long.toString(id)},
-                null,
-                null,
-                null
-        );
-        c.moveToFirst();
-        groupName = c.getString(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_WORD));
-        parentGroupID = c.getLong(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_PARENT_ID));
-        HashMap<Long, Long> group_id_map = ActionMultiWord.parse_element_id_count_tag(c.getString(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_ELEMENT_ID_TAG)));
-        c.close();
-
-        if (old_current_group_ID != currentGroupID) {
-            HashMap<Long, QueryWordInfoRaw> qwir_map = new HashMap<>(group_id_map.size());
-            for (Map.Entry<Long, Long> e : group_id_map.entrySet()) {
-                QueryWordInfoRaw qwir = new QueryWordInfoRaw(e.getValue(), 1);
-                qwir_map.put(e.getKey(), qwir);
-            }
-            feedbackHelper.set_query_id_map(qwir_map);
+    protected class explore_group_runnable implements Runnable {
+        long id;
+        public explore_group_runnable(long id) {
+            this.id = id;
         }
 
-        // 그룹 제목 출력
-        titleView.setText(groupName + " 그룹");
+        @Override
+        public void run() {
+            synchronized (explore_group_runnable) {
+                read_lock.lock();
+                long old_current_group_ID = current_group_ID;
+                current_group_ID = id;
+                old_item_list = new ArrayList<>(item_list);
+                item_list.clear();
+                checkBoxes.clear();
+                selectedList.clear();
+                rootGroupElement.ids.clear();
+                rootGroupElement.words.clear();
+                isFolded = false;
 
-        // 쿼리 옵션 설정
-        String[] projection = {
-                ActionWord.SQL._ID,
-                ActionWord.SQL.COLUMN_NAME_PRIORITY,
-                ActionWord.SQL.COLUMN_NAME_WORD,
-                ActionWord.SQL.COLUMN_NAME_PICTURE,
-                ActionWord.SQL.COLUMN_NAME_PICTURE_IS_PRESET
-        };
-        String sortOrder =
-                ActionWord.SQL.COLUMN_NAME_PRIORITY + " DESC";
-        String queryClause = ActionItem.SQL.COLUMN_NAME_PARENT_ID  + " = " + id; // 검색 조건
 
-        // 워드 쿼리
-        c = db.query(
-                actionMain.itemChain[ActionMain.item.ID_Word].TABLE_NAME, // The table to query
-                projection, // The columns to return
-                queryClause, // The columns for the WHERE clause
-                null, // The values for the WHERE clause
-                null, // don't group the rows
-                null, // don't filter by row groups
-                sortOrder // The sort order
-        );
-        c.moveToFirst();
+                SQLiteDatabase db = actionMain.getDB();
+                Cursor c;
+                long cursorCount;
+                ContentValues values = new ContentValues();
 
-        cursorCount = c.getCount();
+                // 부모 그룹 정보 가져오기
+                c = db.query(
+                        actionMain.itemChain[ActionMain.item.ID_Group].TABLE_NAME,
+                        new String[] {
+                                ActionGroup.SQL.COLUMN_NAME_WORD,
+                                ActionGroup.SQL.COLUMN_NAME_PARENT_ID,
+                                ActionGroup.SQL.COLUMN_NAME_PICTURE,
+                                ActionGroup.SQL.COLUMN_NAME_PICTURE_IS_PRESET,
+                                ActionGroup.SQL.COLUMN_NAME_ELEMENT_ID_TAG
+                        },
+                        ActionGroup.SQL._ID + " = ?",
+                        new String[] {Long.toString(id)},
+                        null,
+                        null,
+                        null
+                );
+                c.moveToFirst();
+                parent_group_name = c.getString(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_WORD));
+                long parent_group_ID = c.getLong(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_PARENT_ID));
+                HashMap<Long, Long> group_id_map = ActionMultiWord.parse_element_id_count_tag(c.getString(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_ELEMENT_ID_TAG)));
+                c.close();
 
-        // 최상위 그룹의 이름에 사용되는 단어 파악
-        Cursor rName_c = db.query(
-                actionMain.itemChain[ActionMain.item.ID_Group].TABLE_NAME,
-                new String[] {ActionGroup.SQL.COLUMN_NAME_WORDCHAIN},
-                ActionItem.SQL._ID + "=" + 1,
-                null,
-                null,
-                null,
-                null
-        );
-        rName_c.moveToFirst();
-        ((ActionGroup)actionMain.itemChain[ActionMain.item.ID_Group]).parseWordChain(
-                rName_c.getString(rName_c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_WORDCHAIN)),
-                new ActionMultiWord.onParseCommand() {
-                    @Override
-                    public void onParse(long itemID) {
-                        rootGroupElement.ids.add(itemID);
-
-                        Cursor c = actionMain.getDB().query(
-                                actionMain.itemChain[ActionMain.item.ID_Word].TABLE_NAME,
-                                new String[]{ActionWord.SQL.COLUMN_NAME_WORD},
-                                ActionWord.SQL._ID + "=" + itemID,
-                                null,
-                                null,
-                                null,
-                                null
-                        );
-                        c.moveToFirst();
-                        rootGroupElement.words.add(c.getString(c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_WORD)));
-
-                        c.close();
+                // 피드백 파트
+                if (old_current_group_ID != current_group_ID) {
+                    HashMap<Long, QueryWordInfoRaw> qwir_map = new HashMap<>(group_id_map.size());
+                    for (Map.Entry<Long, Long> e : group_id_map.entrySet()) {
+                        QueryWordInfoRaw qwir = new QueryWordInfoRaw(e.getValue(), 1);
+                        qwir_map.put(e.getKey(), qwir);
                     }
-                });
-        rName_c.close();
-
-
-        for (int i = 0; i < cursorCount; i++) {
-            int itemId = c.getInt(
-                    c.getColumnIndexOrThrow(ActionWord.SQL._ID)
-            );
-
-            values.put(ActionItem.SQL._ID, itemId);
-            values.put(ActionWord.SQL.COLUMN_NAME_WORD, c.getString(c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_WORD)));
-            values.put(ActionWord.SQL.COLUMN_NAME_PRIORITY, c.getLong(c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_PRIORITY)));
-            values.put(ActionWord.SQL.COLUMN_NAME_PICTURE, c.getString(c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_PICTURE)));
-            values.put(ActionWord.SQL.COLUMN_NAME_PICTURE_IS_PRESET, c.getInt(c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_PICTURE_IS_PRESET)));
-
-            addMenuWithCheckBox(
-                    new ActionWord.Button(context, new ActionWordOCCWrapper(context, this), this),
-//                    new ActionWord.Button(context, new ActionWord.onClickClass(context, this), this),
-                    values
-            );
-
-            values.clear();
-            c.moveToNext();
-        }
-
-
-        // 매크로 쿼리
-        String[] projectionMacro = {
-                ActionMacro.SQL._ID,
-                ActionMacro.SQL.COLUMN_NAME_PRIORITY,
-                ActionMacro.SQL.COLUMN_NAME_WORD,
-                ActionMacro.SQL.COLUMN_NAME_WORDCHAIN,
-                ActionMacro.SQL.COLUMN_NAME_PICTURE,
-                ActionMacro.SQL.COLUMN_NAME_PICTURE_IS_PRESET,
-                ActionMacro.SQL.COLUMN_NAME_ELEMENT_ID_TAG
-        };
-
-        c = db.query(
-                actionMain.itemChain[ActionMain.item.ID_Macro].TABLE_NAME, // The table to query
-                projectionMacro, // The columns to return
-                queryClause, // The columns for the WHERE clause
-                null, // The values for the WHERE clause
-                null, // don't group the rows
-                null, // don't filter by row groups
-                sortOrder // The sort order
-        );
-        c.moveToFirst();
-
-        // 매크로 쿼리 처리
-        cursorCount = c.getCount();
-
-        System.out.println("*** ActionMacro Querying ***");
-        for (int i = 0; i < cursorCount; i++) {
-            long itemId = c.getLong(
-                    c.getColumnIndexOrThrow(ActionMacro.SQL._ID)
-            );
-            System.out.println("No. " + i + " : " +
-                            "Word \"" + c.getString(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_WORD)) + "\", " +
-                            "ID=" + itemId + ", " +
-                            "Priority=" + c.getString(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_PRIORITY))
-            );
-
-            System.out.print("HashMap regenerated --> ");
-            ActionMacro.print_hashmap(ActionMultiWord.parse_element_id_count_tag(c.getString(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_ELEMENT_ID_TAG))));
-
-            values.put(ActionItem.SQL._ID, itemId);
-            values.put(ActionMacro.SQL.COLUMN_NAME_WORD, c.getString(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_WORD)));
-            values.put(ActionMacro.SQL.COLUMN_NAME_WORDCHAIN, c.getString(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_WORDCHAIN)));
-            values.put(ActionMacro.SQL.COLUMN_NAME_PRIORITY, c.getLong(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_PRIORITY)));
-            values.put(ActionMacro.SQL.COLUMN_NAME_PICTURE, c.getString(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_PICTURE)));
-            values.put(ActionMacro.SQL.COLUMN_NAME_PICTURE_IS_PRESET, c.getInt(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_PICTURE_IS_PRESET)));
-
-            addMenuWithCheckBox(
-                    new ActionMacro.Button(context, new ActionMacroOCCWrapper(context, this), this),
-//                    new ActionMacro.Button(context, new ActionMacro.onClickClass(context, this), this),
-                    values);
-
-            values.clear();
-            c.moveToNext();
-        }
-        System.out.println("*** ActionMacro Query Complete ***");
-
-
-        // 그룹 쿼리
-
-        String[] projectionGroup = {
-                ActionMacro.SQL._ID,
-                ActionMacro.SQL.COLUMN_NAME_PRIORITY,
-                ActionMacro.SQL.COLUMN_NAME_WORD,
-                ActionMacro.SQL.COLUMN_NAME_WORDCHAIN,
-                ActionMacro.SQL.COLUMN_NAME_PICTURE,
-                ActionMacro.SQL.COLUMN_NAME_PICTURE_IS_PRESET,
-                ActionMacro.SQL.COLUMN_NAME_ELEMENT_ID_TAG
-        };
-
-        String queryClauseGroup =
-                ActionGroup.SQL.COLUMN_NAME_PARENT_ID  + " = " + id +
-                " AND " + ActionGroup.SQL._ID + " != " + id
-                ; // 검색 조건
-        c = db.query(
-                actionMain.itemChain[ActionMain.item.ID_Group].TABLE_NAME, // The table to query
-                projectionGroup, // The columns to return
-                queryClauseGroup, // The columns for the WHERE clause
-                null, // The values for the WHERE clause
-                null, // don't group the rows
-                null, // don't filter by row groups
-                sortOrder // The sort order
-        );
-        c.moveToFirst();
-
-        // 그룹 쿼리 처리
-        cursorCount = c.getCount();
-
-        for (int i = 0; i < cursorCount; i++) {
-            long itemId = c.getLong(
-                    c.getColumnIndexOrThrow(ActionGroup.SQL._ID)
-            );
-            System.out.println("DB Query Result " + i + " = " +
-                            itemId + ", " +
-                            c.getString(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_PRIORITY)) + ", " +
-                            c.getString(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_WORD))
-            );
-
-            System.out.print("HashMap regenerated --> ");
-            ActionMacro.print_hashmap(ActionMultiWord.parse_element_id_count_tag(c.getString(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_ELEMENT_ID_TAG))));
-
-            values.put(ActionGroup.SQL.COLUMN_NAME_WORD, c.getString(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_WORD)));
-            values.put(ActionGroup.SQL.COLUMN_NAME_PRIORITY, c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_PRIORITY));
-            values.put(ActionGroup.SQL._ID, itemId);
-            values.put(ActionGroup.SQL.COLUMN_NAME_PICTURE, c.getString(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_PICTURE)));
-            values.put(ActionGroup.SQL.COLUMN_NAME_PICTURE_IS_PRESET, c.getInt(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_PICTURE_IS_PRESET)));
-
-            addMenuWithCheckBox(
-                    new ActionGroup.Button(context, new ActionGroupOCCWrapper(context, this), this),
-//                    new ActionGroup.Button(context, new ActionGroup.onClickClass(context, this), this),
-                    values);
-
-            values.clear();
-            c.moveToNext();
-        }
-
-
-        ActionWord actionWord = (ActionWord)actionMain.itemChain[ActionMain.item.ID_Word];
-        HashMap<Long, QueryWordInfo> group_qwi_map = actionWord.convert_id_map_to_qwi_map(group_id_map);
-        final Vector<HashMap<Long, Double>> rank_vector =
-                actionMain.allocEvaluation().evaluate_by_query_map(
-                        group_qwi_map,
-                        ActionItem.SQL.COLUMN_NAME_PARENT_ID + "=" + currentGroupID,
-                        null);
-
-
-        Collections.sort(
-                contentList,
-                new Comparator<View>() {
-                    @Override
-                    public int compare(View lhs, View rhs) {
-                        ActionItem.onClickClass lhs_occ = ((ActionItem.Button)lhs.findViewById(R.id.aac_item_button_id)).onClickObj;
-                        ActionItem.onClickClass rhs_occ = ((ActionItem.Button)rhs.findViewById(R.id.aac_item_button_id)).onClickObj;
-
-                        return rank_vector.get(lhs_occ.getItemCategoryID()).get(lhs_occ.getItemID())
-                                > rank_vector.get(rhs_occ.getItemCategoryID()).get(rhs_occ.getItemID())
-                                ? -1 : 1;
-                    }
+                    feedbackHelper.set_query_id_map(qwir_map);
                 }
-        );
+
+        /* DB 쿼리 파트 */
 
 
-        // 마지막으로 상위 그룹에 대한 버튼 형성 (단 최상위 그룹은 패스)
-        if (id != 1) {
-            c = db.query(
-                    actionMain.itemChain[ActionMain.item.ID_Group].TABLE_NAME, // The table to query
-                    projectionGroup, // The columns to return
-                    ActionGroup.SQL._ID + " = " + parentGroupID, // The columns for the WHERE clause
-                    null, // The values for the WHERE clause
-                    null, // don't group the rows
-                    null, // don't filter by row groups
-                    sortOrder // The sort order
-            );
-            c.moveToFirst();
+                // 최상위 그룹의 이름에 사용되는 단어 파악
+                Cursor rName_c = db.query(
+                        actionMain.itemChain[ActionMain.item.ID_Group].TABLE_NAME,
+                        new String[] {ActionGroup.SQL.COLUMN_NAME_WORDCHAIN},
+                        ActionItem.SQL._ID + "=" + 1,
+                        null,
+                        null,
+                        null,
+                        null
+                );
+                rName_c.moveToFirst();
+                ((ActionGroup)actionMain.itemChain[ActionMain.item.ID_Group]).parseWordChain(
+                        rName_c.getString(rName_c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_WORDCHAIN)),
+                        new ActionMultiWord.onParseCommand() {
+                            @Override
+                            public void onParse(long itemID) {
+                                rootGroupElement.ids.add(itemID);
 
-//            ActionGroup.Button parentGroupButton = new ActionGroup.Button(context, new ActionGroupOCCWrapper(context, this), this);
-            ActionGroup.Button parentGroupButton = new ActionGroup.Button(context, new ActionGroup.onClickClass(context, this), this);
+                                Cursor c = actionMain.getDB().query(
+                                        actionMain.itemChain[ActionMain.item.ID_Word].TABLE_NAME,
+                                        new String[]{ActionWord.SQL.COLUMN_NAME_WORD},
+                                        ActionWord.SQL._ID + "=" + itemID,
+                                        null,
+                                        null,
+                                        null,
+                                        null
+                                );
+                                c.moveToFirst();
+                                rootGroupElement.words.add(c.getString(c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_WORD)));
 
-            System.out.print("HashMap regenerated --> ");
-            ActionMacro.print_hashmap(ActionMultiWord.parse_element_id_count_tag(c.getString(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_ELEMENT_ID_TAG))));
+                                c.close();
+                            }
+                        });
+                rName_c.close();
 
-            values.put(ActionGroup.SQL.COLUMN_NAME_WORD, c.getString(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_WORD)));
-            values.put(ActionGroup.SQL.COLUMN_NAME_PRIORITY, c.getLong(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_PRIORITY)));
-            values.put(ActionGroup.SQL._ID, parentGroupID);
-            values.put(ActionGroup.SQL.COLUMN_NAME_PICTURE, c.getString(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_PICTURE)));
-            values.put(ActionGroup.SQL.COLUMN_NAME_PICTURE_IS_PRESET, c.getInt(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_PICTURE_IS_PRESET)));
 
-            addMenuWithoutCheckBox(parentGroupButton, values);
+                // 쿼리 인수 설정
+                String[] projection = {
+                        ActionWord.SQL._ID,
+                        ActionWord.SQL.COLUMN_NAME_PRIORITY,
+                        ActionWord.SQL.COLUMN_NAME_WORD,
+                        ActionWord.SQL.COLUMN_NAME_PICTURE,
+                        ActionWord.SQL.COLUMN_NAME_PICTURE_IS_PRESET
+                };
+                String sortOrder =
+                        ActionWord.SQL.COLUMN_NAME_PRIORITY + " DESC";
+                String queryClause = ActionItem.SQL.COLUMN_NAME_PARENT_ID  + " = " + id; // 검색 조건
 
-            parentGroupButton.setText("상위그룹 " + c.getString(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_WORD)));
+                // 워드 쿼리
+                c = db.query(
+                        actionMain.itemChain[ActionMain.item.ID_Word].TABLE_NAME, // The table to query
+                        projection, // The columns to return
+                        queryClause, // The columns for the WHERE clause
+                        null, // The values for the WHERE clause
+                        null, // don't group the rows
+                        null, // don't filter by row groups
+                        sortOrder // The sort order
+                );
+                c.moveToFirst();
+                cursorCount = c.getCount();
 
-            values.clear();
-            c.close();
+                for (int i = 0; i < cursorCount; i++) {
+                    int itemId = c.getInt(
+                            c.getColumnIndexOrThrow(ActionWord.SQL._ID)
+                    );
+
+                    values.put(ActionItem.SQL._ID, itemId);
+                    values.put(ActionWord.SQL.COLUMN_NAME_WORD, c.getString(c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_WORD)));
+                    values.put(ActionWord.SQL.COLUMN_NAME_PRIORITY, c.getLong(c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_PRIORITY)));
+                    values.put(ActionWord.SQL.COLUMN_NAME_PICTURE, c.getString(c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_PICTURE)));
+                    values.put(ActionWord.SQL.COLUMN_NAME_PICTURE_IS_PRESET, c.getInt(c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_PICTURE_IS_PRESET)));
+
+                    addMenuWithCheckBox(
+                            new ActionWord.Button(context, new ActionWordOCCWrapper(context, AACGroupContainer.this), AACGroupContainer.this),
+                            values
+                    );
+
+                    values.clear();
+                    c.moveToNext();
+                }
+
+                // 매크로 쿼리
+                String[] projectionMacro = {
+                        ActionMacro.SQL._ID,
+                        ActionMacro.SQL.COLUMN_NAME_PRIORITY,
+                        ActionMacro.SQL.COLUMN_NAME_WORD,
+                        ActionMacro.SQL.COLUMN_NAME_WORDCHAIN,
+                        ActionMacro.SQL.COLUMN_NAME_PICTURE,
+                        ActionMacro.SQL.COLUMN_NAME_PICTURE_IS_PRESET,
+                        ActionMacro.SQL.COLUMN_NAME_ELEMENT_ID_TAG
+                };
+
+                c = db.query(
+                        actionMain.itemChain[ActionMain.item.ID_Macro].TABLE_NAME, // The table to query
+                        projectionMacro, // The columns to return
+                        queryClause, // The columns for the WHERE clause
+                        null, // The values for the WHERE clause
+                        null, // don't group the rows
+                        null, // don't filter by row groups
+                        sortOrder // The sort order
+                );
+                c.moveToFirst();
+
+                // 매크로 쿼리 처리
+                cursorCount = c.getCount();
+
+                System.out.println("*** ActionMacro Querying ***");
+                for (int i = 0; i < cursorCount; i++) {
+                    long itemId = c.getLong(
+                            c.getColumnIndexOrThrow(ActionMacro.SQL._ID)
+                    );
+                    System.out.println("No. " + i + " : " +
+                                    "Word \"" + c.getString(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_WORD)) + "\", " +
+                                    "ID=" + itemId + ", " +
+                                    "Priority=" + c.getString(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_PRIORITY))
+                    );
+
+                    System.out.print("HashMap regenerated --> ");
+                    ActionMacro.print_hashmap(ActionMultiWord.parse_element_id_count_tag(c.getString(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_ELEMENT_ID_TAG))));
+
+                    values.put(ActionItem.SQL._ID, itemId);
+                    values.put(ActionMacro.SQL.COLUMN_NAME_WORD, c.getString(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_WORD)));
+                    values.put(ActionMacro.SQL.COLUMN_NAME_WORDCHAIN, c.getString(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_WORDCHAIN)));
+                    values.put(ActionMacro.SQL.COLUMN_NAME_PRIORITY, c.getLong(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_PRIORITY)));
+                    values.put(ActionMacro.SQL.COLUMN_NAME_PICTURE, c.getString(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_PICTURE)));
+                    values.put(ActionMacro.SQL.COLUMN_NAME_PICTURE_IS_PRESET, c.getInt(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_PICTURE_IS_PRESET)));
+
+                    addMenuWithCheckBox(
+                            new ActionMacro.Button(context, new ActionMacroOCCWrapper(context, AACGroupContainer.this), AACGroupContainer.this),
+                            values);
+
+                    values.clear();
+                    c.moveToNext();
+                }
+                System.out.println("*** ActionMacro Query Complete ***");
+
+
+                // 그룹 쿼리
+
+                String[] projectionGroup = {
+                        ActionMacro.SQL._ID,
+                        ActionMacro.SQL.COLUMN_NAME_PRIORITY,
+                        ActionMacro.SQL.COLUMN_NAME_WORD,
+                        ActionMacro.SQL.COLUMN_NAME_WORDCHAIN,
+                        ActionMacro.SQL.COLUMN_NAME_PICTURE,
+                        ActionMacro.SQL.COLUMN_NAME_PICTURE_IS_PRESET,
+                        ActionMacro.SQL.COLUMN_NAME_ELEMENT_ID_TAG
+                };
+
+                String queryClauseGroup =
+                        ActionGroup.SQL.COLUMN_NAME_PARENT_ID  + " = " + id +
+                                " AND " + ActionGroup.SQL._ID + " != " + id
+                        ; // 검색 조건
+                c = db.query(
+                        actionMain.itemChain[ActionMain.item.ID_Group].TABLE_NAME, // The table to query
+                        projectionGroup, // The columns to return
+                        queryClauseGroup, // The columns for the WHERE clause
+                        null, // The values for the WHERE clause
+                        null, // don't group the rows
+                        null, // don't filter by row groups
+                        sortOrder // The sort order
+                );
+                c.moveToFirst();
+
+                // 그룹 쿼리 처리
+                cursorCount = c.getCount();
+
+                for (int i = 0; i < cursorCount; i++) {
+                    long itemId = c.getLong(
+                            c.getColumnIndexOrThrow(ActionGroup.SQL._ID)
+                    );
+                    System.out.println("DB Query Result " + i + " = " +
+                                    itemId + ", " +
+                                    c.getString(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_PRIORITY)) + ", " +
+                                    c.getString(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_WORD))
+                    );
+
+                    System.out.print("HashMap regenerated --> ");
+                    ActionMacro.print_hashmap(ActionMultiWord.parse_element_id_count_tag(c.getString(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_ELEMENT_ID_TAG))));
+
+                    values.put(ActionGroup.SQL.COLUMN_NAME_WORD, c.getString(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_WORD)));
+                    values.put(ActionGroup.SQL.COLUMN_NAME_PRIORITY, c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_PRIORITY));
+                    values.put(ActionGroup.SQL._ID, itemId);
+                    values.put(ActionGroup.SQL.COLUMN_NAME_PICTURE, c.getString(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_PICTURE)));
+                    values.put(ActionGroup.SQL.COLUMN_NAME_PICTURE_IS_PRESET, c.getInt(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_PICTURE_IS_PRESET)));
+
+                    addMenuWithCheckBox(
+                            new ActionGroup.Button(context, new ActionGroupOCCWrapper(context, AACGroupContainer.this), AACGroupContainer.this),
+                            values);
+
+                    values.clear();
+                    c.moveToNext();
+                }
+
+                ActionWord actionWord = (ActionWord)actionMain.itemChain[ActionMain.item.ID_Word];
+                HashMap<Long, QueryWordInfo> group_qwi_map = actionWord.convert_id_map_to_qwi_map(group_id_map);
+                final Vector<HashMap<Long, Double>> rank_vector =
+                        actionMain.allocEvaluation().evaluate_by_query_map(
+                                group_qwi_map,
+                                ActionItem.SQL.COLUMN_NAME_PARENT_ID + "=" + current_group_ID,
+                                null);
+
+                Collections.sort(
+                        item_list,
+                        new Comparator<View>() {
+                            @Override
+                            public int compare(View lhs, View rhs) {
+                                ActionItem.onClickClass lhs_occ = ((ActionItem.Button)lhs.findViewById(R.id.aac_item_button_id)).onClickObj;
+                                ActionItem.onClickClass rhs_occ = ((ActionItem.Button)rhs.findViewById(R.id.aac_item_button_id)).onClickObj;
+
+                                return rank_vector.get(lhs_occ.getItemCategoryID()).get(lhs_occ.getItemID())
+                                        > rank_vector.get(rhs_occ.getItemCategoryID()).get(rhs_occ.getItemID())
+                                        ? -1 : 1;
+                            }
+                        }
+                );
+
+
+                // 마지막으로 상위 그룹에 대한 버튼 형성 (단 최상위 그룹은 패스)
+                if (id != 1) {
+                    c = db.query(
+                            actionMain.itemChain[ActionMain.item.ID_Group].TABLE_NAME, // The table to query
+                            projectionGroup, // The columns to return
+                            ActionGroup.SQL._ID + " = " + parent_group_ID, // The columns for the WHERE clause
+                            null, // The values for the WHERE clause
+                            null, // don't group the rows
+                            null, // don't filter by row groups
+                            sortOrder // The sort order
+                    );
+                    c.moveToFirst();
+
+                    ActionGroup.Button parentGroupButton = new ActionGroup.Button(context, new ActionGroup.onClickClass(context, AACGroupContainer.this), AACGroupContainer.this);
+
+                    System.out.print("HashMap regenerated --> ");
+                    ActionMacro.print_hashmap(ActionMultiWord.parse_element_id_count_tag(c.getString(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_ELEMENT_ID_TAG))));
+
+                    values.put(ActionGroup.SQL.COLUMN_NAME_WORD, c.getString(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_WORD)));
+                    values.put(ActionGroup.SQL.COLUMN_NAME_PRIORITY, c.getLong(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_PRIORITY)));
+                    values.put(ActionGroup.SQL._ID, parent_group_ID);
+                    values.put(ActionGroup.SQL.COLUMN_NAME_PICTURE, c.getString(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_PICTURE)));
+                    values.put(ActionGroup.SQL.COLUMN_NAME_PICTURE_IS_PRESET, c.getInt(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_PICTURE_IS_PRESET)));
+
+                    addMenuWithoutCheckBox(parentGroupButton, values);
+
+                    parentGroupButton.setText("상위그룹 " + c.getString(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_WORD)));
+
+                    values.clear();
+                    c.close();
+                }
+
+        /* DB 쿼리 파트 끝 */
+
+                setFoldAnimation();
+                activity.runOnUiThread(new explore_group_ui());
+
+                read_lock.unlock();
+            }
         }
-
-
-
-//        Collections.sort(contentList, new ActionItem.Button.itemComparator()); // 정렬된 두 리스트의 병합 알고리즘은 내가 짜야 할지도?
-
-        for (View btn : contentList) {
-            menuLayout.addView(btn);
-        }
-
-        setFoldAnimation();
     }
+
+
+//    public void explore_group(long id) {
+//        long old_current_group_ID = current_group_ID;
+//        current_group_ID = id;
+//
+//        for (View item : item_list) menuLayout.removeView(item);
+//        item_list.clear();
+//        checkBoxes.clear();
+//        selectedList.clear();
+////        feedbackHelper.send_feedback();
+//        rootGroupElement.ids.clear();
+//        rootGroupElement.words.clear();
+//
+//        isFolded = false;
+//
+//        SQLiteDatabase db = actionMain.getDB();
+//        Cursor c;
+//        String groupName;
+//        long parentGroupID;
+//        long cursorCount;
+//        ContentValues values = new ContentValues();
+//
+//        // 그룹 이름 가져오기
+//        c = db.query(
+//                actionMain.itemChain[ActionMain.item.ID_Group].TABLE_NAME,
+//                new String[] {
+//                        ActionGroup.SQL.COLUMN_NAME_WORD,
+//                        ActionGroup.SQL.COLUMN_NAME_PARENT_ID,
+//                        ActionGroup.SQL.COLUMN_NAME_PICTURE,
+//                        ActionGroup.SQL.COLUMN_NAME_PICTURE_IS_PRESET,
+//                        ActionGroup.SQL.COLUMN_NAME_ELEMENT_ID_TAG
+//                },
+//                ActionGroup.SQL._ID + " = ?",
+//                new String[] {Long.toString(id)},
+//                null,
+//                null,
+//                null
+//        );
+//        c.moveToFirst();
+//        groupName = c.getString(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_WORD));
+//        parentGroupID = c.getLong(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_PARENT_ID));
+//        HashMap<Long, Long> group_id_map = ActionMultiWord.parse_element_id_count_tag(c.getString(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_ELEMENT_ID_TAG)));
+//        c.close();
+//
+//        if (old_current_group_ID != current_group_ID) {
+//            HashMap<Long, QueryWordInfoRaw> qwir_map = new HashMap<>(group_id_map.size());
+//            for (Map.Entry<Long, Long> e : group_id_map.entrySet()) {
+//                QueryWordInfoRaw qwir = new QueryWordInfoRaw(e.getValue(), 1);
+//                qwir_map.put(e.getKey(), qwir);
+//            }
+//            feedbackHelper.set_query_id_map(qwir_map);
+//        }
+//
+//        // 그룹 제목 출력
+//        titleView.setText(groupName + " 그룹");
+//
+//        // 쿼리 옵션 설정
+//        String[] projection = {
+//                ActionWord.SQL._ID,
+//                ActionWord.SQL.COLUMN_NAME_PRIORITY,
+//                ActionWord.SQL.COLUMN_NAME_WORD,
+//                ActionWord.SQL.COLUMN_NAME_PICTURE,
+//                ActionWord.SQL.COLUMN_NAME_PICTURE_IS_PRESET
+//        };
+//        String sortOrder =
+//                ActionWord.SQL.COLUMN_NAME_PRIORITY + " DESC";
+//        String queryClause = ActionItem.SQL.COLUMN_NAME_PARENT_ID  + " = " + id; // 검색 조건
+//
+//        // 워드 쿼리
+//        c = db.query(
+//                actionMain.itemChain[ActionMain.item.ID_Word].TABLE_NAME, // The table to query
+//                projection, // The columns to return
+//                queryClause, // The columns for the WHERE clause
+//                null, // The values for the WHERE clause
+//                null, // don't group the rows
+//                null, // don't filter by row groups
+//                sortOrder // The sort order
+//        );
+//        c.moveToFirst();
+//
+//        cursorCount = c.getCount();
+//
+//        // 최상위 그룹의 이름에 사용되는 단어 파악
+//        Cursor rName_c = db.query(
+//                actionMain.itemChain[ActionMain.item.ID_Group].TABLE_NAME,
+//                new String[] {ActionGroup.SQL.COLUMN_NAME_WORDCHAIN},
+//                ActionItem.SQL._ID + "=" + 1,
+//                null,
+//                null,
+//                null,
+//                null
+//        );
+//        rName_c.moveToFirst();
+//        ((ActionGroup)actionMain.itemChain[ActionMain.item.ID_Group]).parseWordChain(
+//                rName_c.getString(rName_c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_WORDCHAIN)),
+//                new ActionMultiWord.onParseCommand() {
+//                    @Override
+//                    public void onParse(long itemID) {
+//                        rootGroupElement.ids.add(itemID);
+//
+//                        Cursor c = actionMain.getDB().query(
+//                                actionMain.itemChain[ActionMain.item.ID_Word].TABLE_NAME,
+//                                new String[]{ActionWord.SQL.COLUMN_NAME_WORD},
+//                                ActionWord.SQL._ID + "=" + itemID,
+//                                null,
+//                                null,
+//                                null,
+//                                null
+//                        );
+//                        c.moveToFirst();
+//                        rootGroupElement.words.add(c.getString(c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_WORD)));
+//
+//                        c.close();
+//                    }
+//                });
+//        rName_c.close();
+//
+//
+//        for (int i = 0; i < cursorCount; i++) {
+//            int itemId = c.getInt(
+//                    c.getColumnIndexOrThrow(ActionWord.SQL._ID)
+//            );
+//
+//            values.put(ActionItem.SQL._ID, itemId);
+//            values.put(ActionWord.SQL.COLUMN_NAME_WORD, c.getString(c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_WORD)));
+//            values.put(ActionWord.SQL.COLUMN_NAME_PRIORITY, c.getLong(c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_PRIORITY)));
+//            values.put(ActionWord.SQL.COLUMN_NAME_PICTURE, c.getString(c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_PICTURE)));
+//            values.put(ActionWord.SQL.COLUMN_NAME_PICTURE_IS_PRESET, c.getInt(c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_PICTURE_IS_PRESET)));
+//
+//            addMenuWithCheckBox(
+//                    new ActionWord.Button(context, new ActionWordOCCWrapper(context, this), this),
+////                    new ActionWord.Button(context, new ActionWord.onClickClass(context, this), this),
+//                    values
+//            );
+//
+//            values.clear();
+//            c.moveToNext();
+//        }
+//
+//
+//        // 매크로 쿼리
+//        String[] projectionMacro = {
+//                ActionMacro.SQL._ID,
+//                ActionMacro.SQL.COLUMN_NAME_PRIORITY,
+//                ActionMacro.SQL.COLUMN_NAME_WORD,
+//                ActionMacro.SQL.COLUMN_NAME_WORDCHAIN,
+//                ActionMacro.SQL.COLUMN_NAME_PICTURE,
+//                ActionMacro.SQL.COLUMN_NAME_PICTURE_IS_PRESET,
+//                ActionMacro.SQL.COLUMN_NAME_ELEMENT_ID_TAG
+//        };
+//
+//        c = db.query(
+//                actionMain.itemChain[ActionMain.item.ID_Macro].TABLE_NAME, // The table to query
+//                projectionMacro, // The columns to return
+//                queryClause, // The columns for the WHERE clause
+//                null, // The values for the WHERE clause
+//                null, // don't group the rows
+//                null, // don't filter by row groups
+//                sortOrder // The sort order
+//        );
+//        c.moveToFirst();
+//
+//        // 매크로 쿼리 처리
+//        cursorCount = c.getCount();
+//
+//        System.out.println("*** ActionMacro Querying ***");
+//        for (int i = 0; i < cursorCount; i++) {
+//            long itemId = c.getLong(
+//                    c.getColumnIndexOrThrow(ActionMacro.SQL._ID)
+//            );
+//            System.out.println("No. " + i + " : " +
+//                            "Word \"" + c.getString(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_WORD)) + "\", " +
+//                            "ID=" + itemId + ", " +
+//                            "Priority=" + c.getString(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_PRIORITY))
+//            );
+//
+//            System.out.print("HashMap regenerated --> ");
+//            ActionMacro.print_hashmap(ActionMultiWord.parse_element_id_count_tag(c.getString(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_ELEMENT_ID_TAG))));
+//
+//            values.put(ActionItem.SQL._ID, itemId);
+//            values.put(ActionMacro.SQL.COLUMN_NAME_WORD, c.getString(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_WORD)));
+//            values.put(ActionMacro.SQL.COLUMN_NAME_WORDCHAIN, c.getString(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_WORDCHAIN)));
+//            values.put(ActionMacro.SQL.COLUMN_NAME_PRIORITY, c.getLong(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_PRIORITY)));
+//            values.put(ActionMacro.SQL.COLUMN_NAME_PICTURE, c.getString(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_PICTURE)));
+//            values.put(ActionMacro.SQL.COLUMN_NAME_PICTURE_IS_PRESET, c.getInt(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_PICTURE_IS_PRESET)));
+//
+//            addMenuWithCheckBox(
+//                    new ActionMacro.Button(context, new ActionMacroOCCWrapper(context, this), this),
+////                    new ActionMacro.Button(context, new ActionMacro.onClickClass(context, this), this),
+//                    values);
+//
+//            values.clear();
+//            c.moveToNext();
+//        }
+//        System.out.println("*** ActionMacro Query Complete ***");
+//
+//
+//        // 그룹 쿼리
+//
+//        String[] projectionGroup = {
+//                ActionMacro.SQL._ID,
+//                ActionMacro.SQL.COLUMN_NAME_PRIORITY,
+//                ActionMacro.SQL.COLUMN_NAME_WORD,
+//                ActionMacro.SQL.COLUMN_NAME_WORDCHAIN,
+//                ActionMacro.SQL.COLUMN_NAME_PICTURE,
+//                ActionMacro.SQL.COLUMN_NAME_PICTURE_IS_PRESET,
+//                ActionMacro.SQL.COLUMN_NAME_ELEMENT_ID_TAG
+//        };
+//
+//        String queryClauseGroup =
+//                ActionGroup.SQL.COLUMN_NAME_PARENT_ID  + " = " + id +
+//                " AND " + ActionGroup.SQL._ID + " != " + id
+//                ; // 검색 조건
+//        c = db.query(
+//                actionMain.itemChain[ActionMain.item.ID_Group].TABLE_NAME, // The table to query
+//                projectionGroup, // The columns to return
+//                queryClauseGroup, // The columns for the WHERE clause
+//                null, // The values for the WHERE clause
+//                null, // don't group the rows
+//                null, // don't filter by row groups
+//                sortOrder // The sort order
+//        );
+//        c.moveToFirst();
+//
+//        // 그룹 쿼리 처리
+//        cursorCount = c.getCount();
+//
+//        for (int i = 0; i < cursorCount; i++) {
+//            long itemId = c.getLong(
+//                    c.getColumnIndexOrThrow(ActionGroup.SQL._ID)
+//            );
+//            System.out.println("DB Query Result " + i + " = " +
+//                            itemId + ", " +
+//                            c.getString(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_PRIORITY)) + ", " +
+//                            c.getString(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_WORD))
+//            );
+//
+//            System.out.print("HashMap regenerated --> ");
+//            ActionMacro.print_hashmap(ActionMultiWord.parse_element_id_count_tag(c.getString(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_ELEMENT_ID_TAG))));
+//
+//            values.put(ActionGroup.SQL.COLUMN_NAME_WORD, c.getString(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_WORD)));
+//            values.put(ActionGroup.SQL.COLUMN_NAME_PRIORITY, c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_PRIORITY));
+//            values.put(ActionGroup.SQL._ID, itemId);
+//            values.put(ActionGroup.SQL.COLUMN_NAME_PICTURE, c.getString(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_PICTURE)));
+//            values.put(ActionGroup.SQL.COLUMN_NAME_PICTURE_IS_PRESET, c.getInt(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_PICTURE_IS_PRESET)));
+//
+//            addMenuWithCheckBox(
+//                    new ActionGroup.Button(context, new ActionGroupOCCWrapper(context, this), this),
+////                    new ActionGroup.Button(context, new ActionGroup.onClickClass(context, this), this),
+//                    values);
+//
+//            values.clear();
+//            c.moveToNext();
+//        }
+//
+//
+//        ActionWord actionWord = (ActionWord)actionMain.itemChain[ActionMain.item.ID_Word];
+//        HashMap<Long, QueryWordInfo> group_qwi_map = actionWord.convert_id_map_to_qwi_map(group_id_map);
+//        final Vector<HashMap<Long, Double>> rank_vector =
+//                actionMain.allocEvaluation().evaluate_by_query_map(
+//                        group_qwi_map,
+//                        ActionItem.SQL.COLUMN_NAME_PARENT_ID + "=" + current_group_ID,
+//                        null);
+//
+//
+//        Collections.sort(
+//                item_list,
+//                new Comparator<View>() {
+//                    @Override
+//                    public int compare(View lhs, View rhs) {
+//                        ActionItem.onClickClass lhs_occ = ((ActionItem.Button)lhs.findViewById(R.id.aac_item_button_id)).onClickObj;
+//                        ActionItem.onClickClass rhs_occ = ((ActionItem.Button)rhs.findViewById(R.id.aac_item_button_id)).onClickObj;
+//
+//                        return rank_vector.get(lhs_occ.getItemCategoryID()).get(lhs_occ.getItemID())
+//                                > rank_vector.get(rhs_occ.getItemCategoryID()).get(rhs_occ.getItemID())
+//                                ? -1 : 1;
+//                    }
+//                }
+//        );
+//
+//
+//        // 마지막으로 상위 그룹에 대한 버튼 형성 (단 최상위 그룹은 패스)
+//        if (id != 1) {
+//            c = db.query(
+//                    actionMain.itemChain[ActionMain.item.ID_Group].TABLE_NAME, // The table to query
+//                    projectionGroup, // The columns to return
+//                    ActionGroup.SQL._ID + " = " + parentGroupID, // The columns for the WHERE clause
+//                    null, // The values for the WHERE clause
+//                    null, // don't group the rows
+//                    null, // don't filter by row groups
+//                    sortOrder // The sort order
+//            );
+//            c.moveToFirst();
+//
+////            ActionGroup.Button parentGroupButton = new ActionGroup.Button(context, new ActionGroupOCCWrapper(context, this), this);
+//            ActionGroup.Button parentGroupButton = new ActionGroup.Button(context, new ActionGroup.onClickClass(context, this), this);
+//
+//            System.out.print("HashMap regenerated --> ");
+//            ActionMacro.print_hashmap(ActionMultiWord.parse_element_id_count_tag(c.getString(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_ELEMENT_ID_TAG))));
+//
+//            values.put(ActionGroup.SQL.COLUMN_NAME_WORD, c.getString(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_WORD)));
+//            values.put(ActionGroup.SQL.COLUMN_NAME_PRIORITY, c.getLong(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_PRIORITY)));
+//            values.put(ActionGroup.SQL._ID, parentGroupID);
+//            values.put(ActionGroup.SQL.COLUMN_NAME_PICTURE, c.getString(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_PICTURE)));
+//            values.put(ActionGroup.SQL.COLUMN_NAME_PICTURE_IS_PRESET, c.getInt(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_PICTURE_IS_PRESET)));
+//
+//            addMenuWithoutCheckBox(parentGroupButton, values);
+//
+//            parentGroupButton.setText("상위그룹 " + c.getString(c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_WORD)));
+//
+//            values.clear();
+//            c.close();
+//        }
+//
+//
+//
+////        Collections.sort(item_list, new ActionItem.Button.itemComparator()); // 정렬된 두 리스트의 병합 알고리즘은 내가 짜야 할지도?
+//
+//        for (View btn : item_list) {
+//            menuLayout.addView(btn);
+//        }
+//
+//        setFoldAnimation();
+//    }
 
     void addMenuWithCheckBox(ActionItem.Button btn, ContentValues values) {
         btn.init(values);
@@ -434,7 +800,7 @@ public class AACGroupContainer {
         });
 
         checkBoxes.add(checkBox);
-        contentList.add(item_layout);
+        item_list.add(item_layout);
     }
 
     void addMenuWithoutCheckBox(ActionItem.Button btn, ContentValues values) {
@@ -449,11 +815,11 @@ public class AACGroupContainer {
         checkBox.setVisibility(View.INVISIBLE);
         checkBox.setEnabled(false);
 
-        contentList.add(item_layout);
+        item_list.add(item_layout);
     }
 
     public long getCurrentGroupID() {
-        return currentGroupID;
+        return current_group_ID;
     }
 
     class TTSListener implements TextToSpeech.OnInitListener {
@@ -462,17 +828,32 @@ public class AACGroupContainer {
 
     public TextToSpeech getTTS() { return TTS; }
 
+    // 작업 중.
     public void onDestroy() {
         TTS.shutdown();
-        feedbackHelper.send_feedback();
+        write_lock.lock();
+        ConcurrentLibrary.run_off_ui_thread(
+                activity,
+                new Runnable() {
+                    @Override
+                    public void run() {
+                        feedbackHelper.send_feedback();
+                    }
+                },
+                null
+        );
+        write_lock.unlock();
     }
 
-    public void refresh() { explore_group(currentGroupID); }
+    public void refresh() {
+//        explore_group(current_group_ID);
+        explore_group_MT(current_group_ID, null);
+    }
 
     public void setFoldAnimation() {
         isFolded = false;
 
-        int listSize = contentList.size();
+        int listSize = item_list.size();
 
         if (listSize <= 0) return;
 
@@ -482,7 +863,7 @@ public class AACGroupContainer {
 //        Path p = new Path();
 //        p.moveTo(1f, 1f);
 //        p.lineTo(0f, 0f);
-        for (View v : contentList) {
+        for (View v : item_list) {
             CheckBox cbox = (CheckBox)v.findViewById(R.id.aac_item_checkbox);
             list[listPos] = new AnimatorSet();
             list[listPos].playTogether(
@@ -522,7 +903,7 @@ public class AACGroupContainer {
 //        p.reset();
 //        p.moveTo(0f, 0f);
 //        p.lineTo(1f, 1f);
-        for (View v : contentList) {
+        for (View v : item_list) {
             CheckBox cbox = (CheckBox)v.findViewById(R.id.aac_item_checkbox);
             list[listPos] = new AnimatorSet();
             list[listPos].playTogether(
@@ -558,7 +939,7 @@ public class AACGroupContainer {
         });
 
         // Setting default folded status
-        for (View v : contentList) {
+        for (View v : item_list) {
             CheckBox cbox = (CheckBox)v.findViewById(R.id.aac_item_checkbox);
 
             cbox.setVisibility(View.INVISIBLE);
@@ -576,13 +957,13 @@ public class AACGroupContainer {
             if (isFolded) {
                 checkbox_appearing_animation_reverse.start();
 
-                for (View v : contentList) {
+                for (View v : item_list) {
                     ActionItem.Button btn = (ActionItem.Button)v.findViewById(R.id.aac_item_button_id);
                     btn.onClickObj.toogleOnline();
                 }
             }
             else {
-                for (View v : contentList) {
+                for (View v : item_list) {
                     ActionItem.Button btn = (ActionItem.Button)v.findViewById(R.id.aac_item_button_id);
                     btn.onClickObj.toogleOnline();
                 }
@@ -594,7 +975,7 @@ public class AACGroupContainer {
     }
 
     public void selectAll() {
-        for (View v : contentList) {
+        for (View v : item_list) {
             CheckBox cbox = ((CheckBox)v.findViewById(R.id.aac_item_checkbox));
             if (!cbox.isEnabled() || cbox.isChecked()) continue;
             selectedList.add(v);
@@ -612,28 +993,66 @@ public class AACGroupContainer {
         selectedList.clear();
     }
 
-    // 단순한 아이템 삭제가 이렇게 길어질 줄 누가 알았으랴...
-    public void removeSelected() {
-        if (selectedList.size() == 0) return;
-
-        removalListBundle.clear();
-
-        for (View v : selectedList)
-            removalListBundle.addByOCC(((ActionItem.Button) v.findViewById(R.id.aac_item_button_id)).onClickObj);
-        removalListBundle.printList();
-
-        // 만일 의존성 검사에서 문제 발생 시 유저의 확인을 받음 (문제가 없으면 확인 없이 바로 삭제)
-        if (!removalListBundle.checkNoDependencyLeft()) {
-            removalListBundle.printMissingDependencyList();
-            ((MainActivity) context).confirmDependency();
-        }
-        else invokeRemoval();
+    public void remove_selected_MT(Runnable after) {
+//        run_off_ui_thread(activity, new remove_selected_runnable());
+        ConcurrentLibrary.run_off_ui_thread(activity, new remove_selected_runnable(), after);
     }
+
+    // 단순한 아이템 삭제가 이렇게 길어질 줄 누가 알았으랴...
+    // TODO: 디버깅 중.
+    public class remove_selected_runnable implements Runnable {
+        @Override
+        public void run() {
+            write_lock.lock();
+            if (selectedList.size() == 0) {
+                write_lock.unlock();
+                return;
+            }
+
+            removalListBundle.clear();
+
+            for (View v : selectedList)
+                removalListBundle.addByOCC(((ActionItem.Button) v.findViewById(R.id.aac_item_button_id)).onClickObj);
+            removalListBundle.printList();
+
+            // 만일 의존성 검사에서 문제 발생 시 유저의 확인을 받음 (문제가 없으면 확인 없이 바로 삭제)
+            if (!removalListBundle.checkNoDependencyLeft()) {
+                removalListBundle.printMissingDependencyList();
+                ((MainActivity) context).confirmDependency();
+            }
+            else invokeRemoval();
+            write_lock.unlock();
+        }
+    }
+
+
+//    // 단순한 아이템 삭제가 이렇게 길어질 줄 누가 알았으랴...
+//    public void removeSelected() {
+//        write_lock.lock();
+//        if (selectedList.size() == 0) return;
+//
+//        removalListBundle.clear();
+//
+//        for (View v : selectedList)
+//            removalListBundle.addByOCC(((ActionItem.Button) v.findViewById(R.id.aac_item_button_id)).onClickObj);
+//        removalListBundle.printList();
+//
+//        // 만일 의존성 검사에서 문제 발생 시 유저의 확인을 받음 (문제가 없으면 확인 없이 바로 삭제)
+//        if (!removalListBundle.checkNoDependencyLeft()) {
+//            removalListBundle.printMissingDependencyList();
+//            ((MainActivity) context).confirmDependency();
+//        }
+//        else invokeRemoval();
+//        write_lock.unlock();
+//    }
 
     // 아이템 삭제 명령 수행
     public void invokeRemoval() {
+        write_lock.lock();
         removalListBundle.execRemoval();
-        explore_group(currentGroupID);
+//        explore_group(current_group_ID);
+        explore_group_MT(current_group_ID, null);
+        write_lock.unlock();
     }
 
     protected class RemovalListBundle {
@@ -704,6 +1123,7 @@ public class AACGroupContainer {
         }
 
         public void execRemoval() {
+            write_lock.lock();
             int cat_id;
 
             // 선택 리스트에는 없으나 삭제 대상에 의존성을 가지는 아이템들을 모두 삭제 대상 리스트에 포함
@@ -723,6 +1143,7 @@ public class AACGroupContainer {
                 i.clear();
                 cat_id++;
             }
+            write_lock.unlock();
         }
 
         public void clear() {
@@ -733,39 +1154,87 @@ public class AACGroupContainer {
 
     public String getUserImagePathPrefix() { return userImageDirectoryPathPrefix; }
 
-    // 선택된 항목들의 이미지를 지정한 것으로 바꿈.
-    public int setImageForSelected(ContentValues values) {
-        Vector<ArrayList<Long>> id_Vector = new Vector<>(ActionMain.item.ITEM_COUNT);
-        ActionMain actionMain = ActionMain.getInstance();
+    public void set_image_for_selected_MT(ContentValues values, Runnable after) { // TODO: fire and forget이 아님.
+        ConcurrentLibrary.run_off_ui_thread(activity, new set_image_for_selected_runnable(values), after);
+    }
 
-        // 각 분류별 리스트를 가지는 백터 객체 생성
-        for (int i = 0; i < ActionMain.item.ITEM_COUNT; i++) id_Vector.add(new ArrayList<Long>());
-
-        // 선택된 리스트의 각 객체별로 OCC 객체에서 아이템의 분류 ID와 각 레코드 ID를 추출해 넣음.
-        for (View v : selectedList) {
-            ActionItem.onClickClass occ = ((ActionItem.Button)v.findViewById(R.id.aac_item_button_id)).onClickObj;
-            System.out.println("OCC CatID = " + occ.itemCategoryID);
-            id_Vector.get(occ.itemCategoryID).add(occ.itemID);
+    protected class set_image_for_selected_runnable implements Runnable {
+        private ContentValues values;
+        public set_image_for_selected_runnable(ContentValues values) {
+            this.values = values;
         }
 
-        // 각 분류 단위로 지정된 이미지를 쓰도록 DB 업데이트
-        int i = 0;
-        for (ArrayList<Long> list : id_Vector) {
-            if (list.size() == 0) {
-                i++;
-                continue;
+        @Override
+        public void run() {
+            write_lock.lock();
+            Vector<ArrayList<Long>> id_Vector = new Vector<>(ActionMain.item.ITEM_COUNT);
+            ActionMain actionMain = ActionMain.getInstance();
+
+            // 각 분류별 리스트를 가지는 백터 객체 생성
+            for (int i = 0; i < ActionMain.item.ITEM_COUNT; i++) id_Vector.add(new ArrayList<Long>());
+
+            // 선택된 리스트의 각 객체별로 OCC 객체에서 아이템의 분류 ID와 각 레코드 ID를 추출해 넣음.
+            for (View v : selectedList) {
+                ActionItem.onClickClass occ = ((ActionItem.Button)v.findViewById(R.id.aac_item_button_id)).onClickObj;
+                System.out.println("OCC CatID = " + occ.itemCategoryID);
+                id_Vector.get(occ.itemCategoryID).add(occ.itemID);
             }
 
-            long[] id_ary = new long[list.size()];
-            int j = 0;
+            // 각 분류 단위로 지정된 이미지를 쓰도록 DB 업데이트
+            int i = 0;
+            for (ArrayList<Long> list : id_Vector) {
+                if (list.size() == 0) {
+                    i++;
+                    continue;
+                }
 
-            for (long k : list) id_ary[j++] = k;
+                long[] id_ary = new long[list.size()];
+                int j = 0;
 
-            actionMain.itemChain[i++].updateWithIDs(context, values, id_ary);
+                for (long k : list) id_ary[j++] = k;
+
+                actionMain.itemChain[i++].updateWithIDs(context, values, id_ary);
+            }
+
+            write_lock.unlock();
         }
-
-        return 0;
     }
+
+//    // 선택된 항목들의 이미지를 지정한 것으로 바꿈.
+//    public int setImageForSelected(ContentValues values) {
+//        write_lock.lock();
+//        Vector<ArrayList<Long>> id_Vector = new Vector<>(ActionMain.item.ITEM_COUNT);
+//        ActionMain actionMain = ActionMain.getInstance();
+//
+//        // 각 분류별 리스트를 가지는 백터 객체 생성
+//        for (int i = 0; i < ActionMain.item.ITEM_COUNT; i++) id_Vector.add(new ArrayList<Long>());
+//
+//        // 선택된 리스트의 각 객체별로 OCC 객체에서 아이템의 분류 ID와 각 레코드 ID를 추출해 넣음.
+//        for (View v : selectedList) {
+//            ActionItem.onClickClass occ = ((ActionItem.Button)v.findViewById(R.id.aac_item_button_id)).onClickObj;
+//            System.out.println("OCC CatID = " + occ.itemCategoryID);
+//            id_Vector.get(occ.itemCategoryID).add(occ.itemID);
+//        }
+//
+//        // 각 분류 단위로 지정된 이미지를 쓰도록 DB 업데이트
+//        int i = 0;
+//        for (ArrayList<Long> list : id_Vector) {
+//            if (list.size() == 0) {
+//                i++;
+//                continue;
+//            }
+//
+//            long[] id_ary = new long[list.size()];
+//            int j = 0;
+//
+//            for (long k : list) id_ary[j++] = k;
+//
+//            actionMain.itemChain[i++].updateWithIDs(context, values, id_ary);
+//        }
+//
+//        write_lock.unlock();
+//        return 0;
+//    }
 
     protected class GroupElement {
         ArrayList<Long> ids;
@@ -787,7 +1256,7 @@ public class AACGroupContainer {
     @SuppressWarnings("UnnecessaryReturnStatement")
     public void setMode(int mode) {
         if (mode == MODE_RENAMING) {
-            for (View v : contentList) {
+            for (View v : item_list) {
                 ActionItem.Button btn =  (ActionItem.Button)v.findViewById(R.id.aac_item_button_id);
                 final ActionItem.onClickClass occ = btn.onClickObj;
 
@@ -809,7 +1278,7 @@ public class AACGroupContainer {
         }
 
         if (mode == MODE_NORMAL) {
-            for (View v : contentList) {
+            for (View v : item_list) {
                 ActionItem.Button btn = (ActionItem.Button)v.findViewById(R.id.aac_item_button_id);
 
                 // 루트 그룹만 특별 처리.
@@ -824,35 +1293,87 @@ public class AACGroupContainer {
         }
     }
 
-    public void moveSelected(long new_parent_id) {
-        if (currentGroupID == new_parent_id) return;
+    public void move_selected_runnable_MT(long new_parent_id, Runnable after) { // TODO: fire and forget이 아님.
+        ConcurrentLibrary.run_off_ui_thread(activity, new move_selected_runnable(new_parent_id), after);
+    }
 
-        Vector<ArrayList<Long>> itemVector = new Vector<>(ActionMain.item.ITEM_COUNT);
-        for (int i = 0; i < ActionMain.item.ITEM_COUNT; i++) itemVector.add(new ArrayList<Long>());
-
-        for (View v : selectedList) {
-            ActionItem.onClickClass occ = ((ActionItem.Button)v.findViewById(R.id.aac_item_button_id)).onClickObj;
-            itemVector.get(occ.getItemCategoryID()).add(occ.getItemID());
+    protected class move_selected_runnable implements Runnable {
+        long new_parent_id;
+        public move_selected_runnable(long new_parent_id) {
+            this.new_parent_id = new_parent_id;
         }
 
-        ContentValues values = new ContentValues();
-        values.put(ActionItem.SQL.COLUMN_NAME_PARENT_ID, new_parent_id);
-
-        int cat_id = 0;
-        for (ArrayList<Long> list : itemVector) {
-            if (list.isEmpty()) continue;
-
-            long[] array = new long[list.size()];
-            int i = 0;
-            for (long l : list) {
-                array[i] = l;
-                i++;
+        @Override
+        public void run() {
+            write_lock.lock();
+            if (current_group_ID == new_parent_id) {
+                write_lock.unlock();
+                return;
             }
-            actionMain.itemChain[cat_id].updateWithIDs(context, values, array);
 
-            cat_id++;
+            Vector<ArrayList<Long>> itemVector = new Vector<>(ActionMain.item.ITEM_COUNT);
+            for (int i = 0; i < ActionMain.item.ITEM_COUNT; i++) itemVector.add(new ArrayList<Long>());
+
+            for (View v : selectedList) {
+                ActionItem.onClickClass occ = ((ActionItem.Button)v.findViewById(R.id.aac_item_button_id)).onClickObj;
+                itemVector.get(occ.getItemCategoryID()).add(occ.getItemID());
+            }
+
+            ContentValues values = new ContentValues();
+            values.put(ActionItem.SQL.COLUMN_NAME_PARENT_ID, new_parent_id);
+
+            int cat_id = 0;
+            for (ArrayList<Long> list : itemVector) {
+                if (list.isEmpty()) continue;
+
+                long[] array = new long[list.size()];
+                int i = 0;
+                for (long l : list) {
+                    array[i] = l;
+                    i++;
+                }
+                actionMain.itemChain[cat_id].updateWithIDs(context, values, array);
+
+                cat_id++;
+            }
+            write_lock.unlock();
         }
     }
+
+//    public void moveSelected(long new_parent_id) {
+//        write_lock.lock();
+//        if (current_group_ID == new_parent_id) {
+//            write_lock.unlock();
+//            return;
+//        }
+//
+//        Vector<ArrayList<Long>> itemVector = new Vector<>(ActionMain.item.ITEM_COUNT);
+//        for (int i = 0; i < ActionMain.item.ITEM_COUNT; i++) itemVector.add(new ArrayList<Long>());
+//
+//        for (View v : selectedList) {
+//            ActionItem.onClickClass occ = ((ActionItem.Button)v.findViewById(R.id.aac_item_button_id)).onClickObj;
+//            itemVector.get(occ.getItemCategoryID()).add(occ.getItemID());
+//        }
+//
+//        ContentValues values = new ContentValues();
+//        values.put(ActionItem.SQL.COLUMN_NAME_PARENT_ID, new_parent_id);
+//
+//        int cat_id = 0;
+//        for (ArrayList<Long> list : itemVector) {
+//            if (list.isEmpty()) continue;
+//
+//            long[] array = new long[list.size()];
+//            int i = 0;
+//            for (long l : list) {
+//                array[i] = l;
+//                i++;
+//            }
+//            actionMain.itemChain[cat_id].updateWithIDs(context, values, array);
+//
+//            cat_id++;
+//        }
+//        write_lock.unlock();
+//    }
 
     public ArrayList<Long> getSelectedGroups() {
         ArrayList<Long> list  = new ArrayList<>();
@@ -897,7 +1418,7 @@ public class AACGroupContainer {
         @Override
         public void onClick(View v) {
             add_feedback_info(this, v);
-            feedbackHelper.send_feedback();
+            feedbackHelper.send_feedback(); // TODO: 작업 중.
             super.onClick(v);
         }
     }
@@ -905,6 +1426,18 @@ public class AACGroupContainer {
     protected void add_feedback_info(ActionItem.onClickClass occ, View v) {
         SearchImplicitFeedback.ItemIDInfo idInfo = new SearchImplicitFeedback.ItemIDInfo(occ.getItemCategoryID(), occ.getItemID());
         View item_layout = (View)v.getParent();
-        feedbackHelper.add_rel(idInfo, contentList.indexOf(item_layout));
+        feedbackHelper.add_rel(idInfo, item_list.indexOf(item_layout));
     }
+
+    protected class explore_group_ui implements Runnable {
+        @Override
+        public void run() {
+            for (View item : old_item_list) menuLayout.removeView(item);
+            titleView.setText(parent_group_name + " 그룹");
+            for (View btn : item_list) {
+                menuLayout.addView(btn);
+            }
+        }
+    }
+
 }

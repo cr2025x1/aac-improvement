@@ -267,7 +267,7 @@ public abstract class ActionItem implements Serializable {
         else System.out.println("*** No image file is exclusive ***");
 
         c.close();
-        write_lock.lock();
+        write_lock.unlock();
         return count;
     }
 
@@ -280,7 +280,6 @@ public abstract class ActionItem implements Serializable {
 
         removeExclusiveImage(context, SQL._ID + "=" + id);
 
-        ActionMain actionMain = ActionMain.getInstance();
         actionMain.getDB().delete(
                 TABLE_NAME,
                 SQL._ID + " = " + id,

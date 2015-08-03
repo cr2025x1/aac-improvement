@@ -106,6 +106,7 @@ public class ActionGroup extends ActionMultiWord {
     }
 
     protected void addToRemovalList(Context context, AACGroupContainer.RemovalListBundle listBundle, long id) {
+        read_lock.lock();
         ActionMain actionMain = ActionMain.getInstance();
         SQLiteDatabase db = actionMain.getDB();
         String[] projection = new String[] { ActionItem.SQL._ID };
@@ -141,10 +142,13 @@ public class ActionGroup extends ActionMultiWord {
 
             c.close();
         }
+        read_lock.unlock();
     }
 
     @Override
     protected boolean verifyAndCorrectDependencyRemoval(Context context, AACGroupContainer.RemovalListBundle listBundle) {
+        read_lock.lock();
+
         boolean result = true;
         ActionMain actionMain = ActionMain.getInstance();
         SQLiteDatabase db = actionMain.getDB();
@@ -198,6 +202,8 @@ public class ActionGroup extends ActionMultiWord {
             }
         }
 
+        read_lock.unlock();
+
         return result;
     }
 
@@ -222,6 +228,7 @@ public class ActionGroup extends ActionMultiWord {
             String picture,
             Boolean is_picture_preset
     ) {
+        write_lock.lock();
         HashMap<Long, Long> map = create_element_id_count_map(wordIDs);
 
         ContentValues values = new ContentValues();
@@ -236,6 +243,7 @@ public class ActionGroup extends ActionMultiWord {
         values.put(SQL.COLUMN_NAME_ELEMENT_ID_TAG, create_element_id_count_tag(map));
         values.put(SQL.ATTACHMENT_ID_MAP, map_carrier.attach(map));
 
+        write_lock.unlock();
         return raw_add(values);
     }
 
@@ -266,7 +274,8 @@ public class ActionGroup extends ActionMultiWord {
             if (!isOnline) return;
 
             Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
-            container.explore_group(itemID);
+//            container.explore_group(itemID);
+            container.explore_group_MT(itemID, null);
         }
         public void init(ContentValues values) {
             super.init(values);
@@ -276,6 +285,8 @@ public class ActionGroup extends ActionMultiWord {
 
     @NonNull
     public Vector<ArrayList<Long>> expand_item_vector(long id, @Nullable Vector<ArrayList<Long>> itemVector) {
+        read_lock.lock();
+
         ActionMain actionMain = ActionMain.getInstance();
         SQLiteDatabase db = actionMain.getDB();
 
@@ -302,11 +313,15 @@ public class ActionGroup extends ActionMultiWord {
             c.close();
         }
 
+        read_lock.unlock();
+
         return v;
     }
 
     @NonNull
     public GenericTree<Info> get_sub_tree(long id, @Nullable Collection<Long> blacklist) {
+        read_lock.lock();
+
         ActionMain actionMain = ActionMain.getInstance();
         SQLiteDatabase db = actionMain.getDB();
 
@@ -348,11 +363,16 @@ public class ActionGroup extends ActionMultiWord {
         GenericTreeNode<Info> root = get_sub_tree_node(new Info(id, id_name), blacklist_clause);
         GenericTree<Info> tree = new GenericTree<>();
         tree.setRoot(root);
+
+        read_lock.unlock();
+
         return tree;
     }
 
     @NonNull
     private GenericTreeNode<Info> get_sub_tree_node(Info info, String blacklist_clause) {
+        read_lock.lock();
+
         ActionMain actionMain = ActionMain.getInstance();
         SQLiteDatabase db = actionMain.getDB();
 
@@ -399,6 +419,8 @@ public class ActionGroup extends ActionMultiWord {
         for (Info i : info_list) {
             root.addChild(get_sub_tree_node(i, blacklist_clause));
         }
+
+        read_lock.unlock();
 
         return root;
     }
