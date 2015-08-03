@@ -452,7 +452,6 @@ public class ActionWord extends ActionItem {
 
             for (int i = 0; i < entry_word_cursor.getCount(); i++) {
                 long id = entry_word_cursor.getLong(entry_word_cursor.getColumnIndexOrThrow(SQL._ID));
-                // TODO: 만일 형태소 분석기 추가 시 여기서 분석기의 태그를 제거하도록 해야 한다.
                 String word_frag = entry_word_cursor.getString(entry_word_cursor.getColumnIndexOrThrow(SQL.COLUMN_NAME_STEM));
                 if (!id_ref_map.containsKey(id)) {
                     QueryWordInfo info = new QueryWordInfo(

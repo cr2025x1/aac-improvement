@@ -326,7 +326,6 @@ public final class ActionMain {
     }
 
     // 주어진 문장을 받아 해쉬맵으로 만들어 반환함.
-    // TODO: 형태소 분석기 도입시 반드시 업데이트되어야 할 부분.
     @NonNull public static HashMap<String, Long> reduce_to_map(@NonNull String text) {
         HashMap<String, Long> map = new HashMap<>();
 
@@ -875,7 +874,7 @@ public final class ActionMain {
                 }
 
                 try {
-                    morphemeSocket.close();
+                    morphemeSocket.close(); // TODO: 커넥션 열기/닫기 횟수를 좀 줄여서 최적화?
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -979,6 +978,7 @@ public final class ActionMain {
         boolean is_analyzer_thread = false;
         StackTraceElement[] stacktrace = Thread.currentThread().getStackTrace();
         for (StackTraceElement element : stacktrace) {
+            // 호출 스텍 체크: 만일 호출한 스레드의 스택에 WordRefiner 클래스가 있다면 WordRefiner를 중복해서 활성화하면 안 된다.
             if (element.getClassName().equals(ActionMain.WordRefiner.class.getName())) {
                 is_analyzer_thread = true;
                 break;

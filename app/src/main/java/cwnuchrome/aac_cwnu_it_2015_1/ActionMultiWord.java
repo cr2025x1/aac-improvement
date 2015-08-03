@@ -112,11 +112,9 @@ public abstract class ActionMultiWord extends ActionItem {
         final String OR = " OR ";
         final String LIKE_AND_HEAD = " LIKE '%:";
         final String TAIL = ",%'";
-//        final String TAIL = ":%'";
 
         StringBuilder qBuilder = new StringBuilder("(");
         qBuilder.append(SQL.COLUMN_NAME_ELEMENT_ID_TAG);
-//        qBuilder.append(SQL.COLUMN_NAME_WORDCHAIN); // TODO: 교체 고려 대상
         qBuilder.append(LIKE_AND_HEAD);
         qBuilder.append(id);
         qBuilder.append(TAIL);
@@ -126,7 +124,6 @@ public abstract class ActionMultiWord extends ActionItem {
             id = i.next();
             qBuilder.append(OR);
             qBuilder.append(SQL.COLUMN_NAME_ELEMENT_ID_TAG);
-//            qBuilder.append(SQL.COLUMN_NAME_WORDCHAIN); // TODO: 교체 고려 대상
             qBuilder.append(LIKE_AND_HEAD);
             qBuilder.append(id);
             qBuilder.append(TAIL);
@@ -404,8 +401,6 @@ public abstract class ActionMultiWord extends ActionItem {
                                 new String[]{SQL._ID, SQL.COLUMN_NAME_ELEMENT_ID_TAG},
                                 SQL.COLUMN_NAME_ELEMENT_ID_TAG + " LIKE ? AND (" + eval_map_id_clause + ")",
                                 new String[]{"%:" + id + ",%"},
-//                                SQL.COLUMN_NAME_WORDCHAIN + " LIKE ? AND (" + eval_map_id_clause + ")", // TODO: 교체 고려 대상
-//                                new String[]{"%:" + id + ":%"}, // TODO: 교체 고려 대상
                                 null,
                                 null,
                                 null
