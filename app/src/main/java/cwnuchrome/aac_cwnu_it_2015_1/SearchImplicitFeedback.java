@@ -22,6 +22,10 @@ import java.util.Vector;
  *
  * 관련-비관련성의 결정
  * 1~n번째 아이템 중 사용자가 클릭한 것은 쿼리와 관련있는 문서로 간주, 그렇지 않은 것은 관련없는 문서로 간주한다.
+ *
+ * 이상적인 결과에 대한 처리
+ * 가장 위에 있는 문서가 클릭되어 관련있는 문서로 결정되었을 시, 이 문서의 관련 인수는 조정되지 않는다.
+ * 가장 이상적인 결과이므로 손댈 필요가 없기 때문이다.
  */
 
 public class SearchImplicitFeedback {
@@ -35,7 +39,7 @@ public class SearchImplicitFeedback {
     public SearchImplicitFeedback(DocumentProcessor doc_proc) {
         fb_info_v = new Vector<>(ActionMain.item.ITEM_COUNT);
         for (int i = 0; i < ActionMain.item.ITEM_COUNT; i++) {
-            fb_info_v.add(new HashMap<Long, SearchFeedbackInfo>());
+            fb_info_v.add(new HashMap<>());
         }
         pos_max = -1;
         rel_doc_count = 0;
@@ -102,12 +106,17 @@ public class SearchImplicitFeedback {
     }
 
     public void send_feedback() {
-        if (pos_max == -1) return;
+        ActionMain actionMain = ActionMain.getInstance();
+        actionMain.write_lock.lock();
+        if (pos_max == -1) {
+            actionMain.write_lock.unlock();
+            return;
+        }
 
         add_irrel();
-        ActionMain actionMain = ActionMain.getInstance();
         actionMain.commit_feedback(query_id_map, this);
         clear();
+        actionMain.write_lock.unlock();
     }
 
     public interface DocumentProcessor {

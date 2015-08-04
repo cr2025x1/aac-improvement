@@ -221,8 +221,6 @@ public final class ActionMain {
         }
 
         public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-            // This database is only a cache for online data, so its upgrade policy is
-            // to simply to discard the data and fetchSuggestion over
             // TODO: 수정 필요
             delete_central_table(db);
             for (ActionItem i : itemChain) i.clearTable(db);
@@ -688,7 +686,6 @@ public final class ActionMain {
         return (word_count_in_query + word_feedback_weight) * Math.log1p(Math.log1p(word_count_in_document)) / (1 - AACGroupContainerPreferences.RANKING_FUNCTION_CONSTANT_B + AACGroupContainerPreferences.RANKING_FUNCTION_CONSTANT_B * document_length / average_document_length) * Math.log((collection_count + 1) / document_with_word_count_in_collection);
     }
 
-//    public void commit_feedback(HashMap<Long, QueryWordInfo> query_id_map, SearchImplicitFeedback feedback) {
     public void commit_feedback(HashMap<Long, ? extends QueryWordInfoRaw> query_id_map, SearchImplicitFeedback feedback) {
         write_lock.lock();
         long query_size = 0;

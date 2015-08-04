@@ -3,7 +3,6 @@ package cwnuchrome.aac_cwnu_it_2015_1;
 import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.text.Editable;
@@ -20,42 +19,51 @@ import java.util.HashMap;
 import java.util.ListIterator;
 import java.util.Map;
 import java.util.Vector;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 public class SearchActivity extends AppCompatActivity {
     ListView listView;
     EditText textInput;
     Context context;
-    updateList updater;
-    ArrayList<String> suggestionList;
     ArrayAdapter<String> adapter;
 
     HashMap<String, Long> queryMap;
     HashMap<Long, QueryWordInfo> query_id_map;
 
-    ArrayList<ActionItem.onClickClass> suggestionOCCList;
+    protected final SearchList search_list;
+    protected final Object interrupt_check_lock;
+    protected static final int POOL_SIZE = 2;
+    protected final ArrayList<Thread> threads;
+    ExecutorService search_executor;
 
     protected ActionMain actionMain;
     protected SearchImplicitFeedback feedbackHelper;
 
+
     public SearchActivity() {
         super();
         context = this;
-        updater = new updateList();
 
-        suggestionList = new ArrayList<>();
-        suggestionOCCList = new ArrayList<>(ActionMain.item.ITEM_COUNT);
+        search_list = new SearchList();
+        interrupt_check_lock = new Object();
+        threads = new ArrayList<>(POOL_SIZE);
+        search_executor = Executors.newFixedThreadPool(POOL_SIZE);
 
         query_id_map = null;
         queryMap = null;
         feedbackHelper = new SearchImplicitFeedback(
-                new SearchImplicitFeedback.DocumentProcessor() {
-                    @Override
-                    public SearchImplicitFeedback.ItemIDInfo get_doc_id(int pos) {
-                        ActionItem.onClickClass occ = suggestionOCCList.get(pos);
-                        return new SearchImplicitFeedback.ItemIDInfo(occ.getItemCategoryID(), occ.getItemID());
-                    }
+                (int pos) -> {
+                    ActionItem.onClickClass occ = search_list.occs.get(pos);
+                    return new SearchImplicitFeedback.ItemIDInfo(occ.getItemCategoryID(), occ.getItemID());
                 }
         );
+    }
+
+    protected class SearchList {
+        ArrayList<String> views = new ArrayList<>();
+        ArrayList<ActionItem.onClickClass> occs = new ArrayList<>();
     }
 
     @Override
@@ -76,186 +84,131 @@ public class SearchActivity extends AppCompatActivity {
         // Third parameter - ID of the TextView to which the data is written
         // Forth - the Array of data
         adapter = new ArrayAdapter<>(context,
-                android.R.layout.simple_list_item_1, android.R.id.text1, suggestionList);
+                android.R.layout.simple_list_item_1, android.R.id.text1, search_list.views);
         listView.setAdapter(adapter);
         // ListView Item Click Listener
-        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view,
-                                    int position, long id) {
-
+        listView.setOnItemClickListener(
+                (AdapterView<?> parent, View view, int position, long id) -> {
 //                String itemValue = (String) listView.getItemAtPosition(position);
-                ActionItem.onClickClass occ = suggestionOCCList.get(position);
-                feedbackHelper.add_rel(
-                        new SearchImplicitFeedback.ItemIDInfo(occ.getItemCategoryID(), occ.getItemID()),
-                        position
-                );
+                    ActionItem.onClickClass occ = search_list.occs.get(position);
+                    feedbackHelper.add_rel(
+                            new SearchImplicitFeedback.ItemIDInfo(occ.getItemCategoryID(), occ.getItemID()),
+                            position
+                    );
+                    occ.onClick(view);
 
-                occ.onClick(view);
-
-            }
-        });
+                }
+        );
         /* End of ListView initialization */
 
         /* Method for text-changing event */
         textInput.addTextChangedListener(new TextWatcher() {
-            public void afterTextChanged(Editable s) {
+            public void afterTextChanged(Editable s) {}
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                search_executor.execute(new key_event_runnable());
             }
-
-            public void beforeTextChanged(CharSequence s, int start,
-                                          int count, int after) {
-            }
-
-            public void onTextChanged(CharSequence s, int start,
-                                      int before, int count) {
-                updater.onResume();
-            }
-
-            // 백슬레시?
         });
         /* End of Method for text-changing event */
-
-        updater.execute(); // Initializing Updater thread
     }
 
     @Override
     protected void onDestroy() {
-        updater.onComplete(); // Setting Updater thread to end
+        search_executor.shutdown();
+        try {
+            search_executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
         super.onDestroy();
     }
 
-    class updateList extends AsyncTask<String, Integer, Long> {
-        private final Object mPauseLock = new Object();
-        private boolean mPaused;
-        private boolean mFinished;
 
-        @Override
-        protected void onCancelled() {
-            super.onCancelled();
+    protected class key_event_runnable implements Runnable {
+        Thread thread;
+        public key_event_runnable() {
+            thread = Thread.currentThread();
+        }
+
+        protected boolean check_mutual_exclusive_interrupt() {
+            synchronized (interrupt_check_lock) {
+                if (thread.isInterrupted()) {
+                    threads.remove(thread);
+                    return false;
+                }
+                for (Thread t : threads) if (t != thread) t.interrupt();
+                if (!threads.contains(thread)) threads.add(thread);
+                return true;
+            }
         }
 
         @Override
-        protected void onPostExecute(Long result) {
-            super.onPostExecute(result);
-        }
+        public void run() {
+            if (!check_mutual_exclusive_interrupt()) {
+                return;
+            }
 
-        @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
-            mPaused = false;
-            mFinished = false;
-
-            System.out.println("ListView updater thread starts.");
-        }
-
-        @Override
-        protected void onProgressUpdate(Integer... values) {
-            super.onProgressUpdate(values);
-        }
-
-        @Override
-        protected Long doInBackground(String... params) {
-            long result = 0;
-
-            while (!mFinished) {
-                try {
-                    if (fetchSuggestion()) {
-                        suggestionList.clear();
-                        for (ActionItem.onClickClass occ : suggestionOCCList) {
-                            int catID = occ.getItemCategoryID();
-                            StringBuilder sb = new StringBuilder();
-                            String className = actionMain.itemChain[catID].CLASS_NAME;
-                            if (className == null || !className.equals("")) {
-                                sb.append(className);
-                                sb.append(": ");
-                            }
-                            sb.append(occ.phonetic);
-
-                            suggestionList.add(sb.toString());
-                        }
-                    }
-                    runOnUiThread(new updateItem());
-
-                } catch (Exception e) {
-                    e.printStackTrace();
+            if (search_by_query()) {
+                if (!check_mutual_exclusive_interrupt()) {
+                    return;
                 }
 
-                onPause();
+                synchronized (search_list) {
+                    search_list.views.clear();
+                    for (ActionItem.onClickClass occ : search_list.occs) {
+                        int catID = occ.getItemCategoryID();
+                        StringBuilder sb = new StringBuilder();
+                        String className = actionMain.itemChain[catID].CLASS_NAME;
+                        if (className == null || !className.equals("")) {
+                            sb.append(className);
+                            sb.append(": ");
+                        }
+                        sb.append(occ.phonetic);
 
-                synchronized (mPauseLock) {
-                    while (mPaused) {
-                        try {
-                            mPauseLock.wait();
-                        }
-                        catch (InterruptedException e) {
-                            System.out.println("InterruptedException error occurred.");
-                        }
+                        search_list.views.add(sb.toString());
                     }
                 }
 
-            }
-
-            System.out.println("ListView updater thread ends.");
-            return result;
-        }
-
-        /**
-         * Call this on pause.
-         */
-        public void onPause() {
-            synchronized (mPauseLock) {
-                mPaused = true;
+                if (!check_mutual_exclusive_interrupt()) {
+                    return;
+                }
+                runOnUiThread(adapter::notifyDataSetChanged);
             }
         }
 
-        /**
-         * Call this on resume.
-         */
-        public void onResume() {
-            synchronized (mPauseLock) {
-                mPaused = false;
-                mPauseLock.notifyAll();
-            }
-        }
-
-        // The thread is set to end. Making it escape the loop.
-        public void onComplete() {
-            mFinished = true;
-            this.onResume();
-        }
-
-        // Notifying the UI thread to update the GUI.
-        class updateItem implements Runnable {
-            public void run() {
-                adapter.notifyDataSetChanged();
-            }
-        }
-
-        boolean fetchSuggestion()
+        protected boolean search_by_query()
         {
             HashMap<String, Long> new_query_map = ActionMain.reduce_to_map(textInput.getText().toString());
             if ((new_query_map.size() == 0 && queryMap == null)||
-                    (queryMap != null && new_query_map.equals(queryMap))) return false;
+                    (queryMap != null && new_query_map.equals(queryMap))) {
+                return false;
+            }
             if (new_query_map.size() == 0 && queryMap != null) {
                 feedbackHelper.send_feedback();
-
-                suggestionOCCList.clear();
+                search_list.occs.clear();
                 queryMap = null;
                 return true;
             }
 
+            actionMain.write_lock.lock();
             HashMap<Long, QueryWordInfo> new_query_id_map =
                     ((ActionWord)actionMain.itemChain[ActionMain.item.ID_Word]).convert_query_map_to_qwi_map(new_query_map);
             if ((new_query_id_map.size() == 0 && query_id_map == null) ||
-                    (query_id_map != null && new_query_id_map.equals(query_id_map))) return false;
+                    (query_id_map != null && new_query_id_map.equals(query_id_map))) {
+                actionMain.write_lock.unlock();
+                return false;
+            }
 
             feedbackHelper.send_feedback();
+            actionMain.getReadLock().lock();
+            actionMain.write_lock.unlock();
 
-            suggestionOCCList.clear();
+            search_list.occs.clear();
 
             if (new_query_id_map.size() == 0 && query_id_map != null) {
                 queryMap = new_query_map;
                 query_id_map = null;
+                actionMain.read_lock.unlock();
                 return true;
             }
 
@@ -270,9 +223,12 @@ public class SearchActivity extends AppCompatActivity {
 
             update_occ_list(rank_vector);
 
+            actionMain.read_lock.unlock();
             return true;
         }
     }
+
+
 
     // 키보드의 엔터키를 무시하기 위해 지정한 리스너 클래스
     class EnterKeyBlocker implements EditText.OnKeyListener {
@@ -292,11 +248,20 @@ public class SearchActivity extends AppCompatActivity {
     @Override
     public void onBackPressed() {
         // 피드백을 보내고 액티비티 종료 결과를 알린다.
-        feedbackHelper.send_feedback();
-
-        setResult(RESULT_CANCELED);
-
-        super.onBackPressed();
+        ConcurrentLibrary.run_off_ui_thread(
+                this,
+                () -> {
+                    actionMain.write_lock.lock();
+                    feedbackHelper.send_feedback();
+                    actionMain.write_lock.unlock();
+                },
+                () -> SearchActivity.this.runOnUiThread(
+                        () -> {
+                            SearchActivity.this.setResult(RESULT_CANCELED);
+                            SearchActivity.super.onBackPressed();
+                        }
+                )
+        );
     }
 
     // OCC 객체의 리스트를 업데이트하는 메소드.
@@ -305,7 +270,7 @@ public class SearchActivity extends AppCompatActivity {
         /*
          * OCC 객체의 리스트는 정렬 순서가 몹시 중요하다.
          * 물론 ListView 객체에 직접 연결된 객체는 suggestionList이지만, suggestionList를 클릭 시 호출되는 객체는
-         * suggestionOCCList이며 suggestionList의 객체는 자신의 인덱스 위치와 같은 위치에 있는 suggestionOCCList
+         * suggestionOCCList이며 suggestionList의 객체는 자신의 인덱스 위치와 같은 위치에 있는 search_list.occs
          * 의 원소 객체를 호출하기 때문이다.
          * 즉, suggestionList와 그 원소들에 1:1 대응하는 객체들의 리스트인 suggestionOCCList는 정렬 상태가 완전히
          * 똑같아야 한다.
@@ -316,6 +281,8 @@ public class SearchActivity extends AppCompatActivity {
          * 여기서 비교할 필요가 없는 상태라는 말은, 최대 단 하나의 카테고리 리스트만이 남은 원소가 있는 경우이다.
          * 이 때부터는 남은 리스트만을 기반으로 순차적으로 OCC 객체를 생성해 삽입하기를 반복한다.
          */
+
+        actionMain.read_lock.lock();
 
         Vector<ListIterator<Map.Entry<Long, Double>>> iterator_vector = new Vector<>(ActionMain.item.ITEM_COUNT);
         for (int i = 0; i < ActionMain.item.ITEM_COUNT; i++) iterator_vector.add(rank_list.get(i).listIterator());
@@ -363,10 +330,13 @@ public class SearchActivity extends AppCompatActivity {
             }
             catID++;
         }
+
+        actionMain.read_lock.unlock();
     }
 
     // OCC 객체를 생성하는 메소드.
     protected void addOCC(int catID, Map.Entry<Long, Double> entry) {
+        actionMain.read_lock.lock();
         ActionItem actionItem = actionMain.itemChain[catID];
         ActionItem.onClickClass occ;
         AACGroupContainer container = actionMain.getReferrer().get(getIntent().getIntExtra("AACGC_ID", -1));
@@ -400,7 +370,8 @@ public class SearchActivity extends AppCompatActivity {
         c.close();
 
         // 마지막으로 쿼리결과 OCC 리스트에 추가한다.
-        suggestionOCCList.add(occ);
+        search_list.occs.add(occ);
+        actionMain.read_lock.unlock();
     }
 
     // 그룹 아이템 클릭시에는 기존 그룹의 onClick()의 동작 외에 추가 동작이 필요하므로 서브클래스를 하나 정의한다.
@@ -413,11 +384,21 @@ public class SearchActivity extends AppCompatActivity {
         public void onClick(View v) {
             Intent i = new Intent();
             setResult(RESULT_OK, i);
-            super.onClick(v);
 
-            feedbackHelper.send_feedback(); // 액티비티를 종료하게 되므로 쿼리결과 조회는 자동으로 종료된다. 따라서 피드백을 보낸다.
-
-            finish(); // 이 액티비티를 종료하고, 기존의 탐색 화면으로 돌아간다.
+            ConcurrentLibrary.run_off_ui_thread(
+                    SearchActivity.this,
+                    () -> {
+                        actionMain.write_lock.lock();
+                        feedbackHelper.send_feedback(); // 액티비티를 종료하게 되므로 쿼리결과 조회는 자동으로 종료된다. 따라서 피드백을 보낸다.
+                        actionMain.write_lock.unlock();
+                    },
+                    () -> runOnUiThread(
+                            () -> {
+                                super.onClick(v);
+                                finish(); // 이 액티비티를 종료하고, 기존의 탐색 화면으로 돌아간다.
+                            }
+                    )
+            );
         }
     }
 
