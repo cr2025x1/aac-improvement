@@ -112,17 +112,17 @@ public class MainActivity extends AppCompatActivity {
             return true;
         }
 
-        if (id == R.id.action_set_debug_db) {
-            actionMain.resetTables();
-            ActionDebug.getInstance().deleteFlag();
-            ActionDebug.getInstance().insertTestRecords(this);
-
-            isInited = false;
-//            container.explore_group(1);
-            container.explore_group_MT(1, null);
-
-            return true;
-        }
+//        if (id == R.id.action_set_debug_db) {
+//            actionMain.resetTables();
+//            ActionDebug.getInstance().deleteFlag();
+//            ActionDebug.getInstance().insertTestRecords(this);
+//
+//            isInited = false;
+////            container.explore_group(1);
+//            container.explore_group_MT(1, null);
+//
+//            return true;
+//        }
 
         if (id == R.id.action_set_default_db) {
             actionMain.resetTables();
@@ -174,17 +174,20 @@ public class MainActivity extends AppCompatActivity {
 
 //            container.removeSelected();
 //            revert_menu_to_main();
-            container.remove_selected_MT(new Runnable() {
-                @Override
-                public void run() {
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            revert_menu_to_main();
-                        }
-                    });
-                }
-            });
+            container.remove_selected_MT(
+                    () -> runOnUiThread(this::revert_menu_to_main));
+            // 이것이 바로 람다의 기적!!
+//            container.remove_selected_MT(new Runnable() {
+//                @Override
+//                public void run() {
+//                    runOnUiThread(new Runnable() {
+//                        @Override
+//                        public void run() {
+//                            revert_menu_to_main();
+//                        }
+//                    });
+//                }
+//            });
 
             return true;
         }
@@ -274,18 +277,12 @@ public class MainActivity extends AppCompatActivity {
                     }
                     else v.put(ActionItem.SQL.COLUMN_NAME_PICTURE, pictureFilename);
 
-                    container.set_image_for_selected_MT(v, new Runnable() {
-                        @Override
-                        public void run() {
-                            runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    revertMenu();
-                                    container.explore_group_MT(container.getCurrentGroupID(), null);
-                                }
-                            });
-                        }
-                    });
+                    container.set_image_for_selected_MT(v,
+                            () -> runOnUiThread(
+                                    () -> {
+                                        revertMenu();
+                                        container.explore_group_MT(container.getCurrentGroupID(), null);
+                                    }));
 //                    container.setImageForSelected(v);
 //                    revertMenu();
 //                    container.explore_group(container.getCurrentGroupID());
@@ -305,18 +302,12 @@ public class MainActivity extends AppCompatActivity {
                     if (id == -1) throw new IllegalStateException("Getting data from Intent's extra has failed.");
 
 //                    container.moveSelected(id);
-                    container.move_selected_runnable_MT(id, new Runnable() {
-                        @Override
-                        public void run() {
-                            runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    revertMenu();
-                                    container.explore_group_MT(container.getCurrentGroupID(), null);
-                                }
-                            });
-                        }
-                    });
+                    container.move_selected_runnable_MT(id,
+                            () -> runOnUiThread(
+                                    () -> {
+                                        revertMenu();
+                                        container.explore_group_MT(container.getCurrentGroupID(), null);
+                                    }));
 //                    revertMenu();
 //                    container.explore_group(container.getCurrentGroupID());
 //                    container.explore_group_MT(container.getCurrentGroupID());
@@ -332,17 +323,11 @@ public class MainActivity extends AppCompatActivity {
                 .setTitle(R.string.menu_remove_item_dependency_warning_title)
                 .setView(linear)
                 .setPositiveButton(R.string.menu_remove_item_dependency_warning_confirm,
-                        new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialog, int which) {
-                                container.invokeRemoval();
-                            }
+                        (DialogInterface dialog, int which) -> {
+                            container.invokeRemoval();
                         })
-                .setNegativeButton(R.string.menu_remove_item_dependency_warning_cancel, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                    }
-                })
+                .setNegativeButton(R.string.menu_remove_item_dependency_warning_cancel,
+                        (DialogInterface dialog, int which) -> {})
                 .show();
 
     }
@@ -367,59 +352,52 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void dialog_rename(int category_id, long item_id) {
-        final int category_id_wrapper = category_id;
-        final long item_id_wrapper = item_id;
         final LinearLayout linear = (LinearLayout)View.inflate(this, R.layout.dialog_item_rename, null);
 
         new AlertDialog.Builder(this)
                 .setTitle(R.string.title_dialog_item_rename)
                 .setView(linear)
                 .setPositiveButton(R.string.button_dialog_item_rename_positive,
-                        new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialog, int which) {
-                                ContentValues values = new ContentValues();
-                                values.put(
-                                        ActionWord.SQL.COLUMN_NAME_WORD,
-                                        ((EditText) linear.findViewById(R.id.dialog_item_rename_edit_text))
-                                                .getText()
-                                                .toString()
-                                                .trim()
-                                );
-
-                                if (actionMain.itemChain[category_id_wrapper].updateWithIDs(getBaseContext(), values, new long[]{item_id_wrapper}) > 0) {
-                                    // TODO: 아니면 버튼 텍스트만 업데이트하게 변경?
-//                                    container.explore_group(container.getCurrentGroupID());
-                                    container.explore_group_MT(container.getCurrentGroupID(), new Runnable() {
+                        (DialogInterface dialog, int which) -> {
+                            container.modify_item_MT(
+                                    category_id,
+                                    item_id,
+                                    ((EditText) linear.findViewById(R.id.dialog_item_rename_edit_text))
+                                            .getText()
+                                            .toString()
+                                            .trim(),
+                                    new RunnableWithResult<Long>() {
                                         @Override
                                         public void run() {
-                                            runOnUiThread(new Runnable() {
-                                                @Override
-                                                public void run() {
-                                                    Toast
-                                                            .makeText(getBaseContext(), R.string.toast_dialog_item_rename_success, Toast.LENGTH_SHORT)
-                                                            .show();
-                                                }
-                                            });
+                                            if (getParam() > 0) {
+                                                // TODO: 아니면 버튼 텍스트만 업데이트하게 변경?
+                                                container.explore_group_MT(
+                                                        container.getCurrentGroupID(),
+                                                        () -> runOnUiThread(
+                                                                () -> {
+                                                                    Toast
+                                                                            .makeText(getBaseContext(), R.string.toast_dialog_item_rename_success, Toast.LENGTH_SHORT)
+                                                                            .show();
+                                                                    revert_menu_to_main();
+                                                                }
+                                                        )
+                                                );
+                                            } else {
+                                                Toast
+                                                        .makeText(getBaseContext(), R.string.toast_dialog_item_rename_failure, Toast.LENGTH_SHORT)
+                                                        .show();
+                                                revert_menu_to_main();
+                                            }
                                         }
-                                    });
-                                }
-                                else {
-                                    Toast
-                                            .makeText(getBaseContext(), R.string.toast_dialog_item_rename_failure, Toast.LENGTH_SHORT)
-                                            .show();
-                                }
-
-                                revert_menu_to_main();
-                            }
+                                    }
+                            );
+                        }
+                )
+                .setNegativeButton(R.string.button_dialog_item_rename_negative,
+                        (DialogInterface dialog, int which) -> {
+                            container.setMode(AACGroupContainer.MODE_NORMAL);
+                            revert_menu_to_main();
                         })
-                .setNegativeButton(R.string.button_dialog_item_rename_negative, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        container.setMode(AACGroupContainer.MODE_NORMAL);
-                        revert_menu_to_main();
-                    }
-                })
                 .show();
     }
 

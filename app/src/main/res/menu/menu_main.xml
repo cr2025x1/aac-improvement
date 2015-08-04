@@ -15,8 +15,6 @@
             android:orderInCategory="100" app:showAsAction="never" />
         <item android:id="@+id/action_set_default_db" android:title="@string/menu_main_return_to_default"
             android:orderInCategory="100" app:showAsAction="never" />
-        <item android:id="@+id/action_set_debug_db" android:title="Set test DB"
-            android:orderInCategory="100" app:showAsAction="never" />
 
     </group>
 

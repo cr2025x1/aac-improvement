@@ -347,7 +347,7 @@ public class ActionGroup extends ActionMultiWord {
         }
 
         String blacklist_clause = null;
-        if (blacklist != null) {
+        if (blacklist != null && blacklist.size() > 0) {
             StringBuilder sb = new StringBuilder();
             for (long l : blacklist) {
                 sb

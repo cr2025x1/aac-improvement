@@ -6,8 +6,6 @@ import android.os.Looper;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
-import java.lang.reflect.Method;
-
 /**
  * Created by Chrome on 8/3/15.
  *
@@ -19,18 +17,44 @@ public class ConcurrentLibrary {
         if (Looper.myLooper() == Looper.getMainLooper()) {
             final ProgressDialog dialog = ProgressDialog.show(activity, "Please wait...", "Loading...", true);
             dialog.setCancelable(false);
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    run.run();
-                    dialog.dismiss();
-                    if (after != null) after.run();
-                }
-            }).start();
+            new Thread(
+                    () -> {
+                        run.run();
+                        dialog.dismiss();
+                        if (after != null) after.run();
+                    }
+            ).start();
         }
         else {
             run.run();
             if (after != null) after.run();
         }
     }
+
+    public static <T> void run_off_ui_thread_with_result(@NonNull Activity activity, @NonNull final RunnableWithResult<T> run, @Nullable final RunnableWithResult<T> after) {
+        // 참고: http://stackoverflow.com/questions/11411022/how-to-check-if-current-thread-is-not-main-thread
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            final ProgressDialog dialog = ProgressDialog.show(activity, "Please wait...", "Loading...", true);
+            dialog.setCancelable(false);
+            new Thread(
+                    () -> {
+                        run.run();
+                        dialog.dismiss();
+                        if (after != null) {
+                            after.setParam(run.getResult());
+                            after.run();
+                        }
+                    }
+            ).start();
+        }
+        else {
+            run.run();
+            if (after != null) {
+                after.setParam(run.getResult());
+                after.run();
+            }
+        }
+    }
+
+
 }
