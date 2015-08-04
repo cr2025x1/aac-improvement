@@ -771,7 +771,7 @@ public class AACGroupContainer {
 
     public String getUserImagePathPrefix() { return userImageDirectoryPathPrefix; }
 
-    public void set_image_for_selected_MT(ContentValues values, Runnable after) { // TODO: fire and forget이 아님.
+    public void set_image_for_selected_MT(ContentValues values, Runnable after) {
         ConcurrentLibrary.run_off_ui_thread(activity, new set_image_for_selected_runnable(values), after);
     }
 
@@ -965,8 +965,15 @@ public class AACGroupContainer {
         @Override
         public void onClick(View v) {
             add_feedback_info(this, v);
-            feedbackHelper.send_feedback(); // TODO: 작업 중.
-            super.onClick(v);
+            ConcurrentLibrary.run_off_ui_thread(
+                    activity,
+                    () -> {
+                        feedbackHelper.send_feedback();
+                        activity.runOnUiThread(
+                                () -> super.onClick(v)
+                        );
+                    },
+                    null);
         }
     }
 
@@ -987,7 +994,6 @@ public class AACGroupContainer {
         }
     }
 
-    // TODO: 개량 필요.
     public void modify_item_MT(int cat_id, long id, String new_word, RunnableWithResult<Long> after) {
         ConcurrentLibrary.run_off_ui_thread_with_result(activity, new modify_item_runnable(cat_id, id, new_word), after);
     }

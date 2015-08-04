@@ -104,7 +104,7 @@ public final class ActionMain {
 
     public void initDBHelper (Context context) {
         actionDBHelper = new ActionDBHelper(context);
-        db = actionDBHelper.getWritableDatabase(); // TODO: 언젠가는 멀티스레딩 형식으로 바꾸기.
+        db = actionDBHelper.getWritableDatabase();
         activate_morpheme_analyzer();
     }
 
@@ -688,8 +688,8 @@ public final class ActionMain {
         return (word_count_in_query + word_feedback_weight) * Math.log1p(Math.log1p(word_count_in_document)) / (1 - AACGroupContainerPreferences.RANKING_FUNCTION_CONSTANT_B + AACGroupContainerPreferences.RANKING_FUNCTION_CONSTANT_B * document_length / average_document_length) * Math.log((collection_count + 1) / document_with_word_count_in_collection);
     }
 
-//    public void apply_feedback(HashMap<Long, QueryWordInfo> query_id_map, SearchImplicitFeedback feedback) {
-    public void apply_feedback(HashMap<Long, ? extends QueryWordInfoRaw> query_id_map, SearchImplicitFeedback feedback) {
+//    public void commit_feedback(HashMap<Long, QueryWordInfo> query_id_map, SearchImplicitFeedback feedback) {
+    public void commit_feedback(HashMap<Long, ? extends QueryWordInfoRaw> query_id_map, SearchImplicitFeedback feedback) {
         write_lock.lock();
         long query_size = 0;
         for (Map.Entry<Long, ? extends QueryWordInfoRaw> qwi : query_id_map.entrySet()) {

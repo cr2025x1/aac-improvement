@@ -53,6 +53,17 @@ public class SearchImplicitFeedback {
         long id = idInfo.id;
         HashMap<Long, SearchFeedbackInfo> map = fb_info_v.get(category_id);
         SearchFeedbackInfo sfi;
+
+        // 사용자가 가장 최상의 결과를 고른 경우: 가장 이상적인 경우이므로 이 때에는 피드백을 할 필요가 없다.
+        // 그래도 어쨌건 간에 관련문서 목록에는 들어가야 한다. 그렇지 않을 경우 피드백 적용시 일괄 추가로 인해 비관련 문서로 분류된다.
+        // 따라서 콜 카운트를 0으로 지정한다.
+        if (pos == 0 && (sfi = map.get(id)) == null) {
+            sfi = new SearchFeedbackInfo(true);
+            sfi.call_count = 0l;
+            map.put(id, sfi);
+            return;
+        }
+
         if ((sfi = map.get(id)) == null) {
             sfi = new SearchFeedbackInfo(true);
             sfi.call_count = 1l;
@@ -95,7 +106,7 @@ public class SearchImplicitFeedback {
 
         add_irrel();
         ActionMain actionMain = ActionMain.getInstance();
-        actionMain.apply_feedback(query_id_map, this);
+        actionMain.commit_feedback(query_id_map, this);
         clear();
     }
 
