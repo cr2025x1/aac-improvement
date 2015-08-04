@@ -30,10 +30,10 @@ import java.util.ListIterator;
 import java.util.Map;
 import java.util.Random;
 import java.util.Vector;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
@@ -69,6 +69,7 @@ public final class ActionMain {
         write_lock = new DBWriteLockWrapper(this, lock.writeLock());
 
         for (ActionItem i : itemChain) i.setActionMain(this);
+        subthread_executor = Executors.newFixedThreadPool(ActionMain.item.ITEM_COUNT * 2);
     }
 
     Random rand;
@@ -86,6 +87,7 @@ public final class ActionMain {
     DBWriteLockWrapper write_lock;
     byte[] socket_buffer;
     ExecutorService morpheme_analysis_executor;
+    ExecutorService subthread_executor;
 
     public void setContext(Context context) {
         this.context = context;
@@ -560,15 +562,30 @@ public final class ActionMain {
             Vector<HashMap<Long, Double>> eval_map_vector = alloc_eval_map_vector(selection, selectionArgs);
             Vector<HashMap<Long, Double>> rank_vector = new Vector<>();
             int i = 0;
+            CountDownLatch latch = new CountDownLatch(ActionMain.item.ITEM_COUNT);
             for (ActionItem item : itemChain) {
-                rank_vector.add(item.evaluate_by_query_map(
-                        db,
-                        query_id_map_feedbacked,
-                        eval_map_vector.get(i),
-                        entire_collection_count,
-                        average_document_length
-                ));
+                rank_vector.add(null);
+                subthread_executor.execute(
+                        new evaluate_by_query_map_subthread(
+                                latch,
+                                rank_vector,
+                                i,
+                                item,
+                                db,
+                                query_id_map_feedbacked,
+                                eval_map_vector.get(i),
+                                entire_collection_count,
+                                average_document_length
+                        )
+                );
                 i++;
+            }
+
+            try {
+                latch.await();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                throw new IllegalStateException();
             }
 
             read_lock.unlock();
@@ -576,6 +593,55 @@ public final class ActionMain {
             return rank_vector;
         }
 
+    }
+
+    private class evaluate_by_query_map_subthread implements Runnable {
+        private final CountDownLatch latch;
+        private final Vector<HashMap<Long, Double>> return_vector;
+        private final int pos;
+        private final ActionItem item;
+        final SQLiteDatabase db;
+        HashMap<Long, QueryWordInfo> queryMap;
+        HashMap<Long, Double> eval_map;
+        final long entire_collection_count;
+        final double average_document_length;
+
+        public evaluate_by_query_map_subthread(
+                @NonNull CountDownLatch latch,
+                @NonNull Vector<HashMap<Long, Double>> return_vector,
+                int pos,
+                @NonNull ActionItem item,
+                @NonNull final SQLiteDatabase db,
+                @NonNull HashMap<Long, QueryWordInfo> queryMap,
+                @NonNull HashMap<Long, Double> eval_map,
+                final long entire_collection_count,
+                final double average_document_length
+        ) {
+            this.latch = latch;
+            this.return_vector = return_vector;
+            this.pos = pos;
+            this.item = item;
+            this.db = db;
+            this.queryMap = queryMap;
+            this.eval_map = eval_map;
+            this.entire_collection_count = entire_collection_count;
+            this.average_document_length = average_document_length;
+        }
+
+        @Override
+        public void run() {
+            return_vector.set(
+                    pos,
+                    item.evaluate_by_query_map(
+                            db,
+                            queryMap,
+                            eval_map,
+                            entire_collection_count,
+                            average_document_length
+                    )
+            );
+            latch.countDown();
+        }
     }
 
     static final int NO_FILTER = 0;
