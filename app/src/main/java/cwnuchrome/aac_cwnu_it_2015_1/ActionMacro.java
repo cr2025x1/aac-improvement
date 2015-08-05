@@ -188,6 +188,8 @@ public class ActionMacro extends ActionMultiWord {
                             );
                             c.moveToFirst();
 
+                            // TODO: 지금은 아무 것도 하는 일이 없다.
+
                             c.close();
                         }
                     });

@@ -36,6 +36,7 @@ public abstract class ActionMultiWord extends ActionItem {
 
     @Override
     public long raw_add(ContentValues values) {
+        write_lock.lock();
         HashMap<Long, Long> map = map_carrier.detach(values.getAsInteger(SQL.ATTACHMENT_ID_MAP));
         values.remove(SQL.ATTACHMENT_ID_MAP);
 
@@ -56,6 +57,7 @@ public abstract class ActionMultiWord extends ActionItem {
             actionMain.update_db_collection_count(1, doc_length);
         }
 
+        write_lock.unlock();
         return id;
     }
 
@@ -396,47 +398,46 @@ public abstract class ActionMultiWord extends ActionItem {
         return evaluate_by_query_map_by_query_processor(
                 queryMap,
                 eval_map,
-                new QueryProcessor() {
-                    @Override
-                    public void process_query_id(
-                            long id,
-                            final QueryWordInfo qwi,
-                            @NonNull final String eval_map_id_clause,
-                            @NonNull final HashMap<Long, Double> eval_map
-                    ) {
-                        Cursor c = db.query(
-                                TABLE_NAME,
-                                new String[]{SQL._ID, SQL.COLUMN_NAME_ELEMENT_ID_TAG},
-                                SQL.COLUMN_NAME_ELEMENT_ID_TAG + " LIKE ? AND (" + eval_map_id_clause + ")",
-                                new String[]{"%:" + id + ",%"},
-                                null,
-                                null,
-                                null
+                (
+                        long id,
+                        final QueryWordInfo qwi,
+                        @NonNull final String eval_map_id_clause,
+                        @NonNull final HashMap<Long, Double> query_proc_eval_map
+                ) -> {
+                    read_lock.lock();
+                    Cursor c = db.query(
+                            TABLE_NAME,
+                            new String[]{SQL._ID, SQL.COLUMN_NAME_ELEMENT_ID_TAG},
+                            SQL.COLUMN_NAME_ELEMENT_ID_TAG + " LIKE ? AND (" + eval_map_id_clause + ")",
+                            new String[]{"%:" + id + ",%"},
+                            null,
+                            null,
+                            null
+                    );
+                    c.moveToFirst();
+
+                    int multiword_id_col = c.getColumnIndexOrThrow(SQL._ID);
+                    int id_tag_col = c.getColumnIndexOrThrow(SQL.COLUMN_NAME_ELEMENT_ID_TAG);
+                    for (int i = 0; i < c.getCount(); i++) {
+                        HashMap<Long, Long> map = parse_element_id_count_tag(c.getString(id_tag_col));
+                        long doc_ref_count = map.get(id);
+
+                        double eval = ActionMain.ranking_function(
+                                qwi.count,
+                                qwi.feedback_weight,
+                                doc_ref_count,
+                                map.size(),
+                                average_document_length,
+                                entire_collection_count,
+                                qwi.ref_count
                         );
-                        c.moveToFirst();
 
-                        int multiword_id_col = c.getColumnIndexOrThrow(SQL._ID);
-                        int id_tag_col = c.getColumnIndexOrThrow(SQL.COLUMN_NAME_ELEMENT_ID_TAG);
-                        for (int i = 0; i < c.getCount(); i++) {
-                            HashMap<Long, Long> map = parse_element_id_count_tag(c.getString(id_tag_col));
-                            long doc_ref_count = map.get(id);
-
-                            double eval = ActionMain.ranking_function(
-                                    qwi.count,
-                                    qwi.feedback_weight,
-                                    doc_ref_count,
-                                    map.size(),
-                                    average_document_length,
-                                    entire_collection_count,
-                                    qwi.ref_count
-                            );
-
-                            long multiword_item_id = c.getLong(multiword_id_col);
-                            eval_map.put(multiword_item_id, eval_map.get(multiword_item_id) + eval);
-                            c.moveToNext();
-                        }
-                        c.close();
+                        long multiword_item_id = c.getLong(multiword_id_col);
+                        query_proc_eval_map.put(multiword_item_id, query_proc_eval_map.get(multiword_item_id) + eval);
+                        c.moveToNext();
                     }
+                    c.close();
+                    read_lock.unlock();
                 }
         );
     }
@@ -461,11 +462,17 @@ public abstract class ActionMultiWord extends ActionItem {
 
     @Override
     public long updateWithIDs(@NonNull Context context, @NonNull ContentValues values, @NonNull long[] idArray) {
+        write_lock.lock();
+
         // 인수 필터링
-        if (idArray.length == 0) throw new IllegalArgumentException("Argument idArray is empty.");
+        if (idArray.length == 0) {
+            write_lock.unlock();
+            throw new IllegalArgumentException("Argument idArray is empty.");
+        }
         if (values.containsKey(SQL.COLUMN_NAME_WORD)) {
             if (idArray.length > 1) {
                 // 동시에 한 아이템 이상에 대해 단어 변경을 수행하게 되면 동일 이름을 가지는 여러 아이템을 생성하게 되므로 고유성 원칙에 위배된다.
+                write_lock.unlock();
                 throw new IllegalArgumentException("This method does not allow change of words in multiple items.");
             }
 
@@ -524,6 +531,7 @@ public abstract class ActionMultiWord extends ActionItem {
             }
         }
 
+        write_lock.unlock();
         return super.updateWithIDs(context, values, idArray);
     }
 

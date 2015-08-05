@@ -8,9 +8,9 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  */
 public class DBWriteLockWrapper {
     ActionMain actionMain;
-    Lock lock;
+    ReentrantReadWriteLock.WriteLock lock;
 
-    public DBWriteLockWrapper(ActionMain actionMain, Lock lock) {
+    public DBWriteLockWrapper(ActionMain actionMain, ReentrantReadWriteLock.WriteLock lock) {
         this.lock = lock;
         this.actionMain = actionMain;
     }
@@ -21,7 +21,7 @@ public class DBWriteLockWrapper {
 
     public void unlock() {
         lock.unlock();
-        if (((ReentrantReadWriteLock.WriteLock)lock).getHoldCount() == 0) {
+        if (lock.getHoldCount() == 0) {
             actionMain.activate_morpheme_analyzer();
         }
     }

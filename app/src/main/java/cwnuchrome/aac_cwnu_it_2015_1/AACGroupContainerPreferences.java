@@ -62,4 +62,7 @@ public class AACGroupContainerPreferences {
     // 형태소 분석기 서버
     public static final String MORPHEME_SERVER_HOSTNAME = "cr2025x1-dorm.ddns.net"; // 서버의 주소
     public static final int MORPHEME_SERVER_PORT = 59002; // 서버의 포트
+
+    // 락 Wrapper
+    public static final int LOCK_WRAPPER_STACK_INIT_SIZE = 10;
 }

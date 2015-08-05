@@ -455,8 +455,10 @@ public abstract class ActionItem implements Serializable {
             @NonNull final HashMap<Long, QueryWordInfo> queryMap,
             @NonNull final HashMap<Long, Double> eval_map,
             final QueryProcessor queryProcessor) {
+        read_lock.lock();
 
         if (eval_map.size() == 0) {
+            read_lock.unlock();
             return eval_map;
         }
 
@@ -477,6 +479,7 @@ public abstract class ActionItem implements Serializable {
             queryProcessor.process_query_id(entry.getKey(), entry.getValue(), eval_map_id_where_clause, eval_map);
         }
 
+        read_lock.unlock();
         return eval_map;
     }
 
@@ -494,8 +497,10 @@ public abstract class ActionItem implements Serializable {
     // 이 아이템의 테이블의 모든 행에 대응하는 1:1 대응하는 키를 모두 가지는 해쉬맵을 만들어 반환한다.
     @NonNull protected HashMap<Long, Double> alloc_evaluation_map(@NonNull SQLiteDatabase db, @Nullable String selection, @Nullable String[] selectionArgs) {
         HashMap<Long, Double> eval_map = new HashMap<>();
+        read_lock.lock();
 
         if (is_transparent) {
+            read_lock.unlock();
             return eval_map;
         }
 
@@ -520,6 +525,7 @@ public abstract class ActionItem implements Serializable {
         }
         entire_item_cursor.close();
 
+        read_lock.unlock();
         return eval_map;
     }
 
@@ -529,7 +535,7 @@ public abstract class ActionItem implements Serializable {
         Vector<ArrayList<Long>> v;
         if (itemVector == null) {
             v = new Vector<>(ActionMain.item.ITEM_COUNT);
-            for (int i = 0; i < ActionMain.item.ITEM_COUNT; i++) v.add(new ArrayList<Long>());
+            for (int i = 0; i < ActionMain.item.ITEM_COUNT; i++) v.add(new ArrayList<>());
         }
         else v = itemVector;
 

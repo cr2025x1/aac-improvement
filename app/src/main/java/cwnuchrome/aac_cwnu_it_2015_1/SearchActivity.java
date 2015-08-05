@@ -174,6 +174,10 @@ public class SearchActivity extends AppCompatActivity {
                 }
                 runOnUiThread(adapter::notifyDataSetChanged);
             }
+
+            synchronized (interrupt_check_lock) {
+                threads.remove(thread);
+            }
         }
 
         protected boolean search_by_query()
