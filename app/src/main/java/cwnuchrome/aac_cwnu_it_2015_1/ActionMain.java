@@ -1,8 +1,6 @@
 package cwnuchrome.aac_cwnu_it_2015_1;
 
 import android.annotation.SuppressLint;
-import android.app.Activity;
-import android.app.ProgressDialog;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
@@ -66,7 +64,10 @@ public final class ActionMain {
         kryo.register(HashMap.class);
 
         morpheme_analysis_executor = Executors.newFixedThreadPool(1);
-        write_lock = new DBWriteLockWrapper(this, lock.writeLock());
+//        write_lock = new DBWriteLockWrapper(this, lock.writeLock());
+        lock_wrapper = new LockWrapper(this);
+        read_lock = lock_wrapper.read_lock();
+        write_lock = lock_wrapper.write_lock();
 
         for (ActionItem i : itemChain) i.setActionMain(this);
         subthread_executor = Executors.newFixedThreadPool(ActionMain.item.ITEM_COUNT * 2);
@@ -83,8 +84,11 @@ public final class ActionMain {
     byte[] buffer;
     Context context;
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
-    Lock read_lock = lock.readLock();
-    DBWriteLockWrapper write_lock;
+    LockWrapper lock_wrapper;
+//    Lock read_lock = lock.readLock();
+    LockWrapper.ReadLockWrapper read_lock;
+//    DBWriteLockWrapper write_lock;
+    LockWrapper.WriteLockWrapper write_lock;
     byte[] socket_buffer;
     ExecutorService morpheme_analysis_executor;
     ExecutorService subthread_executor;
@@ -1055,11 +1059,17 @@ public final class ActionMain {
         }
     }
 
-    public Lock getReadLock() {
+//    public Lock getReadLock() {
+//        return read_lock;
+//    }
+    public LockWrapper.ReadLockWrapper getReadLock() {
         return read_lock;
     }
 
-    public DBWriteLockWrapper getWriteLock() {
+//    public DBWriteLockWrapper getWriteLock() {
+//        return write_lock;
+//    }
+    public LockWrapper.WriteLockWrapper getWriteLock() {
         return write_lock;
     }
 }

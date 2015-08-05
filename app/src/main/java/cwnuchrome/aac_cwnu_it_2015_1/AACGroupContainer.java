@@ -57,8 +57,11 @@ public class AACGroupContainer {
 
     protected int container_id;
 
-    Lock read_lock;
-    DBWriteLockWrapper write_lock;
+//    Lock read_lock;
+//    DBWriteLockWrapper write_lock;
+    LockWrapper.ReadLockWrapper read_lock;
+    LockWrapper.WriteLockWrapper write_lock;
+
     protected ArrayList<View> old_item_list;
     String parent_group_name;
     Activity activity;

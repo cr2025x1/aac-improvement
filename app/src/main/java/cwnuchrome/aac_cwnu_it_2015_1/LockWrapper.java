@@ -18,9 +18,9 @@ public class LockWrapper {
     ReentrantReadWriteLock.ReadLock read_lock;
     ReentrantReadWriteLock.WriteLock write_lock;
 
-    public LockWrapper(ActionMain actionMain, ReentrantReadWriteLock lock) {
+    public LockWrapper(ActionMain actionMain) {
         this.actionMain = actionMain;
-        this.lock = lock;
+        this.lock = new ReentrantReadWriteLock();
         read_lock = lock.readLock();
         write_lock = lock.writeLock();
     }
@@ -52,7 +52,46 @@ public class LockWrapper {
 
         public void unlock() {
             HoldCountStructure hcs = counts.remove(counts.size() - 1);
-            if (hcs.write_hold_count != lock.getWriteHoldCount() || hcs.read_hold_count != lock.getReadHoldCount()) {
+            int write_hold_count = lock.getWriteHoldCount();
+            int read_hold_count = lock.getReadHoldCount();
+            if (hcs.write_hold_count != write_hold_count || hcs.read_hold_count != read_hold_count) {
+                StringBuilder sb = new StringBuilder(50)
+                        .append("Stored: ReadHoldCount = ")
+                        .append(hcs.read_hold_count)
+                        .append(", WriteHoldCount = ")
+                        .append(hcs.write_hold_count);
+                System.out.println(sb.toString());
+                sb.setLength(0);
+
+                sb
+                        .append("Current: ReadHoldCount = ")
+                        .append(read_hold_count)
+                        .append(", WriteHoldCount = ")
+                        .append(write_hold_count);
+                System.out.println(sb.toString());
+
+                throw new IllegalStateException("Lock count mismatch!! Check the code!!");
+            }
+            write_lock.unlock();
+            if (write_lock.getHoldCount() == 0) {
+                actionMain.activate_morpheme_analyzer();
+            }
+        }
+
+        public void unlock_without_read_lock_check() {
+            HoldCountStructure hcs = counts.remove(counts.size() - 1);
+            int write_hold_count = lock.getWriteHoldCount();
+            if (hcs.write_hold_count != write_hold_count) {
+                StringBuilder sb = new StringBuilder(50)
+                        .append("Stored: WriteHoldCount = ")
+                        .append(hcs.write_hold_count);
+                System.out.println(sb.toString());
+                sb.setLength(0);
+
+                sb
+                        .append("Current: WriteHoldCount = ")
+                        .append(write_hold_count);
+                System.out.println(sb.toString());
                 throw new IllegalStateException("Lock count mismatch!! Check the code!!");
             }
             write_lock.unlock();
@@ -80,7 +119,44 @@ public class LockWrapper {
 
         public void unlock() {
             HoldCountStructure hcs = counts.remove(counts.size() - 1);
-            if (hcs.write_hold_count != lock.getWriteHoldCount() || hcs.read_hold_count != lock.getReadHoldCount()) {
+            int write_hold_count = lock.getWriteHoldCount();
+            int read_hold_count = lock.getReadHoldCount();
+            if (hcs.write_hold_count != write_hold_count || hcs.read_hold_count != read_hold_count) {
+                StringBuilder sb = new StringBuilder(50)
+                        .append("Stored: ReadHoldCount = ")
+                        .append(hcs.read_hold_count)
+                        .append(", WriteHoldCount = ")
+                        .append(hcs.write_hold_count);
+                System.out.println(sb.toString());
+                sb.setLength(0);
+
+                sb
+                        .append("Current: ReadHoldCount = ")
+                        .append(read_hold_count)
+                        .append(", WriteHoldCount = ")
+                        .append(write_hold_count);
+                System.out.println(sb.toString());
+
+                throw new IllegalStateException("Lock count mismatch!! Check the code!!");
+            }
+            read_lock.unlock();
+        }
+
+        public void unlock_without_write_lock_check() {
+            HoldCountStructure hcs = counts.remove(counts.size() - 1);
+            int read_hold_count = lock.getReadHoldCount();
+            if (hcs.read_hold_count != read_hold_count) {
+                StringBuilder sb = new StringBuilder(50)
+                        .append("Stored: ReadHoldCount = ")
+                        .append(hcs.read_hold_count);
+                System.out.println(sb.toString());
+                sb.setLength(0);
+
+                sb
+                        .append("Current: ReadHoldCount = ")
+                        .append(read_hold_count);
+                System.out.println(sb.toString());
+
                 throw new IllegalStateException("Lock count mismatch!! Check the code!!");
             }
             read_lock.unlock();
@@ -89,5 +165,13 @@ public class LockWrapper {
         public Lock getLock() {
             return read_lock;
         }
+    }
+
+    public ReadLockWrapper read_lock() {
+        return new ReadLockWrapper();
+    }
+
+    public WriteLockWrapper write_lock() {
+        return new WriteLockWrapper();
     }
 }

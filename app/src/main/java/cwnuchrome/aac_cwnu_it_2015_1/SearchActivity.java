@@ -168,7 +168,7 @@ public class SearchActivity extends AppCompatActivity {
 
             feedbackHelper.send_feedback();
             actionMain.getReadLock().lock();
-            actionMain.write_lock.unlock();
+            actionMain.write_lock.unlock_without_read_lock_check();
 
             search_list.occs.clear();
 
@@ -190,7 +190,7 @@ public class SearchActivity extends AppCompatActivity {
 
             update_occ_list(rank_vector);
 
-            actionMain.read_lock.unlock();
+            actionMain.read_lock.unlock_without_write_lock_check();
             return true;
         }
     }

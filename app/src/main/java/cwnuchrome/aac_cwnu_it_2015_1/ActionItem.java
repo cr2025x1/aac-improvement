@@ -34,8 +34,10 @@ public abstract class ActionItem implements Serializable {
     protected int[] reservedID;
     protected final boolean is_transparent;
     ActionMain actionMain;
-    Lock read_lock;
-    DBWriteLockWrapper write_lock;
+//    Lock read_lock;
+//    DBWriteLockWrapper write_lock;
+    LockWrapper.ReadLockWrapper read_lock;
+    LockWrapper.WriteLockWrapper write_lock;
 
     protected ActionItem(int itemID, String className, boolean is_transparent) {
         this.itemClassID = itemID;

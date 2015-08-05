@@ -132,6 +132,7 @@ public class ActionWord extends ActionItem {
 
     // 주어진 단어가 이미 DB 상에 존재하면 그 단어의 ID를 반환, 없으면 추가 후 추가된 단어의 ID를 반환.
     public long raw_add(ContentValues values) {
+        write_lock.lock();
         String word = values.getAsString(ActionWord.SQL.COLUMN_NAME_WORD);
         long result = exists(word);
         ActionMain actionMain = ActionMain.getInstance();
@@ -163,6 +164,7 @@ public class ActionWord extends ActionItem {
                 }
             }
 
+            write_lock.unlock();
             return result;
         }
 
@@ -182,8 +184,8 @@ public class ActionWord extends ActionItem {
 
         }
 
+        write_lock.unlock();
         return id;
-
     }
 
     long add(
@@ -342,6 +344,7 @@ public class ActionWord extends ActionItem {
 
     // 단어의 참조 카운트 업데이트 메소드
     public void update_reference_count(long id, long diff) {
+        write_lock.lock();
         ActionMain actionMain = ActionMain.getInstance();
         Cursor c = actionMain.getDB().query(
                 TABLE_NAME,
@@ -352,13 +355,19 @@ public class ActionWord extends ActionItem {
                 null,
                 null
         );
-        if (c.getCount() == 0) throw new IllegalArgumentException("Given ID does not exists.");
+        if (c.getCount() == 0) {
+            write_lock.unlock();
+            throw new IllegalArgumentException("Given ID does not exists.");
+        }
         c.moveToFirst();
 
         long ref_count = c.getLong(c.getColumnIndexOrThrow(SQL.COLUMN_NAME_REFERENCE_COUNT)) + diff;
         c.close();
 
-        if (ref_count < 0) throw new IllegalStateException("Reference count is below 0.");
+        if (ref_count < 0) {
+            write_lock.unlock();
+            throw new IllegalStateException("Reference count is below 0.");
+        }
 
         //noinspection PointlessBooleanExpression,ConstantConditions
         if (ref_count == 0 && AACGroupContainerPreferences.DATABASE_REMOVE_WORD_WITH_NO_REFERENCE) removeWithID(actionMain.getContext(), id);
@@ -368,11 +377,12 @@ public class ActionWord extends ActionItem {
                             + " WHERE " + SQL._ID + "=" + id
             );
         }
+        write_lock.unlock();
     }
 
     // 해당 워드의 아이디와 피드백 맵을 받아 데이터베이스를 업데이트하는 메소드
     public void update_feedback(long id, @NonNull HashMap<Long, Double> map) {
-        ActionMain actionMain = ActionMain.getInstance();
+        write_lock.lock();
         ContentValues map_values = new ContentValues();
         map_values.put(SQL.COLUMN_NAME_FEEDBACK_MAP, actionMain.freeze_map(map));
         actionMain.getDB().update(
@@ -385,12 +395,17 @@ public class ActionWord extends ActionItem {
         ContentValues values = new ContentValues();
         values.put(SQL.COLUMN_NAME_FEEDBACK_MAP_TAG, create_feedback_map_tag(map));
         updateWithIDs(actionMain.context, values, new long[] {id});
+        write_lock.unlock();
     }
 
     public boolean is_hidden_word(String s) {
+        read_lock.lock();
         ActionMain actionMain = ActionMain.getInstance();
         long existCheck = exists(s);
-        if (existCheck == -1) return false;
+        if (existCheck == -1) {
+            read_lock.unlock();
+            return false;
+        }
         else {
             Cursor c = actionMain.getDB().query(
                     actionMain.itemChain[ActionMain.item.ID_Word].TABLE_NAME,
@@ -405,8 +420,12 @@ public class ActionWord extends ActionItem {
             int parentID = c.getInt(c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_PARENT_ID));
             c.close();
 
-            if (parentID == 0) return true;
+            if (parentID == 0) {
+                read_lock.unlock();
+                return true;
+            }
         }
+        read_lock.unlock();
         return false;
     }
 
@@ -439,6 +458,8 @@ public class ActionWord extends ActionItem {
     // 주어진 문자열-문자열 수 쿼리 해시맵에 대응되는 워드의 ID와 그 워드의 참조 횟수의 해시맵을 제공한다.
     @NonNull
     public HashMap<Long, QueryWordInfo> convert_query_map_to_qwi_map(@NonNull HashMap<String, Long> queryMap) {
+        read_lock.lock();
+
         HashMap<Long, QueryWordInfo> id_ref_map = new HashMap<>();
         SQLiteDatabase db = ActionMain.getInstance().getDB();
 
@@ -477,6 +498,7 @@ public class ActionWord extends ActionItem {
 
             entry_word_cursor.close();
         }
+        read_lock.unlock();
         return id_ref_map;
     }
 
@@ -484,6 +506,8 @@ public class ActionWord extends ActionItem {
 
     @NonNull
     public HashMap<Long, QueryWordInfo> convert_id_map_to_qwi_map(@NonNull HashMap<Long, Long> queryMap) {
+        read_lock.lock();
+
         HashMap<Long, QueryWordInfo> id_ref_map = new HashMap<>();
         SQLiteDatabase db = ActionMain.getInstance().getDB();
 
@@ -514,6 +538,7 @@ public class ActionWord extends ActionItem {
 
             entry_word_cursor.close();
         }
+        read_lock.unlock();
         return id_ref_map;
     }
 
@@ -529,26 +554,23 @@ public class ActionWord extends ActionItem {
         return evaluate_by_query_map_by_query_processor(
                 queryMap,
                 eval_map,
-                new QueryProcessor() {
-                    @Override
-                    public void process_query_id(
-                            long id,
-                            final QueryWordInfo qwi,
-                            @NonNull final String eval_map_id_clause,
-                            @NonNull final HashMap<Long, Double> eval_map
-                    ) {
-                        double eval = ActionMain.ranking_function(
-                                qwi.count,
-                                qwi.feedback_weight,
-                                1,
-                                1,
-                                average_document_length,
-                                entire_collection_count,
-                                qwi.ref_count
-                        );
+                (
+                        long id,
+                        final QueryWordInfo qwi,
+                        @NonNull final String eval_map_id_clause,
+                        @NonNull final HashMap<Long, Double> query_proc_eval_map
+                ) -> {
+                    double eval = ActionMain.ranking_function(
+                            qwi.count,
+                            qwi.feedback_weight,
+                            1,
+                            1,
+                            average_document_length,
+                            entire_collection_count,
+                            qwi.ref_count
+                    );
 
-                        eval_map.put(id, eval_map.get(id) + eval);
-                    }
+                    query_proc_eval_map.put(id, query_proc_eval_map.get(id) + eval);
                 }
         );
     }
@@ -582,9 +604,12 @@ public class ActionWord extends ActionItem {
 
     // 동시에 여러 개의 워드를 생성하는 메소드. 멀티워드 아이템 생성 시에 유용하다.
     @NonNull public long[] add_multi(@NonNull String[] textTokens) {
-        if (textTokens.length == 0) throw new IllegalArgumentException("Size of given String array is 0.");
+        write_lock.lock();
+        if (textTokens.length == 0) {
+            write_lock.unlock();
+            throw new IllegalArgumentException("Size of given String array is 0.");
+        }
 
-        ActionMain actionMain = ActionMain.getInstance();
         long[] wordIDs = new long[textTokens.length];
         int wordPos = 0;
         for (String s : textTokens) {
@@ -608,6 +633,7 @@ public class ActionWord extends ActionItem {
             wordIDs[wordPos++] = id;
         }
 
+        write_lock.unlock();
         return wordIDs;
     }
 
