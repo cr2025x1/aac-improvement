@@ -19,9 +19,6 @@ import java.util.HashMap;
 import java.util.ListIterator;
 import java.util.Map;
 import java.util.Vector;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 public class SearchActivity extends AppCompatActivity {
     ListView listView;
@@ -33,10 +30,7 @@ public class SearchActivity extends AppCompatActivity {
     HashMap<Long, QueryWordInfo> query_id_map;
 
     protected final SearchList search_list;
-    protected final Object interrupt_check_lock;
-    protected static final int POOL_SIZE = 2;
-    protected final ArrayList<Thread> threads;
-    ExecutorService search_executor;
+    KeyEventHandler search_key_event_handler;
 
     protected ActionMain actionMain;
     protected SearchImplicitFeedback feedbackHelper;
@@ -47,9 +41,7 @@ public class SearchActivity extends AppCompatActivity {
         context = this;
 
         search_list = new SearchList();
-        interrupt_check_lock = new Object();
-        threads = new ArrayList<>(POOL_SIZE);
-        search_executor = Executors.newFixedThreadPool(POOL_SIZE);
+        search_key_event_handler = new KEHSearch();
 
         query_id_map = null;
         queryMap = null;
@@ -106,7 +98,7 @@ public class SearchActivity extends AppCompatActivity {
             public void afterTextChanged(Editable s) {}
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-                search_executor.execute(new key_event_runnable());
+                search_key_event_handler.execute();
             }
         });
         /* End of Method for text-changing event */
@@ -114,40 +106,15 @@ public class SearchActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
-        search_executor.shutdown();
-        try {
-            search_executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+        search_key_event_handler.soft_off();
         super.onDestroy();
     }
 
 
-    protected class key_event_runnable implements Runnable {
-        Thread thread;
-        public key_event_runnable() {
-            thread = Thread.currentThread();
-        }
 
-        protected boolean check_mutual_exclusive_interrupt() {
-            synchronized (interrupt_check_lock) {
-                if (thread.isInterrupted()) {
-                    threads.remove(thread);
-                    return false;
-                }
-                for (Thread t : threads) if (t != thread) t.interrupt();
-                if (!threads.contains(thread)) threads.add(thread);
-                return true;
-            }
-        }
-
+    protected class KEHSearch extends KeyEventHandler {
         @Override
         public void run() {
-            if (!check_mutual_exclusive_interrupt()) {
-                return;
-            }
-
             if (search_by_query()) {
                 if (!check_mutual_exclusive_interrupt()) {
                     return;
@@ -173,10 +140,6 @@ public class SearchActivity extends AppCompatActivity {
                     return;
                 }
                 runOnUiThread(adapter::notifyDataSetChanged);
-            }
-
-            synchronized (interrupt_check_lock) {
-                threads.remove(thread);
             }
         }
 
@@ -231,7 +194,6 @@ public class SearchActivity extends AppCompatActivity {
             return true;
         }
     }
-
 
 
     // 키보드의 엔터키를 무시하기 위해 지정한 리스너 클래스

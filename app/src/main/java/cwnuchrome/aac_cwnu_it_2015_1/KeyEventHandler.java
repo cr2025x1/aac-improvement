@@ -3,6 +3,7 @@ package cwnuchrome.aac_cwnu_it_2015_1;
 import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Created by Chrome on 8/5/15.
@@ -10,7 +11,7 @@ import java.util.concurrent.Executors;
  * 검색, 아이템 추가 등의 상황에서의 키 입력을 받아 주어진 일을 처리하는 멀티스레드 Wrapper
  *
  */
-public class KeyEventHandler {
+public abstract class KeyEventHandler implements Runnable {
     protected final Object interrupt_check_lock;
     protected static final int POOL_SIZE = 2;
     protected final ArrayList<Thread> threads;
@@ -22,14 +23,14 @@ public class KeyEventHandler {
         search_executor = Executors.newFixedThreadPool(POOL_SIZE);
     }
 
-    public void execute(Runnable runnable) {
+    public void execute() {
         search_executor.execute(
                 () -> {
                     if (!check_mutual_exclusive_interrupt()) {
                         return;
                     }
 
-                    runnable.run();
+                    run();
 
                     synchronized (interrupt_check_lock) {
                         threads.remove(Thread.currentThread());
@@ -48,6 +49,15 @@ public class KeyEventHandler {
             for (Thread t : threads) if (t != thread) t.interrupt();
             if (!threads.contains(thread)) threads.add(thread);
             return true;
+        }
+    }
+
+    public void soft_off() {
+        search_executor.shutdown();
+        try {
+            search_executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
     }
 }
