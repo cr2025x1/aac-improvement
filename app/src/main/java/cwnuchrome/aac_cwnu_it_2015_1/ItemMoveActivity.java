@@ -35,28 +35,40 @@ public class ItemMoveActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_item_move);
 
-        list = get_list();
+        ConcurrentLibrary.run_off_ui_thread_with_result(
+                this,
+                new RunnableWithResult<ArrayList<Map.Entry<GenericTreeNode<ActionGroup.Info>, Integer>>>() {
+                    @Override
+                    public void run() {
+                        setResult(get_list());
+                    }
+                },
+                new RunnableWithResult<ArrayList<Map.Entry<GenericTreeNode<ActionGroup.Info>, Integer>>>() {
+                    @Override
+                    public void run() {
+                        runOnUiThread(
+                                () -> {
+                                    list = getParam();
 
-        /* ListView Initialization */
-        listView = (ListView) findViewById(R.id.listview_tree);
-        adapter = new InfoAdapter(this,
-                android.R.layout.simple_list_item_1, android.R.id.text1, list);
-        listView.setAdapter(adapter);
-        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view,
-                                    int position, long id) {
+                                    /* ListView Initialization */
+                                    listView = (ListView) findViewById(R.id.listview_tree);
+                                    adapter = new InfoAdapter(ItemMoveActivity.this,
+                                            android.R.layout.simple_list_item_1, android.R.id.text1, list);
+                                    listView.setAdapter(adapter);
+                                    listView.setOnItemClickListener(
+                                            (AdapterView<?> parent, View view, int position, long id) -> {
+                                                Intent i = new Intent();
+                                                i.putExtra("new_group_id", id);
+                                                ItemMoveActivity.this.setResult(RESULT_OK, i);
 
-                Intent i = new Intent();
-                i.putExtra("new_group_id", id);
-                setResult(RESULT_OK, i);
+                                                finish();
+                                            });
+                                }
+                        );
+                    }
+                }
 
-                finish();
-            }
-        });
-        /* End of ListView initialization */
-
-
+        );
     }
 
     @Override
@@ -85,6 +97,7 @@ public class ItemMoveActivity extends AppCompatActivity {
 
     protected ArrayList<Map.Entry<GenericTreeNode<ActionGroup.Info>, Integer>> get_list() {
         ActionMain actionMain = ActionMain.getInstance();
+        actionMain.read_lock.lock();
         int blacklist_id = getIntent().getIntExtra("blacklist", -1);
         if (blacklist_id == -1) throw new IllegalArgumentException("Required parameter is not given by intent.");
         ArrayList<Long> blacklist = actionMain.getIDReferrer().detach(blacklist_id);
@@ -92,6 +105,7 @@ public class ItemMoveActivity extends AppCompatActivity {
         GenericTree<ActionGroup.Info> group_tree = ((ActionGroup)(ActionMain.getInstance().itemChain[ActionMain.item.ID_Group])).get_sub_tree(1, blacklist); // 1 == 루트 그룹의 ID
         Set<Map.Entry<GenericTreeNode<ActionGroup.Info>, Integer>> depth_set = group_tree.buildWithDepth(GenericTreeTraversalOrderEnum.PRE_ORDER).entrySet();
 
+        actionMain.read_lock.unlock();
         return new ArrayList<>(depth_set);
     }
 

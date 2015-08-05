@@ -17,12 +17,16 @@ public class LockWrapper {
     ActionMain actionMain;
     ReentrantReadWriteLock.ReadLock read_lock;
     ReentrantReadWriteLock.WriteLock write_lock;
+    ReadLockWrapper read_lock_wrapper;
+    WriteLockWrapper write_lock_wrapper;
 
     public LockWrapper(ActionMain actionMain) {
         this.actionMain = actionMain;
         this.lock = new ReentrantReadWriteLock();
         read_lock = lock.readLock();
         write_lock = lock.writeLock();
+        read_lock_wrapper = new ReadLockWrapper();
+        write_lock_wrapper = new WriteLockWrapper();
     }
 
     public ReentrantReadWriteLock getLock() {
@@ -168,10 +172,10 @@ public class LockWrapper {
     }
 
     public ReadLockWrapper read_lock() {
-        return new ReadLockWrapper();
+        return read_lock_wrapper;
     }
 
     public WriteLockWrapper write_lock() {
-        return new WriteLockWrapper();
+        return write_lock_wrapper;
     }
 }
