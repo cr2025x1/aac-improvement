@@ -143,8 +143,7 @@ public class SearchActivity extends AppCompatActivity {
             }
         }
 
-        protected boolean search_by_query()
-        {
+        protected boolean search_by_query() {
             HashMap<String, Long> new_query_map = ActionMain.reduce_to_map(textInput.getText().toString());
             if ((new_query_map.size() == 0 && queryMap == null)||
                     (queryMap != null && new_query_map.equals(queryMap))) {

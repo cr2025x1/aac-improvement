@@ -5,8 +5,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
-import android.os.AsyncTask;
 import android.os.Bundle;
+import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -22,25 +22,29 @@ import android.widget.Toast;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
+import org.xml.sax.SAXException;
 
 import java.io.BufferedInputStream;
+import java.io.IOException;
 import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.ProtocolException;
 import java.net.URL;
-import java.net.URLConnection;
 import java.net.URLEncoder;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 
 
 public class AddItemActivity extends AppCompatActivity {
     ListView listView;
     EditText textInput;
     Context context;
-    updateList updater;
-    ArrayList<String> suggestionList;
+    final ArrayList<String> suggestion_list;
     ArrayAdapter<String> adapter;
 
     protected ActionMain actionMain;
@@ -49,16 +53,17 @@ public class AddItemActivity extends AppCompatActivity {
     protected int mode;
     protected static final int ADD_WORD_MACRO = 0;
     protected static final int ADD_GROUP = 1;
-
     protected static final int ACTIVITY_IMAGE_SELECTION = 0;
+
+    AISuggest key_event_handler;
 
     public AddItemActivity() {
         super();
         context = this;
-        updater = new updateList();
-        suggestionList = new ArrayList<>();
+        suggestion_list = new ArrayList<>();
         mode = -1;
         mode_values = new ContentValues();
+        key_event_handler = new AISuggest();
     }
 
     @Override
@@ -79,40 +84,25 @@ public class AddItemActivity extends AppCompatActivity {
         // Third parameter - ID of the TextView to which the data is written
         // Forth - the Array of data
         adapter = new ArrayAdapter<>(context,
-                android.R.layout.simple_list_item_1, android.R.id.text1, suggestionList);
+                android.R.layout.simple_list_item_1, android.R.id.text1, suggestion_list);
         listView.setAdapter(adapter);
         // ListView Item Click Listener
-        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view,
-                                    int position, long id) {
-
+        listView.setOnItemClickListener(
+            (AdapterView<?> parent, View view, int position, long id) -> {
                 String itemValue = (String) listView.getItemAtPosition(position);
-
                 textInput.setText(itemValue);
-
-//                add(itemValue);
-            }
         });
         /* End of ListView initialization */
 
         /* Method for text-changing event */
         textInput.addTextChangedListener(new TextWatcher() {
-            public void afterTextChanged(Editable s) {
-            }
-
-            public void beforeTextChanged(CharSequence s, int start,
-                                          int count, int after) {
-            }
-
-            public void onTextChanged(CharSequence s, int start,
-                                      int before, int count) {
-                updater.onResume();
+            public void afterTextChanged(Editable s) {}
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                key_event_handler.execute();
             }
         });
         /* End of Method for text-changing event */
-
-        updater.execute(); // Initializing Updater thread
     }
 
     protected void add(String itemText, int mod) {
@@ -193,170 +183,136 @@ public class AddItemActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
-        updater.onComplete(); // Setting Updater thread to end
+        key_event_handler.soft_off();
         super.onDestroy();
     }
 
-    class updateList extends AsyncTask<String, Integer, Long> {
-        // TODO: Change this into the multi-threaded version.
-        Document doc;
-        NodeList descNodes;
-
-        private final Object mPauseLock = new Object();
-        private boolean mPaused;
-        private boolean mFinished;
-
+    protected class AISuggest extends KeyEventHandler {
         @Override
-        protected void onCancelled() {
-            super.onCancelled();
-        }
+        public void run() {
+            ConnectivityManager connMgr = (ConnectivityManager)getSystemService(Context.CONNECTIVITY_SERVICE);
+            NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
+            if (!(networkInfo != null && networkInfo.isConnected())) {
+                return;
+            }
 
-        @Override
-        protected void onPostExecute(Long result) {
-            super.onPostExecute(result);
-        }
-
-        @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
-            mPaused = false;
-            mFinished = false;
-
-            System.out.println("ListView updater thread starts.");
-        }
-
-        @Override
-        protected void onProgressUpdate(Integer... values) {
-            super.onProgressUpdate(values);
-        }
-
-        @Override
-        protected Long doInBackground(String... params) {
-            long result = 0;
-
-            while (!mFinished) {
-                try {
-                    ConnectivityManager connMgr = (ConnectivityManager)
-                            getSystemService(Context.CONNECTIVITY_SERVICE);
-                    NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
-                    if (networkInfo != null && networkInfo.isConnected()) {
-                        System.out.println("Fetching data...");
-                        if (this.fetchSuggestion()) {
-
-                            int suggestion_count = descNodes.getLength();
-                            suggestionList.clear();
-                            if (suggestion_count > 0) {
-                                for (int i = 0; i < suggestion_count; i++) {
-                                    suggestionList.add(descNodes.item(i).getAttributes().getNamedItem("data").getNodeValue());
-                                }
-                            }
-                        }
-                        else {
-                            suggestionList.clear();
-                        }
-
-                        runOnUiThread(new updateItem());
-                    } else {
-                        System.out.println("No network connection available.");
-                    }
-
-
-                } catch (Exception e) {
-                    e.printStackTrace();
+            Document doc;
+            if ((doc = fetch_suggest()) != null) {
+                if (!check_mutual_exclusive_interrupt()) {
+                    return;
                 }
 
-                onPause();
+                synchronized (suggestion_list) {
+                    NodeList nodes = doc.getElementsByTagName("suggestion");
 
-                synchronized (mPauseLock) {
-                    while (mPaused) {
-                        try {
-                            mPauseLock.wait();
-                        }
-                        catch (InterruptedException e) {
-                            System.out.println("InterruptedException error occurred.");
+                    System.out.println("*** Suggestions ***");
+                    StringBuilder sb = new StringBuilder(100);
+                    for(int i = 0; i < nodes.getLength(); i++) {
+                        sb
+                                .append("[")
+                                .append(i)
+                                .append("] ")
+                                .append(nodes.item(i).getAttributes().getNamedItem("data").getNodeValue());
+                        System.out.println(sb.toString());
+                        sb.setLength(0);
+                    }
+
+                    suggestion_list.clear();
+                    if (nodes.getLength() > 0) {
+                        for (int i = 0; i < nodes.getLength(); i++) {
+                            suggestion_list.add(nodes.item(i).getAttributes().getNamedItem("data").getNodeValue());
                         }
                     }
                 }
-
+            }
+            else {
+                synchronized (suggestion_list) {
+                    suggestion_list.clear();
+                }
             }
 
-            System.out.println("ListView updater thread ends.");
-            return result;
-        }
-
-        /**
-         * Call this on pause.
-         */
-        public void onPause() {
-            synchronized (mPauseLock) {
-                mPaused = true;
+            if (!check_mutual_exclusive_interrupt()) {
+                return;
             }
+            runOnUiThread(adapter::notifyDataSetChanged);
         }
 
-        /**
-         * Call this on resume.
-         */
-        public void onResume() {
-            synchronized (mPauseLock) {
-                mPaused = false;
-                mPauseLock.notifyAll();
-            }
-        }
+        @Nullable protected Document fetch_suggest() {
+            String query = textInput.getText().toString().trim();
+            if (query.length() == 0) return null;
 
-        // The thread is set to end. Making it escape the loop.
-        public void onComplete() {
-            mFinished = true;
-            this.onResume();
-        }
-
-        // Notifying the UI thread to update the GUI.
-        class updateItem implements Runnable {
-            public void run() {
-                adapter.notifyDataSetChanged();
-            }
-        }
-
-        protected boolean fetchSuggestion() throws Exception
-        {
-            String queryWord = textInput.getText().toString().trim();
-            if (queryWord.length() == 0) return false;
-            // 출처: http://stackoverflow.com/questions/10786042/java-url-encoding-of-query-string-parameters
-            URL url = new URL("http://google.com/complete/search?output=toolbar&q=" + URLEncoder.encode(queryWord, "UTF-8"));
-            URLConnection connection = url.openConnection();
-
-            // http://stackoverflow.com/questions/15596312/xml-saxparserexception-in-android : 참고한 사이트
+            int code;
+            URL site_url;
             try {
-                doc = parseXML(new BufferedInputStream(connection.getInputStream()));
-            } catch (UnknownHostException e) {
-                System.out.println("Unable to fetch data: Cannot resolve hostname");
-                return false;
+                site_url = new URL("http://google.com/complete/search?output=toolbar&q=" + URLEncoder.encode(query, "UTF-8"));
+            } catch (MalformedURLException e) {
+                e.printStackTrace();
+                return null;
+            } catch (UnsupportedEncodingException e) {
+                e.printStackTrace();
+                return null;
             }
-            descNodes = doc.getElementsByTagName("suggestion");
-
-            for(int i = 0; i < descNodes.getLength(); i++) {
-                System.out.println(descNodes.item(i).getAttributes().getNamedItem("data").getNodeValue());
+            HttpURLConnection connection; // TODO: 커넥션 타임아웃을 도입해 개량?
+            try {
+                connection = (HttpURLConnection)site_url.openConnection();
+            } catch (IOException e) {
+                e.printStackTrace();
+                return null;
+            }
+            try {
+                connection.setRequestMethod("GET");
+            } catch (ProtocolException e) {
+                e.printStackTrace();
+                return null;
+            }
+            try {
+                connection.connect();
+            } catch (IOException e) {
+                e.printStackTrace();
+                return null;
             }
 
-            return true;
+            try {
+                code = connection.getResponseCode();
+            } catch (IOException e) {
+                e.printStackTrace();
+                return null;
+            }
+            if (code == 200) {
+                Document doc;
+                try {
+                    doc = parse_xml(new BufferedInputStream(connection.getInputStream()));
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    return null;
+                }
+                return doc;
+            }
+
+            ActionMain.log("***", "Finishing with unexpected response code " + code);
+            return null;
         }
 
-        protected Document parseXML(InputStream stream)
-                throws Exception
-        {
+        protected Document parse_xml(InputStream stream) {
             DocumentBuilderFactory objDocumentBuilderFactory;
             DocumentBuilder objDocumentBuilder;
             Document doc;
-            try
-            {
-                objDocumentBuilderFactory = DocumentBuilderFactory.newInstance();
+            objDocumentBuilderFactory = DocumentBuilderFactory.newInstance();
+            try {
                 objDocumentBuilder = objDocumentBuilderFactory.newDocumentBuilder();
-
-                doc = objDocumentBuilder.parse(stream);
+            } catch (ParserConfigurationException e) {
+                e.printStackTrace();
+                return null;
             }
-            catch(Exception ex)
-            {
-                System.out.println("Error occurred while parsing fetched XML data.");
-                throw ex;
+
+            try {
+                doc = objDocumentBuilder.parse(stream);
+            } catch (SAXException e) {
+                e.printStackTrace();
+                return null;
+            } catch (IOException e) {
+                e.printStackTrace();
+                return null;
             }
 
             return doc;
