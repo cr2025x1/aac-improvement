@@ -411,6 +411,7 @@ public abstract class ActionItem implements Serializable {
         protected double rank;
         protected long priority;
 
+
 //        public abstract void onClick(View v);
         public onClickClass(Context context, AACGroupContainer container) {
             this.context = context;

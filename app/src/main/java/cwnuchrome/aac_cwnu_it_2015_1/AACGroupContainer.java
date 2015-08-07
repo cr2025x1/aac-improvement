@@ -405,7 +405,7 @@ public class AACGroupContainer {
                     );
                     c.moveToFirst();
 
-                    ActionGroup.Button parentGroupButton = new ActionGroup.Button(context, new ActionGroupOCCWrapper(context, AACGroupContainer.this), AACGroupContainer.this);
+                    ActionGroup.Button parentGroupButton = new ActionGroup.Button(context, new ActionGroupParentOCCWrapper(context, AACGroupContainer.this), AACGroupContainer.this);
 
                     System.out.print("HashMap regenerated --> ");
                     ActionMacro.print_hashmap(ActionMultiWord.parse_element_id_count_tag(c.getString(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_ELEMENT_ID_TAG))));
@@ -1003,6 +1003,34 @@ public class AACGroupContainer {
                                         @Override
                                         public void run() {
                                             ActionGroupOCCWrapper.super.onClick(v_final);
+                                        }
+                                    }
+                            );
+                        }
+                    },
+                    null);
+        }
+    }
+
+    protected class ActionGroupParentOCCWrapper extends ActionGroup.onClickClass {
+        public ActionGroupParentOCCWrapper(Context context, AACGroupContainer container) {
+            super(context, container);
+        }
+
+        @Override
+        public void onClick(View v) {
+            final View v_final = v;
+            ConcurrentLibrary.run_off_ui_thread(
+                    activity,
+                    new Runnable() {
+                        @Override
+                        public void run() {
+                            feedbackHelper.send_feedback();
+                            activity.runOnUiThread(
+                                    new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            ActionGroupParentOCCWrapper.super.onClick(v_final);
                                         }
                                     }
                             );
