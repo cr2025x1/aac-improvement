@@ -39,7 +39,7 @@ public class SearchImplicitFeedback {
     public SearchImplicitFeedback(DocumentProcessor doc_proc) {
         fb_info_v = new Vector<>(ActionMain.item.ITEM_COUNT);
         for (int i = 0; i < ActionMain.item.ITEM_COUNT; i++) {
-            fb_info_v.add(new HashMap<>());
+            fb_info_v.add(new HashMap<Long, SearchFeedbackInfo>());
         }
         pos_max = -1;
         rel_doc_count = 0;

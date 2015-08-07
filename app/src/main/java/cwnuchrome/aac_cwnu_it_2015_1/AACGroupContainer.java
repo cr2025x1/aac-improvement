@@ -18,6 +18,7 @@ import android.widget.TextView;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Vector;
@@ -69,9 +70,12 @@ public class AACGroupContainer {
     boolean is_on_progress;
 
     protected SearchImplicitFeedback feedbackHelper = new SearchImplicitFeedback(
-            (int pos) -> {
-                ActionItem.onClickClass occ = ((ActionItem.Button) item_list.get(pos).findViewById(R.id.aac_item_button_id)).onClickObj;
-                return new SearchImplicitFeedback.ItemIDInfo(occ.getItemCategoryID(), occ.getItemID());
+            new SearchImplicitFeedback.DocumentProcessor() {
+                @Override
+                public SearchImplicitFeedback.ItemIDInfo get_doc_id(int pos) {
+                    ActionItem.onClickClass occ = ((ActionItem.Button) item_list.get(pos).findViewById(R.id.aac_item_button_id)).onClickObj;
+                    return new SearchImplicitFeedback.ItemIDInfo(occ.getItemCategoryID(), occ.getItemID());
+                }
             }
     );
 
@@ -184,22 +188,25 @@ public class AACGroupContainer {
                 rName_c.moveToFirst();
                 ((ActionGroup)actionMain.itemChain[ActionMain.item.ID_Group]).parseWordChain(
                         rName_c.getString(rName_c.getColumnIndexOrThrow(ActionGroup.SQL.COLUMN_NAME_WORDCHAIN)),
-                        (long itemID) -> {
-                            rootGroupElement.ids.add(itemID);
+                        new ActionMultiWord.onParseCommand() {
+                            @Override
+                            public void onParse(long itemID) {
+                                rootGroupElement.ids.add(itemID);
 
-                            Cursor itemID_c = actionMain.getDB().query(
-                                    actionMain.itemChain[ActionMain.item.ID_Word].TABLE_NAME,
-                                    new String[]{ActionWord.SQL.COLUMN_NAME_WORD},
-                                    ActionWord.SQL._ID + "=" + itemID,
-                                    null,
-                                    null,
-                                    null,
-                                    null
-                            );
-                            itemID_c.moveToFirst();
-                            rootGroupElement.words.add(itemID_c.getString(itemID_c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_WORD)));
+                                Cursor itemID_c = actionMain.getDB().query(
+                                        actionMain.itemChain[ActionMain.item.ID_Word].TABLE_NAME,
+                                        new String[]{ActionWord.SQL.COLUMN_NAME_WORD},
+                                        ActionWord.SQL._ID + "=" + itemID,
+                                        null,
+                                        null,
+                                        null,
+                                        null
+                                );
+                                itemID_c.moveToFirst();
+                                rootGroupElement.words.add(itemID_c.getString(itemID_c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_WORD)));
 
-                            itemID_c.close();
+                                itemID_c.close();
+                            }
                         });
                 rName_c.close();
 
@@ -372,16 +379,18 @@ public class AACGroupContainer {
 
                 Collections.sort(
                         item_list,
-                        (View lhs, View rhs) -> {
-                            ActionItem.onClickClass lhs_occ = ((ActionItem.Button)lhs.findViewById(R.id.aac_item_button_id)).onClickObj;
-                            ActionItem.onClickClass rhs_occ = ((ActionItem.Button)rhs.findViewById(R.id.aac_item_button_id)).onClickObj;
+                        new Comparator<View>() {
+                            @Override
+                            public int compare(View lhs, View rhs) {
+                                ActionItem.onClickClass lhs_occ = ((ActionItem.Button)lhs.findViewById(R.id.aac_item_button_id)).onClickObj;
+                                ActionItem.onClickClass rhs_occ = ((ActionItem.Button)rhs.findViewById(R.id.aac_item_button_id)).onClickObj;
 
-                            return rank_vector.get(lhs_occ.getItemCategoryID()).get(lhs_occ.getItemID())
-                                    > rank_vector.get(rhs_occ.getItemCategoryID()).get(rhs_occ.getItemID())
-                                    ? -1 : 1;
+                                return rank_vector.get(lhs_occ.getItemCategoryID()).get(lhs_occ.getItemID())
+                                        > rank_vector.get(rhs_occ.getItemCategoryID()).get(rhs_occ.getItemID())
+                                        ? -1 : 1;
+                            }
                         }
                 );
-
 
                 // 마지막으로 상위 그룹에 대한 버튼 형성 (단 최상위 그룹은 패스)
                 if (id != 1) {
@@ -436,14 +445,19 @@ public class AACGroupContainer {
         btn.setId(R.id.aac_item_button_id);
 
         checkBox.setOnCheckedChangeListener(
-                (CompoundButton buttonView, boolean isChecked) -> {
-                    if (isChecked) {
-                        selectedList.add((LinearLayout) buttonView.getParent());
-                    } else {
-                        View v = (View) buttonView.getParent();
-                        selectedList.remove(v);
+                new CompoundButton.OnCheckedChangeListener() {
+                    @Override
+                    public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                        if (isChecked) {
+                            selectedList.add((LinearLayout) buttonView.getParent());
+                        } else {
+                            View v = (View) buttonView.getParent();
+                            selectedList.remove(v);
+                        }
+
                     }
-                });
+                }
+        );
 
         checkBoxes.add(checkBox);
         item_list.add(item_layout);
@@ -480,7 +494,12 @@ public class AACGroupContainer {
         write_lock.lock();
         ConcurrentLibrary.run_off_ui_thread(
                 activity,
-                feedbackHelper::send_feedback,
+                new Runnable() {
+                    @Override
+                    public void run() {
+                        feedbackHelper.send_feedback();
+                    }
+                },
                 null
         );
         write_lock.unlock();
@@ -687,13 +706,13 @@ public class AACGroupContainer {
             projection = new String[] { ActionItem.SQL._ID };
 
             itemVector = new Vector<>(ActionMain.item.ITEM_COUNT);
-            for (int i = 0; i < ActionMain.item.ITEM_COUNT; i++) itemVector.add(new ArrayList<>());
+            for (int i = 0; i < ActionMain.item.ITEM_COUNT; i++) itemVector.add(new ArrayList<Long>());
 
             missingDependencyPrintVector = new Vector<>(ActionMain.item.ITEM_COUNT);
-            for (int i = 0; i < ActionMain.item.ITEM_COUNT; i++) missingDependencyPrintVector.add(new ArrayList<>());
+            for (int i = 0; i < ActionMain.item.ITEM_COUNT; i++) missingDependencyPrintVector.add(new ArrayList<ContentValues>());
 
             missingDependencyVector = new Vector<>(ActionMain.item.ITEM_COUNT);
-            for (int i = 0; i < ActionMain.item.ITEM_COUNT; i++) missingDependencyVector.add(new ArrayList<>());
+            for (int i = 0; i < ActionMain.item.ITEM_COUNT; i++) missingDependencyVector.add(new ArrayList<Long>());
 
             actionMain = ActionMain.getInstance();
         }
@@ -848,9 +867,14 @@ public class AACGroupContainer {
                     occ.isOnline = false;
                 }
                 else {
-                    btn.setOnClickListener((View view) -> {
-                            ((MainActivity)context).dialog_rename(occ.getItemCategoryID(), occ.getItemID());
-                        });
+                    btn.setOnClickListener(
+                            new View.OnClickListener() {
+                                @Override
+                                public void onClick(View v) {
+                                    ((MainActivity)context).dialog_rename(occ.getItemCategoryID(), occ.getItemID());
+                                }
+                            }
+                    );
                 }
 
             }
@@ -893,7 +917,7 @@ public class AACGroupContainer {
             }
 
             Vector<ArrayList<Long>> itemVector = new Vector<>(ActionMain.item.ITEM_COUNT);
-            for (int i = 0; i < ActionMain.item.ITEM_COUNT; i++) itemVector.add(new ArrayList<>());
+            for (int i = 0; i < ActionMain.item.ITEM_COUNT; i++) itemVector.add(new ArrayList<Long>());
 
             for (View v : selectedList) {
                 ActionItem.onClickClass occ = ((ActionItem.Button)v.findViewById(R.id.aac_item_button_id)).onClickObj;
@@ -967,13 +991,22 @@ public class AACGroupContainer {
         @Override
         public void onClick(View v) {
             add_feedback_info(this, v);
+            final View v_final = v;
             ConcurrentLibrary.run_off_ui_thread(
                     activity,
-                    () -> {
-                        feedbackHelper.send_feedback();
-                        activity.runOnUiThread(
-                                () -> super.onClick(v)
-                        );
+                    new Runnable() {
+                        @Override
+                        public void run() {
+                            feedbackHelper.send_feedback();
+                            activity.runOnUiThread(
+                                    new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            ActionGroupOCCWrapper.super.onClick(v_final);
+                                        }
+                                    }
+                            );
+                        }
                     },
                     null);
         }
@@ -1025,9 +1058,19 @@ public class AACGroupContainer {
     public void set_to_defaults_MT() {
         ConcurrentLibrary.run_off_ui_thread(
                 activity,
-                () -> ActionPreset.getInstance().revert_to_default(context),
-                () -> explore_group_MT(1, null)
-                );
+                new Runnable() {
+                    @Override
+                    public void run() {
+                        ActionPreset.getInstance().revert_to_default(context);
+                    }
+                },
+                new Runnable() {
+                    @Override
+                    public void run() {
+                        explore_group_MT(1, null);
+                    }
+                }
+        );
     }
 
 }

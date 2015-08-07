@@ -398,46 +398,44 @@ public abstract class ActionMultiWord extends ActionItem {
         return evaluate_by_query_map_by_query_processor(
                 queryMap,
                 eval_map,
-                (
-                        long id,
-                        final QueryWordInfo qwi,
-                        @NonNull final String eval_map_id_clause,
-                        @NonNull final HashMap<Long, Double> query_proc_eval_map
-                ) -> {
-                    read_lock.lock();
-                    Cursor c = db.query(
-                            TABLE_NAME,
-                            new String[]{SQL._ID, SQL.COLUMN_NAME_ELEMENT_ID_TAG},
-                            SQL.COLUMN_NAME_ELEMENT_ID_TAG + " LIKE ? AND (" + eval_map_id_clause + ")",
-                            new String[]{"%:" + id + ",%"},
-                            null,
-                            null,
-                            null
-                    );
-                    c.moveToFirst();
-
-                    int multiword_id_col = c.getColumnIndexOrThrow(SQL._ID);
-                    int id_tag_col = c.getColumnIndexOrThrow(SQL.COLUMN_NAME_ELEMENT_ID_TAG);
-                    for (int i = 0; i < c.getCount(); i++) {
-                        HashMap<Long, Long> map = parse_element_id_count_tag(c.getString(id_tag_col));
-                        long doc_ref_count = map.get(id);
-
-                        double eval = ActionMain.ranking_function(
-                                qwi.count,
-                                qwi.feedback_weight,
-                                doc_ref_count,
-                                map.size(),
-                                average_document_length,
-                                entire_collection_count,
-                                qwi.ref_count
+                new QueryProcessor() {
+                    @Override
+                    public void process_query_id(long id, QueryWordInfo qwi, @NonNull String eval_map_id_clause, @NonNull HashMap<Long, Double> query_proc_eval_map) {
+                        read_lock.lock();
+                        Cursor c = db.query(
+                                TABLE_NAME,
+                                new String[]{SQL._ID, SQL.COLUMN_NAME_ELEMENT_ID_TAG},
+                                SQL.COLUMN_NAME_ELEMENT_ID_TAG + " LIKE ? AND (" + eval_map_id_clause + ")",
+                                new String[]{"%:" + id + ",%"},
+                                null,
+                                null,
+                                null
                         );
+                        c.moveToFirst();
 
-                        long multiword_item_id = c.getLong(multiword_id_col);
-                        query_proc_eval_map.put(multiword_item_id, query_proc_eval_map.get(multiword_item_id) + eval);
-                        c.moveToNext();
+                        int multiword_id_col = c.getColumnIndexOrThrow(SQL._ID);
+                        int id_tag_col = c.getColumnIndexOrThrow(SQL.COLUMN_NAME_ELEMENT_ID_TAG);
+                        for (int i = 0; i < c.getCount(); i++) {
+                            HashMap<Long, Long> map = parse_element_id_count_tag(c.getString(id_tag_col));
+                            long doc_ref_count = map.get(id);
+
+                            double eval = ActionMain.ranking_function(
+                                    qwi.count,
+                                    qwi.feedback_weight,
+                                    doc_ref_count,
+                                    map.size(),
+                                    average_document_length,
+                                    entire_collection_count,
+                                    qwi.ref_count
+                            );
+
+                            long multiword_item_id = c.getLong(multiword_id_col);
+                            query_proc_eval_map.put(multiword_item_id, query_proc_eval_map.get(multiword_item_id) + eval);
+                            c.moveToNext();
+                        }
+                        c.close();
+                        read_lock.unlock();
                     }
-                    c.close();
-                    read_lock.unlock();
                 }
         );
     }

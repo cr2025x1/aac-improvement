@@ -47,22 +47,30 @@ public class ItemMoveActivity extends AppCompatActivity {
                     @Override
                     public void run() {
                         runOnUiThread(
-                                () -> {
-                                    list = getParam();
+                                new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        list = getParam();
 
                                     /* ListView Initialization */
-                                    listView = (ListView) findViewById(R.id.listview_tree);
-                                    adapter = new InfoAdapter(ItemMoveActivity.this,
-                                            android.R.layout.simple_list_item_1, android.R.id.text1, list);
-                                    listView.setAdapter(adapter);
-                                    listView.setOnItemClickListener(
-                                            (AdapterView<?> parent, View view, int position, long id) -> {
-                                                Intent i = new Intent();
-                                                i.putExtra("new_group_id", id);
-                                                ItemMoveActivity.this.setResult(RESULT_OK, i);
+                                        listView = (ListView) findViewById(R.id.listview_tree);
+                                        adapter = new InfoAdapter(ItemMoveActivity.this,
+                                                android.R.layout.simple_list_item_1, android.R.id.text1, list);
+                                        listView.setAdapter(adapter);
+                                        listView.setOnItemClickListener(
+                                                new AdapterView.OnItemClickListener() {
+                                                    @Override
+                                                    public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                                                        Intent i = new Intent();
+                                                        i.putExtra("new_group_id", id);
+                                                        ItemMoveActivity.this.setResult(RESULT_OK, i);
 
-                                                finish();
-                                            });
+                                                        finish();
+                                                    }
+                                                }
+                                        );
+
+                                    }
                                 }
                         );
                     }

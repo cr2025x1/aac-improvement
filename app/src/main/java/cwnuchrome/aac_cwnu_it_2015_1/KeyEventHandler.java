@@ -29,15 +29,18 @@ public abstract class KeyEventHandler implements Runnable {
 
     public void execute() {
         search_executor.execute(
-                () -> {
-                    if (!check_mutual_exclusive_interrupt()) {
-                        return;
-                    }
+                new Runnable() {
+                    @Override
+                    public void run() {
+                        if (!check_mutual_exclusive_interrupt()) {
+                            return;
+                        }
 
-                    run();
+                        KeyEventHandler.this.run();
 
-                    synchronized (interrupt_check_lock) {
-                        threads.remove(Thread.currentThread());
+                        synchronized (interrupt_check_lock) {
+                            threads.remove(Thread.currentThread());
+                        }
                     }
                 }
         );

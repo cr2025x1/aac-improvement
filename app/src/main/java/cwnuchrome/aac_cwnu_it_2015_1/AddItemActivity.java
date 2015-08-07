@@ -88,16 +88,24 @@ public class AddItemActivity extends AppCompatActivity {
         listView.setAdapter(adapter);
         // ListView Item Click Listener
         listView.setOnItemClickListener(
-            (AdapterView<?> parent, View view, int position, long id) -> {
-                String itemValue = (String) listView.getItemAtPosition(position);
-                textInput.setText(itemValue);
-        });
+                new AdapterView.OnItemClickListener() {
+                    @Override
+                    public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                        String itemValue = (String) listView.getItemAtPosition(position);
+                        textInput.setText(itemValue);
+                    }
+                }
+        );
         /* End of ListView initialization */
 
         /* Method for text-changing event */
         textInput.addTextChangedListener(new TextWatcher() {
-            public void afterTextChanged(Editable s) {}
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            public void afterTextChanged(Editable s) {
+            }
+
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
             public void onTextChanged(CharSequence s, int start, int before, int count) {
                 key_event_handler.execute();
             }
@@ -238,7 +246,12 @@ public class AddItemActivity extends AppCompatActivity {
             if (!check_mutual_exclusive_interrupt()) {
                 return;
             }
-            runOnUiThread(adapter::notifyDataSetChanged);
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    adapter.notifyDataSetChanged();
+                }
+            });
         }
 
         @Nullable protected Document fetch_suggest() {

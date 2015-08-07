@@ -537,7 +537,7 @@ public abstract class ActionItem implements Serializable {
         Vector<ArrayList<Long>> v;
         if (itemVector == null) {
             v = new Vector<>(ActionMain.item.ITEM_COUNT);
-            for (int i = 0; i < ActionMain.item.ITEM_COUNT; i++) v.add(new ArrayList<>());
+            for (int i = 0; i < ActionMain.item.ITEM_COUNT; i++) v.add(new ArrayList<Long>());
         }
         else v = itemVector;
 

@@ -46,9 +46,12 @@ public class SearchActivity extends AppCompatActivity {
         query_id_map = null;
         queryMap = null;
         feedbackHelper = new SearchImplicitFeedback(
-                (int pos) -> {
-                    ActionItem.onClickClass occ = search_list.occs.get(pos);
-                    return new SearchImplicitFeedback.ItemIDInfo(occ.getItemCategoryID(), occ.getItemID());
+                new SearchImplicitFeedback.DocumentProcessor() {
+                    @Override
+                    public SearchImplicitFeedback.ItemIDInfo get_doc_id(int pos) {
+                        ActionItem.onClickClass occ = search_list.occs.get(pos);
+                        return new SearchImplicitFeedback.ItemIDInfo(occ.getItemCategoryID(), occ.getItemID());
+                    }
                 }
         );
     }
@@ -80,15 +83,17 @@ public class SearchActivity extends AppCompatActivity {
         listView.setAdapter(adapter);
         // ListView Item Click Listener
         listView.setOnItemClickListener(
-                (AdapterView<?> parent, View view, int position, long id) -> {
+                new AdapterView.OnItemClickListener() {
+                    @Override
+                    public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
 //                String itemValue = (String) listView.getItemAtPosition(position);
-                    ActionItem.onClickClass occ = search_list.occs.get(position);
-                    feedbackHelper.add_rel(
-                            new SearchImplicitFeedback.ItemIDInfo(occ.getItemCategoryID(), occ.getItemID()),
-                            position
-                    );
-                    occ.onClick(view);
-
+                        ActionItem.onClickClass occ = search_list.occs.get(position);
+                        feedbackHelper.add_rel(
+                                new SearchImplicitFeedback.ItemIDInfo(occ.getItemCategoryID(), occ.getItemID()),
+                                position
+                        );
+                        occ.onClick(view);
+                    }
                 }
         );
         /* End of ListView initialization */
@@ -139,7 +144,14 @@ public class SearchActivity extends AppCompatActivity {
                 if (!check_mutual_exclusive_interrupt()) {
                     return;
                 }
-                runOnUiThread(adapter::notifyDataSetChanged);
+                runOnUiThread(
+                        new Runnable() {
+                            @Override
+                            public void run() {
+                                adapter.notifyDataSetChanged();
+                            }
+                        }
+                );
             }
         }
 
@@ -215,17 +227,28 @@ public class SearchActivity extends AppCompatActivity {
         // 피드백을 보내고 액티비티 종료 결과를 알린다.
         ConcurrentLibrary.run_off_ui_thread(
                 this,
-                () -> {
-                    actionMain.write_lock.lock();
-                    feedbackHelper.send_feedback();
-                    actionMain.write_lock.unlock();
+                new Runnable() {
+                    @Override
+                    public void run() {
+                        actionMain.write_lock.lock();
+                        feedbackHelper.send_feedback();
+                        actionMain.write_lock.unlock();
+                    }
                 },
-                () -> SearchActivity.this.runOnUiThread(
-                        () -> {
-                            SearchActivity.this.setResult(RESULT_CANCELED);
-                            SearchActivity.super.onBackPressed();
-                        }
-                )
+                new Runnable() {
+                    @Override
+                    public void run() {
+                        SearchActivity.this.runOnUiThread(
+                                new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        SearchActivity.this.setResult(RESULT_CANCELED);
+                                        SearchActivity.super.onBackPressed();
+                                    }
+                                }
+                        );
+                    }
+                }
         );
     }
 
@@ -349,20 +372,32 @@ public class SearchActivity extends AppCompatActivity {
         public void onClick(View v) {
             Intent i = new Intent();
             setResult(RESULT_OK, i);
+            final View v_final = v;
 
             ConcurrentLibrary.run_off_ui_thread(
                     SearchActivity.this,
-                    () -> {
-                        actionMain.write_lock.lock();
-                        feedbackHelper.send_feedback(); // 액티비티를 종료하게 되므로 쿼리결과 조회는 자동으로 종료된다. 따라서 피드백을 보낸다.
-                        actionMain.write_lock.unlock();
+                    new Runnable() {
+                        @Override
+                        public void run() {
+                            actionMain.write_lock.lock();
+                            feedbackHelper.send_feedback(); // 액티비티를 종료하게 되므로 쿼리결과 조회는 자동으로 종료된다. 따라서 피드백을 보낸다.
+                            actionMain.write_lock.unlock();
+                        }
                     },
-                    () -> runOnUiThread(
-                            () -> {
-                                super.onClick(v);
-                                finish(); // 이 액티비티를 종료하고, 기존의 탐색 화면으로 돌아간다.
-                            }
-                    )
+                    new Runnable() {
+                        @Override
+                        public void run() {
+                            runOnUiThread(
+                                    new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            GroupOCCWrapper.super.onClick(v_final);
+                                            finish(); // 이 액티비티를 종료하고, 기존의 탐색 화면으로 돌아간다.
+                                        }
+                                    }
+                            );
+                        }
+                    }
             );
         }
     }

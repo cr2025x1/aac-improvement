@@ -554,23 +554,21 @@ public class ActionWord extends ActionItem {
         return evaluate_by_query_map_by_query_processor(
                 queryMap,
                 eval_map,
-                (
-                        long id,
-                        final QueryWordInfo qwi,
-                        @NonNull final String eval_map_id_clause,
-                        @NonNull final HashMap<Long, Double> query_proc_eval_map
-                ) -> {
-                    double eval = ActionMain.ranking_function(
-                            qwi.count,
-                            qwi.feedback_weight,
-                            1,
-                            1,
-                            average_document_length,
-                            entire_collection_count,
-                            qwi.ref_count
-                    );
+                new QueryProcessor() {
+                    @Override
+                    public void process_query_id(long id, QueryWordInfo qwi, @NonNull String eval_map_id_clause, @NonNull HashMap<Long, Double> query_proc_eval_map) {
+                        double eval = ActionMain.ranking_function(
+                                qwi.count,
+                                qwi.feedback_weight,
+                                1,
+                                1,
+                                average_document_length,
+                                entire_collection_count,
+                                qwi.ref_count
+                        );
 
-                    query_proc_eval_map.put(id, query_proc_eval_map.get(id) + eval);
+                        query_proc_eval_map.put(id, query_proc_eval_map.get(id) + eval);
+                    }
                 }
         );
     }

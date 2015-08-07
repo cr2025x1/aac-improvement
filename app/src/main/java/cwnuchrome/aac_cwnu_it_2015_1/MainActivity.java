@@ -152,19 +152,20 @@ public class MainActivity extends AppCompatActivity {
             }
 
             container.remove_selected_MT(
-                    () -> runOnUiThread(this::revert_menu_to_main));
-            // 이것이 바로 람다의 기적!!
-//            container.remove_selected_MT(new Runnable() {
-//                @Override
-//                public void run() {
-//                    runOnUiThread(new Runnable() {
-//                        @Override
-//                        public void run() {
-//                            revert_menu_to_main();
-//                        }
-//                    });
-//                }
-//            });
+                    new Runnable() {
+                        @Override
+                        public void run() {
+                            runOnUiThread(
+                                    new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            revert_menu_to_main();
+                                        }
+                                    }
+                            );
+                        }
+                    }
+            );
 
             return true;
         }
@@ -255,15 +256,23 @@ public class MainActivity extends AppCompatActivity {
                     else v.put(ActionItem.SQL.COLUMN_NAME_PICTURE, pictureFilename);
 
                     container.set_image_for_selected_MT(v,
-                            () -> runOnUiThread(
-                                    () -> {
-                                        revertMenu();
-                                        container.explore_group_MT(container.getCurrentGroupID(), null);
-                                    }));
-//                    container.setImageForSelected(v);
-//                    revertMenu();
-//                    container.explore_group(container.getCurrentGroupID());
-//                    container.explore_group_MT(container.getCurrentGroupID());
+                            new Runnable() {
+                                @Override
+                                public void run() {
+                                    runOnUiThread(
+                                            new Runnable() {
+                                                @Override
+                                                public void run() {
+                                                    revertMenu();
+                                                    container.explore_group_MT(container.getCurrentGroupID(), null);
+
+                                                }
+                                            }
+                                    );
+                                }
+                            }
+
+                    );
                     break;
             }
 
@@ -280,14 +289,21 @@ public class MainActivity extends AppCompatActivity {
 
 //                    container.moveSelected(id);
                     container.move_selected_runnable_MT(id,
-                            () -> runOnUiThread(
-                                    () -> {
-                                        revertMenu();
-                                        container.explore_group_MT(container.getCurrentGroupID(), null);
-                                    }));
-//                    revertMenu();
-//                    container.explore_group(container.getCurrentGroupID());
-//                    container.explore_group_MT(container.getCurrentGroupID());
+                            new Runnable() {
+                                @Override
+                                public void run() {
+                                    runOnUiThread(
+                                            new Runnable() {
+                                                @Override
+                                                public void run() {
+                                                    revertMenu();
+                                                    container.explore_group_MT(container.getCurrentGroupID(), null);
+                                                }
+                                            }
+                                    );
+                                }
+                            }
+                    );
                     break;
             }
         }
@@ -300,11 +316,21 @@ public class MainActivity extends AppCompatActivity {
                 .setTitle(R.string.menu_remove_item_dependency_warning_title)
                 .setView(linear)
                 .setPositiveButton(R.string.menu_remove_item_dependency_warning_confirm,
-                        (DialogInterface dialog, int which) -> {
-                            container.invokeRemoval();
-                        })
+                        new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                container.invokeRemoval();
+                            }
+                        }
+                )
                 .setNegativeButton(R.string.menu_remove_item_dependency_warning_cancel,
-                        (DialogInterface dialog, int which) -> {})
+                        new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+
+                            }
+                        }
+                )
                 .show();
 
     }
@@ -330,51 +356,68 @@ public class MainActivity extends AppCompatActivity {
 
     public void dialog_rename(int category_id, long item_id) {
         final LinearLayout linear = (LinearLayout)View.inflate(this, R.layout.dialog_item_rename, null);
+        final int category_id_final = category_id;
+        final long item_id_final = item_id;
 
         new AlertDialog.Builder(this)
                 .setTitle(R.string.title_dialog_item_rename)
                 .setView(linear)
                 .setPositiveButton(R.string.button_dialog_item_rename_positive,
-                        (DialogInterface dialog, int which) -> {
-                            container.modify_item_MT(
-                                    category_id,
-                                    item_id,
-                                    ((EditText) linear.findViewById(R.id.dialog_item_rename_edit_text))
-                                            .getText()
-                                            .toString()
-                                            .trim(),
-                                    new RunnableWithResult<Long>() {
-                                        @Override
-                                        public void run() {
-                                            if (getParam() > 0) {
-                                                // TODO: 아니면 버튼 텍스트만 업데이트하게 변경?
-                                                container.explore_group_MT(
-                                                        container.getCurrentGroupID(),
-                                                        () -> runOnUiThread(
-                                                                () -> {
-                                                                    Toast
-                                                                            .makeText(getBaseContext(), R.string.toast_dialog_item_rename_success, Toast.LENGTH_SHORT)
-                                                                            .show();
-                                                                    revert_menu_to_main();
+                        new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                container.modify_item_MT(
+                                        category_id_final,
+                                        item_id_final,
+                                        ((EditText) linear.findViewById(R.id.dialog_item_rename_edit_text))
+                                                .getText()
+                                                .toString()
+                                                .trim(),
+                                        new RunnableWithResult<Long>() {
+                                            @Override
+                                            public void run() {
+                                                if (getParam() > 0) {
+                                                    // TODO: 아니면 버튼 텍스트만 업데이트하게 변경?
+                                                    container.explore_group_MT(
+                                                            container.getCurrentGroupID(),
+                                                            new Runnable() {
+                                                                @Override
+                                                                public void run() {
+                                                                    runOnUiThread(
+                                                                            new Runnable() {
+                                                                                @Override
+                                                                                public void run() {
+                                                                                    Toast
+                                                                                            .makeText(getBaseContext(), R.string.toast_dialog_item_rename_success, Toast.LENGTH_SHORT)
+                                                                                            .show();
+                                                                                    revert_menu_to_main();
+                                                                                }
+                                                                            }
+                                                                    );
                                                                 }
-                                                        )
-                                                );
-                                            } else {
-                                                Toast
-                                                        .makeText(getBaseContext(), R.string.toast_dialog_item_rename_failure, Toast.LENGTH_SHORT)
-                                                        .show();
-                                                revert_menu_to_main();
+                                                            }
+                                                    );
+                                                } else {
+                                                    Toast
+                                                            .makeText(getBaseContext(), R.string.toast_dialog_item_rename_failure, Toast.LENGTH_SHORT)
+                                                            .show();
+                                                    revert_menu_to_main();
+                                                }
                                             }
                                         }
-                                    }
-                            );
+                                );
+                            }
                         }
                 )
                 .setNegativeButton(R.string.button_dialog_item_rename_negative,
-                        (DialogInterface dialog, int which) -> {
-                            container.setMode(AACGroupContainer.MODE_NORMAL);
-                            revert_menu_to_main();
-                        })
+                new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        container.setMode(AACGroupContainer.MODE_NORMAL);
+                        revert_menu_to_main();
+                    }
+                }
+        )
                 .show();
     }
 

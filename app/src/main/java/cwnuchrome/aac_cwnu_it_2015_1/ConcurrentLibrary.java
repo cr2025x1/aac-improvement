@@ -18,10 +18,14 @@ public class ConcurrentLibrary {
             final ProgressDialog dialog = ProgressDialog.show(activity, "Please wait...", "Loading...", true);
             dialog.setCancelable(false);
             new Thread(
-                    () -> {
-                        run.run();
-                        dialog.dismiss();
-                        if (after != null) after.run();
+                    new Runnable() {
+                        @Override
+                        public void run() {
+                            run.run();
+                            dialog.dismiss();
+                            if (after != null) after.run();
+
+                        }
                     }
             ).start();
         }
@@ -37,12 +41,15 @@ public class ConcurrentLibrary {
             final ProgressDialog dialog = ProgressDialog.show(activity, "Please wait...", "Loading...", true);
             dialog.setCancelable(false);
             new Thread(
-                    () -> {
-                        run.run();
-                        dialog.dismiss();
-                        if (after != null) {
-                            after.setParam(run.getResult());
-                            after.run();
+                    new Runnable() {
+                        @Override
+                        public void run() {
+                            run.run();
+                            dialog.dismiss();
+                            if (after != null) {
+                                after.setParam(run.getResult());
+                                after.run();
+                            }
                         }
                     }
             ).start();

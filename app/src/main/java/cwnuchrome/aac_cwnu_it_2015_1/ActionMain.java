@@ -871,6 +871,7 @@ public final class ActionMain {
     private class WordRefiner implements Runnable {
         @Override
         public void run() {
+            log("***", "IS NOW ACTIVE");
             for (int i = 0; i < item.ITEM_COUNT; i++) if (ActionMultiWord.class.isAssignableFrom(itemChain[i].getClass())) while (true) {
                 read_lock.lock();
 
