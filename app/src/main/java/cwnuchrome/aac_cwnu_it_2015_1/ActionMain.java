@@ -31,7 +31,6 @@ import java.util.Vector;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
@@ -85,9 +84,7 @@ public final class ActionMain {
     Context context;
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     LockWrapper lock_wrapper;
-//    Lock read_lock = lock.readLock();
     LockWrapper.ReadLockWrapper read_lock;
-//    DBWriteLockWrapper write_lock;
     LockWrapper.WriteLockWrapper write_lock;
     byte[] socket_buffer;
     ExecutorService morpheme_analysis_executor;
@@ -109,19 +106,25 @@ public final class ActionMain {
     }
 
     public void initDBHelper (Context context) {
+        write_lock.lock();
         actionDBHelper = new ActionDBHelper(context);
         db = actionDBHelper.getWritableDatabase();
         activate_morpheme_analyzer();
+        write_lock.unlock();
     }
 
     public void initTables() {
+        write_lock.lock();
         actionDBHelper.onCreate(db);
         actionDBHelper.initTable(db);
+        write_lock.unlock();
     }
 
     public void resetTables() {
+        write_lock.lock();
         actionDBHelper.deleteTable(db);
         initTables();
+        write_lock.unlock();
     }
 
     public SQLiteDatabase getDB() { return db; }
@@ -946,6 +949,7 @@ public final class ActionMain {
                     morphemeSocket.close(); // TODO: 커넥션 열기/닫기 횟수를 좀 줄여서 최적화?
                 } catch (IOException e) {
                     e.printStackTrace();
+                    return;
                 }
 
 //                try {
@@ -998,19 +1002,18 @@ public final class ActionMain {
 
                 // 적용 시작
 
-                HashMap<Long, Long> diff_map = new HashMap<>(word_ids.length + map.size()); // 아이템의 레퍼런스 차를 기록하는 해시맵
+                HashMap<Long, Long> ref_diff_map = new HashMap<>(word_ids.length + map.size()); // 아이템의 레퍼런스 차를 기록하는 해시맵
                 for (int k = 0; k < word_ids.length; k++) {
                     // 해시맵 병합. 단, 이미 기존 맵에 아이템이 있는 경우에는 기존 양을 초과하는 양만큼만 추가한다.
                     if (id_map.containsKey(word_ids[k])) {
                         long value = id_map.get(word_ids[k]);
                         if (value < word_counts[k]) {
                             id_map.put(word_ids[k], word_counts[k]);
-                            diff_map.put(word_ids[k], word_counts[k] - value);
                         }
                     }
                     else {
                         id_map.put(word_ids[k], word_counts[k]);
-                        diff_map.put(word_ids[k], word_counts[k]);
+                        ref_diff_map.put(word_ids[k], 1l);
                     }
                 }
 
@@ -1019,13 +1022,12 @@ public final class ActionMain {
                 values.put(ActionMultiWord.SQL.COLUMN_NAME_ELEMENT_ID_TAG, updated_id_tag);
                 values.put(ActionMultiWord.SQL.COLUMN_NAME_IS_REFINED, 1);
 
-                // 차이나는 아이템의 레퍼런스 카운트를 업데이트한다.
+                // 추가된 아이템의 레퍼런스 카운트를 업데이트한다.
                 itemChain[i].updateWithIDs(context, values, new long[]{id});
-                for (Map.Entry<Long, Long> e : diff_map.entrySet()) {
+                for (Map.Entry<Long, Long> e : ref_diff_map.entrySet()) {
                     actionWord.update_reference_count(e.getKey(), e.getValue());
                 }
 
-//                StackTraceElement[] stacktrace = Thread.currentThread().getStackTrace();
                 write_lock.unlock();
             }
         }

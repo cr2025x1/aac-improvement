@@ -13,14 +13,18 @@ import java.util.concurrent.TimeUnit;
  */
 public abstract class KeyEventHandler implements Runnable {
     protected final Object interrupt_check_lock;
-    protected static final int POOL_SIZE = 2;
+//    protected static final int POOL_SIZE = 2;
     protected final ArrayList<Thread> threads;
     ExecutorService search_executor;
 
     public KeyEventHandler() {
+        this(2);
+    }
+
+    public KeyEventHandler(int pool_size) {
         interrupt_check_lock = new Object();
-        threads = new ArrayList<>(POOL_SIZE);
-        search_executor = Executors.newFixedThreadPool(POOL_SIZE);
+        threads = new ArrayList<>(pool_size);
+        search_executor = Executors.newFixedThreadPool(pool_size);
     }
 
     public void execute() {

@@ -188,6 +188,10 @@ public class AddItemActivity extends AppCompatActivity {
     }
 
     protected class AISuggest extends KeyEventHandler {
+        public AISuggest() {
+            super(AACGroupContainerPreferences.ADD_ITEM_KEY_EVENT_THREAD_POOL_SIZE);
+        }
+
         @Override
         public void run() {
             ConnectivityManager connMgr = (ConnectivityManager)getSystemService(Context.CONNECTIVITY_SERVICE);
@@ -252,9 +256,10 @@ public class AddItemActivity extends AppCompatActivity {
                 e.printStackTrace();
                 return null;
             }
-            HttpURLConnection connection; // TODO: 커넥션 타임아웃을 도입해 개량?
+            HttpURLConnection connection;
             try {
                 connection = (HttpURLConnection)site_url.openConnection();
+                connection.setConnectTimeout(AACGroupContainerPreferences.ADD_ITEM_FETCH_SUGGESTION_TIMEOUT);
             } catch (IOException e) {
                 e.printStackTrace();
                 return null;

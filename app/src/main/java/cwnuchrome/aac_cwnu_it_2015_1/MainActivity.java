@@ -22,8 +22,6 @@ public class MainActivity extends AppCompatActivity {
     protected ActionMain actionMain;
     protected Resources r;
 
-    protected boolean isInited;
-
     protected int menu_prep_command_status;
     protected final int STATUS_NO_PREP_ISSUED = 0;
     protected final int STATUS_MAIN = 1;
@@ -51,8 +49,6 @@ public class MainActivity extends AppCompatActivity {
 
         menu_prep_command_status = STATUS_MAIN;
 
-        isInited = false;
-//        container.explore_group(1);
         container.explore_group_MT(1, null);
     }
 
@@ -112,25 +108,8 @@ public class MainActivity extends AppCompatActivity {
             return true;
         }
 
-//        if (id == R.id.action_set_debug_db) {
-//            actionMain.resetTables();
-//            ActionDebug.getInstance().deleteFlag();
-//            ActionDebug.getInstance().insertTestRecords(this);
-//
-//            isInited = false;
-////            container.explore_group(1);
-//            container.explore_group_MT(1, null);
-//
-//            return true;
-//        }
-
         if (id == R.id.action_set_default_db) {
-            actionMain.resetTables();
-            ActionPreset.getInstance().revert_to_default(this);
-
-            isInited = false;
-//            container.explore_group(1);
-            container.explore_group_MT(1, null);
+            container.set_to_defaults_MT();
 
             return true;
         }
@@ -172,8 +151,6 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             }
 
-//            container.removeSelected();
-//            revert_menu_to_main();
             container.remove_selected_MT(
                     () -> runOnUiThread(this::revert_menu_to_main));
             // 이것이 바로 람다의 기적!!

@@ -259,6 +259,26 @@ public class ActionGroup extends ActionMultiWord {
         return add(parentID, priority, word, stem, wordIDs, Integer.toString(picture), is_picture_preset);
     }
 
+    long add(
+            long parentID,
+            int priority,
+            String word,
+            int picture
+    ) {
+        ActionWord actionWord = (ActionWord)actionMain.itemChain[ActionMain.item.ID_Word];
+        return add(parentID, priority, word, word, actionWord.add_multi(ActionMain.tokenize(word)), Integer.toString(picture), true);
+    }
+
+    long add(
+            long parentID,
+            int priority,
+            String word,
+            String picture
+    ) {
+        ActionWord actionWord = (ActionWord)actionMain.itemChain[ActionMain.item.ID_Word];
+        return add(parentID, priority, word, word, actionWord.add_multi(ActionMain.tokenize(word)), picture, false);
+    }
+
     public onClickClass allocOCC(Context context, AACGroupContainer container) {
         return new onClickClass(context, container);
     }

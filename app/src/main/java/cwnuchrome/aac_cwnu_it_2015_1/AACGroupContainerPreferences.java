@@ -65,4 +65,8 @@ public class AACGroupContainerPreferences {
 
     // 락 Wrapper
     public static final int LOCK_WRAPPER_STACK_INIT_SIZE = 10;
+
+    // 아이템 추가 액티비티
+    public static final int ADD_ITEM_FETCH_SUGGESTION_TIMEOUT = 2000; // 단위: millisecond
+    public static final int ADD_ITEM_KEY_EVENT_THREAD_POOL_SIZE = 20;
 }

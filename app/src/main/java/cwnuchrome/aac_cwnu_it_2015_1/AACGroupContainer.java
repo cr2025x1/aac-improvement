@@ -21,7 +21,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Vector;
-import java.util.concurrent.locks.Lock;
 
 /**
  * Created by Chrome on 5/9/15.
@@ -397,7 +396,7 @@ public class AACGroupContainer {
                     );
                     c.moveToFirst();
 
-                    ActionGroup.Button parentGroupButton = new ActionGroup.Button(context, new ActionGroup.onClickClass(context, AACGroupContainer.this), AACGroupContainer.this);
+                    ActionGroup.Button parentGroupButton = new ActionGroup.Button(context, new ActionGroupOCCWrapper(context, AACGroupContainer.this), AACGroupContainer.this);
 
                     System.out.print("HashMap regenerated --> ");
                     ActionMacro.print_hashmap(ActionMultiWord.parse_element_id_count_tag(c.getString(c.getColumnIndexOrThrow(ActionMacro.SQL.COLUMN_NAME_ELEMENT_ID_TAG))));
@@ -1021,6 +1020,14 @@ public class AACGroupContainer {
             setResult(actionMain.itemChain[cat_id].updateWithIDs(context, values, new long[]{id}));
             write_lock.unlock();
         }
+    }
+
+    public void set_to_defaults_MT() {
+        ConcurrentLibrary.run_off_ui_thread(
+                activity,
+                () -> ActionPreset.getInstance().revert_to_default(context),
+                () -> explore_group_MT(1, null)
+                );
     }
 
 }
