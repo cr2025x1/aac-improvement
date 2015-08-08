@@ -1,7 +1,9 @@
 package cwnuchrome.aac_cwnu_it_2015_1;
 
+import android.app.Application;
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.pm.ApplicationInfo;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.speech.tts.TextToSpeech;
@@ -20,9 +22,12 @@ import java.util.Map;
  */
 public class ActionWord extends ActionItem {
 
-    String MAP_TABLE_NAME;
-    String MAP_SQL_CREATE_ENTRIES;
-    String MAP_SQL_DELETE_ENTRIES;
+//    String MAP_TABLE_NAME;
+    String map_sql_create_entries_tail;
+    public static final String MAP_SQL_CREATE_ENTIRES_HEAD = "CREATE TABLE IF NOT EXISTS ";
+//    String MAP_SQL_DELETE_ENTRIES;
+    protected SubDBHelper sub_db_helper;
+    protected SQLiteDatabase sub_db;
 
     public ActionWord () {
         super(ActionMain.item.ID_Word, "Word", true);
@@ -30,7 +35,7 @@ public class ActionWord extends ActionItem {
         reservedID = new int[] {1};
 
         TABLE_NAME = "LocalWord";
-        MAP_TABLE_NAME = TABLE_NAME + "_FeedbackMap";
+//        MAP_TABLE_NAME = TABLE_NAME + "_FeedbackMap";
         SQL_DELETE_ENTRIES = "DROP TABLE IF EXISTS " + TABLE_NAME;
         SQL_CREATE_ENTRIES =
                 "CREATE TABLE IF NOT EXISTS " + TABLE_NAME + " (" +
@@ -43,15 +48,24 @@ public class ActionWord extends ActionItem {
                         SQL.COLUMN_NAME_PICTURE_IS_PRESET + SQL.INTEGER_TYPE + SQL.NOT_NULL + SQL.COMMA_SEP +
                         SQL.COLUMN_NAME_REFERENCE_COUNT + SQL.INTEGER_TYPE + SQL.NOT_NULL + SQL.COMMA_SEP +
                         SQL.COLUMN_NAME_FEEDBACK_MAP_TAG + SQL.TEXT_TYPE + SQL.NOT_NULL +
-                        " )";
-        MAP_SQL_CREATE_ENTRIES =
-                "CREATE TABLE IF NOT EXISTS " + MAP_TABLE_NAME + " (" +
-                        SQL._ID + SQL.INTEGER_PRIMARY_KEY + SQL.NOT_NULL + SQL.COMMA_SEP +
-                        SQL.COLUMN_NAME_OWNER_ID + SQL.INTEGER_TYPE + SQL.NOT_NULL + SQL.COMMA_SEP +
-                        SQL.COLUMN_NAME_FEEDBACK_MAP + SQL.BLOB_TYPE + // 맵은 null 값을 가질 수 있음!!!
                         ")";
-        MAP_SQL_DELETE_ENTRIES =
-                "DROP TABLE IF EXISTS " + MAP_TABLE_NAME;
+//        MAP_SQL_CREATE_ENTRIES =
+//                "CREATE TABLE IF NOT EXISTS " + MAP_TABLE_NAME + " (" +
+//                        SQL._ID + SQL.INTEGER_PRIMARY_KEY + SQL.NOT_NULL + SQL.COMMA_SEP +
+//                        SQL.COLUMN_NAME_OWNER_ID + SQL.INTEGER_TYPE + SQL.NOT_NULL + SQL.COMMA_SEP +
+//                        SQL.COLUMN_NAME_FEEDBACK_MAP + SQL.BLOB_TYPE + // 맵은 null 값을 가질 수 있음!!!
+//                        ")";
+//        MAP_SQL_DELETE_ENTRIES =
+//                "DROP TABLE IF EXISTS " + MAP_TABLE_NAME;
+        map_sql_create_entries_tail =
+                " (" +
+                        SQL._ID + SQL.INTEGER_PRIMARY_KEY + SQL.NOT_NULL + SQL.COMMA_SEP +
+                        SQL.COLUMN_NAME_MAP_WEIGHT + SQL.REAL_TYPE + SQL.NOT_NULL +
+                        ")";
+
+
+//        sub_db_helper = new SubDBHelper(actionMain.getContext(), TABLE_NAME + "FeedBack.db" , "id");
+//        sub_db = sub_db_helper.getWritableDatabase();
     }
 
     public int init (ContentValues values) {
@@ -61,16 +75,23 @@ public class ActionWord extends ActionItem {
         return 0;
     }
 
+    public void init_sub_db(Context context) {
+        sub_db_helper = new SubDBHelper(context, TABLE_NAME + "Feedback.db" , "id");
+        sub_db = sub_db_helper.getWritableDatabase();
+    }
+
     interface SQL extends ActionItem.SQL {
         String COLUMN_NAME_REFERENCE_COUNT = "ref_count";
-        String COLUMN_NAME_FEEDBACK_MAP = "feedback_map";
+//        String COLUMN_NAME_FEEDBACK_MAP = "feedback_map";
         String COLUMN_NAME_FEEDBACK_MAP_TAG = "feedback_map_tag";
-        String COLUMN_NAME_OWNER_ID = "owner_id";
+//        String COLUMN_NAME_OWNER_ID = "owner_id";
+        String COLUMN_NAME_MAP_WEIGHT = "weight";
+        String ATTACHMENT_FEEDBACK_MAP = "attachment_feedback_map";
     }
 
     @Override
     public void createTable(SQLiteDatabase db) {
-        db.execSQL(MAP_SQL_CREATE_ENTRIES);
+//        db.execSQL(MAP_SQL_CREATE_ENTRIES);
         super.createTable(db);
     }
 
@@ -103,30 +124,35 @@ public class ActionWord extends ActionItem {
                         SQL._ID + " = 1" +
                         ");"
         );
-        db.execSQL(
-                "INSERT INTO " +
-                        MAP_TABLE_NAME + " (" +
-                        SQL._ID + SQL.COMMA_SEP +
-                        SQL.COLUMN_NAME_OWNER_ID +
-                        ") SELECT " +
-                        1 + SQL.COMMA_SEP +
-                        1 +
-                        " WHERE NOT EXISTS (SELECT 1 FROM " +
-                        MAP_TABLE_NAME + " WHERE " +
-                        SQL._ID + "=1)"
+//        db.execSQL(
+//                "INSERT INTO " +
+//                        MAP_TABLE_NAME + " (" +
+//                        SQL._ID + SQL.COMMA_SEP +
+//                        SQL.COLUMN_NAME_OWNER_ID +
+//                        ") SELECT " +
+//                        1 + SQL.COMMA_SEP +
+//                        1 +
+//                        " WHERE NOT EXISTS (SELECT 1 FROM " +
+//                        MAP_TABLE_NAME + " WHERE " +
+//                        SQL._ID + "=1)"
+//        );
+        sub_db.execSQL(
+                MAP_SQL_CREATE_ENTIRES_HEAD + sub_db_helper.getTableName(1) + map_sql_create_entries_tail
         );
         // ActionMain.update_db_collection_count(db, 1); // 기본 키워드의 parent_id가 0이 아니게 세팅될 경우에 주석처리를 지울 것
     }
 
     @Override
     public void clearTable(SQLiteDatabase db) {
-        db.execSQL(MAP_SQL_DELETE_ENTRIES);
+//        db.execSQL(MAP_SQL_DELETE_ENTRIES);
+        sub_db_helper.onReset(sub_db);
         super.clearTable(db);
     }
 
     @Override
     public void deleteTable(SQLiteDatabase db) {
-        db.execSQL(MAP_SQL_DELETE_ENTRIES);
+//        db.execSQL(MAP_SQL_DELETE_ENTRIES);
+        sub_db_helper.onReset(sub_db);
         super.clearTable(db);
     }
 
@@ -135,7 +161,7 @@ public class ActionWord extends ActionItem {
         write_lock.lock();
         String word = values.getAsString(ActionWord.SQL.COLUMN_NAME_WORD);
         long result = exists(word);
-        ActionMain actionMain = ActionMain.getInstance();
+//        ActionMain actionMain = ActionMain.getInstance();
         SQLiteDatabase db = actionMain.getDB();
         if (result != -1) {
 
@@ -172,16 +198,16 @@ public class ActionWord extends ActionItem {
 
         long id = super.raw_add(values);
         if (id != -1) {
-            ContentValues map_table_values = new ContentValues();
-            map_table_values.put(SQL.COLUMN_NAME_OWNER_ID, id);
-            map_table_values.put(SQL.COLUMN_NAME_FEEDBACK_MAP, (byte[])null);
-
-            db.insert(
-                    MAP_TABLE_NAME,
-                    null,
-                    map_table_values
-                    );
-
+//            ContentValues map_table_values = new ContentValues();
+//            map_table_values.put(SQL.COLUMN_NAME_OWNER_ID, id);
+//            map_table_values.put(SQL.COLUMN_NAME_FEEDBACK_MAP, (byte[])null);
+//
+//            db.insert(
+//                    MAP_TABLE_NAME,
+//                    null,
+//                    map_table_values
+//                    );
+            create_sub_db(id, null);
         }
 
         write_lock.unlock();
@@ -309,32 +335,38 @@ public class ActionWord extends ActionItem {
             if (c.getCount() > 0) for (int i = 0; i < c.getCount(); i++) {
                 // 이 단어가 쓰인 피드백 맵을 찾고, 해동한 후 이 단어의 id 부분을 제거하고 데이터베이스를 업데이트한다.
                 long effected_id = c.getLong(id_col);
-                Cursor fb_c = db.query(
-                        MAP_TABLE_NAME,
-                        new String[] {SQL.COLUMN_NAME_FEEDBACK_MAP},
-                        SQL.COLUMN_NAME_OWNER_ID + "=" + effected_id + " AND " + SQL.COLUMN_NAME_OWNER_ID + "!=" + id, // 자기 자신의 것은 수정 안 함. 어차피 지워지니까.
-                        null,
-                        null,
-                        null,
-                        null
-                );
-                fb_c.moveToFirst();
+//                Cursor fb_c = db.query(
+//                        MAP_TABLE_NAME,
+//                        new String[] {SQL.COLUMN_NAME_FEEDBACK_MAP},
+//                        SQL.COLUMN_NAME_OWNER_ID + "=" + effected_id + " AND " + SQL.COLUMN_NAME_OWNER_ID + "!=" + id, // 자기 자신의 것은 수정 안 함. 어차피 지워지니까.
+//                        null,
+//                        null,
+//                        null,
+//                        null
+//                );
+//                fb_c.moveToFirst();
+//
+//                HashMap<Long, Double> feedback_map = actionMain.thaw_map(fb_c.getBlob(fb_c.getColumnIndexOrThrow(SQL.COLUMN_NAME_FEEDBACK_MAP)));
+//                feedback_map.remove(id);
+//                update_feedback(effected_id, feedback_map);
 
-                HashMap<Long, Double> feedback_map = actionMain.thaw_map(fb_c.getBlob(fb_c.getColumnIndexOrThrow(SQL.COLUMN_NAME_FEEDBACK_MAP)));
-                feedback_map.remove(id);
-                update_feedback(effected_id, feedback_map);
 
-                fb_c.close();
+//                fb_c.close();
+
+                remove_sub_db(effected_id, new long[]{id});
+                update_feedback_tag(effected_id);
+
                 c.moveToNext();
             }
             c.close();
 
             // 자기 자신의 피드백 맵 제거.
-            db.delete(
-                    MAP_TABLE_NAME,
-                    SQL.COLUMN_NAME_OWNER_ID + " = " + id,
-                    null
-            );
+//            db.delete(
+//                    MAP_TABLE_NAME,
+//                    SQL.COLUMN_NAME_OWNER_ID + " = " + id,
+//                    null
+//            );
+            delete_sub_db(id);
 
             boolean result = super.removeWithID(context, id);
             write_lock.unlock();
@@ -381,19 +413,29 @@ public class ActionWord extends ActionItem {
     }
 
     // 해당 워드의 아이디와 피드백 맵을 받아 데이터베이스를 업데이트하는 메소드
+    // TODO: deprecated 판정 검토 중.
     public void update_feedback(long id, @NonNull HashMap<Long, Double> map) {
         write_lock.lock();
-        ContentValues map_values = new ContentValues();
-        map_values.put(SQL.COLUMN_NAME_FEEDBACK_MAP, actionMain.freeze_map(map));
-        actionMain.getDB().update(
-                MAP_TABLE_NAME,
-                map_values,
-                SQL.COLUMN_NAME_OWNER_ID + "=" + id,
-                null
-        );
+//        ContentValues map_values = new ContentValues();
+//        map_values.put(SQL.COLUMN_NAME_FEEDBACK_MAP, actionMain.freeze_map(map));
+//        actionMain.getDB().update(
+//                MAP_TABLE_NAME,
+//                map_values,
+//                SQL.COLUMN_NAME_OWNER_ID + "=" + id,
+//                null
+//        );
+        replace_sub_db(id, map);
 
         ContentValues values = new ContentValues();
         values.put(SQL.COLUMN_NAME_FEEDBACK_MAP_TAG, create_feedback_map_tag(map));
+        updateWithIDs(actionMain.context, values, new long[] {id});
+        write_lock.unlock();
+    }
+
+    public void update_feedback_tag(long id) {
+        write_lock.lock();
+        ContentValues values = new ContentValues();
+        values.put(SQL.COLUMN_NAME_FEEDBACK_MAP_TAG, create_feedback_map_tag(id));
         updateWithIDs(actionMain.context, values, new long[] {id});
         write_lock.unlock();
     }
@@ -515,7 +557,7 @@ public class ActionWord extends ActionItem {
             Long entry_id = entry.getKey();
             Cursor entry_word_cursor = db.query(
                     TABLE_NAME,
-                    new String[] {SQL.COLUMN_NAME_REFERENCE_COUNT},
+                    new String[]{SQL.COLUMN_NAME_REFERENCE_COUNT},
                     ActionItem.SQL._ID + "=" + entry_id,
                     null,
                     null,
@@ -600,6 +642,36 @@ public class ActionWord extends ActionItem {
         return sb.toString();
     }
 
+    @NonNull public String create_feedback_map_tag(long id) {
+        String table_name = get_sub_db_table_name(id);
+        Cursor c = sub_db.query(
+                table_name,
+                new String[]{SQL._ID},
+                null,
+                null,
+                null,
+                null,
+                null
+        );
+        c.moveToFirst();
+        int id_col = c.getColumnIndexOrThrow(SQL._ID);
+
+        String start_end_char = "|";
+        String wrapper_char = ":";
+        StringBuilder sb = new StringBuilder(start_end_char);
+
+        for (int i = 0; i < c.getCount(); i++) {
+            sb.append(wrapper_char);
+            sb.append(c.getLong(id_col));
+            sb.append(wrapper_char);
+            c.moveToNext();
+        }
+        sb.append(start_end_char);
+        c.close();
+
+        return sb.toString();
+    }
+
     // 동시에 여러 개의 워드를 생성하는 메소드. 멀티워드 아이템 생성 시에 유용하다.
     @NonNull public long[] add_multi(@NonNull String[] textTokens) {
         write_lock.lock();
@@ -641,4 +713,208 @@ public class ActionWord extends ActionItem {
 //    @NonNull protected HashMap<Long, Double> alloc_evaluation_map(@NonNull SQLiteDatabase db, @Nullable String selection, @Nullable String[] selectionArgs) {
 //        return new HashMap<>();
 //    }
+
+
+
+
+
+
+    // 만일 만일 해시맵의 각 매핑당 해당항목이 있으면 교체, 없으면 삽입 후 기록한다. 즉 업데이트 형식이다.
+    public int update_sub_db(long id, HashMap<Long, Double> map) {
+        int effected = 0;
+        for (Map.Entry<Long, Double> e : map.entrySet()) {
+            String table_name = sub_db_helper.getTableName(id);
+            Long e_id = e.getKey();
+            String where_clause = SQL._ID + "=" + e_id;
+            Cursor c = sub_db.query(
+                    table_name,
+                    new String[]{SQL._ID},
+                    where_clause,
+                    null,
+                    null,
+                    null,
+                    null
+            );
+            c.moveToFirst();
+            int c_count = c.getCount();
+            c.close();
+            if (c_count > 0) {
+                ContentValues values = new ContentValues(1);
+                values.put(SQL.COLUMN_NAME_MAP_WEIGHT, e.getValue());
+                sub_db.update(
+                        table_name,
+                        values,
+                        where_clause,
+                        null
+                );
+                effected++;
+            } else {
+                ContentValues values = new ContentValues(2);
+                values.put(SQL._ID, e_id);
+                values.put(SQL.COLUMN_NAME_MAP_WEIGHT, e.getValue());
+                sub_db.insert(
+                        table_name,
+                        null,
+                        values
+                );
+                effected++;
+            }
+        }
+        return effected;
+    }
+
+    public void accumulate_sub_db(long id, Long key, Double value) {
+        String table_name = sub_db_helper.getTableName(id);
+        String where_clause = SQL._ID + "=" + key;
+        Cursor c = sub_db.query(
+                table_name,
+                new String[]{SQL._ID, SQL.COLUMN_NAME_MAP_WEIGHT},
+                where_clause,
+                null,
+                null,
+                null,
+                null
+        );
+        c.moveToFirst();
+        if (c.getCount() > 0) {
+            ContentValues values = new ContentValues(1);
+            values.put(SQL.COLUMN_NAME_MAP_WEIGHT, value + c.getDouble(c.getColumnIndexOrThrow(SQL.COLUMN_NAME_MAP_WEIGHT)));
+            sub_db.update(
+                    table_name,
+                    values,
+                    where_clause,
+                    null
+            );
+        } else {
+            ContentValues values = new ContentValues(2);
+            values.put(SQL._ID, key);
+            values.put(SQL.COLUMN_NAME_MAP_WEIGHT, value);
+            sub_db.insert(
+                    table_name,
+                    null,
+                    values
+            );
+        }
+        c.close();
+    }
+
+    public void create_sub_db(long id, HashMap<Long, Double> map) {
+        // 먼저 해당 ID의 대응 테이블이 있는지 확인, 있으면 추가 작업 없이 참값 반환.
+        if (exists_sub_db(id)) return;
+
+        // 해당 ID의 대응 테이블이 없으므로, 먼저 테이블을 생성한다.
+        sub_db.execSQL(
+                MAP_SQL_CREATE_ENTIRES_HEAD + sub_db_helper.getTableName(id) + map_sql_create_entries_tail
+        );
+
+        // 주어진 해시맵을 테이블에 기록한다.
+        if (map != null) update_sub_db(id, map);
+    }
+
+    public boolean exists_sub_db(long id) {
+        boolean exists = false;
+        Cursor c = sub_db.query(
+                "sqlite_master",
+                new String[] {"name"},
+                "type='table' and name=?",
+                new String[] {sub_db_helper.getTableName(id)},
+                null,
+                null,
+                null
+        );
+        c.moveToFirst();
+        if (c.getCount() > 0) exists = true;
+        c.close();
+        return exists;
+    }
+
+    public void remove_sub_db(long id, long[] keys) {
+        String table_name = sub_db_helper.getTableName(id);
+        for (long key : keys) {
+            sub_db.delete(
+                    table_name,
+                    SQL._ID + " = " + key,
+                    null
+            );
+        }
+    }
+
+    public void delete_sub_db(long id) {
+        sub_db.execSQL("drop table " + sub_db_helper.getTableName(id));
+    }
+
+    public void replace_sub_db(long id, HashMap<Long, Double> map) {
+        String table_name = sub_db_helper.getTableName(id);
+        StringBuilder where_clause_builder = new StringBuilder(200);
+
+        where_clause_builder.append("not (");
+        for (Map.Entry<Long, Double> e : map.entrySet()) {
+            where_clause_builder
+                    .append(SQL._ID)
+                    .append("=")
+                    .append(e.getKey())
+                    .append(" OR ");
+        }
+        where_clause_builder.setLength(where_clause_builder.length() - 4);
+        where_clause_builder.append(")");
+
+        sub_db.delete(
+                table_name,
+                where_clause_builder.toString(),
+                null
+        );
+
+        update_sub_db(id, map);
+    }
+
+    public int accumulate_sub_db(long id, HashMap<Long, Double> map) {
+        int effected = 0;
+        for (Map.Entry<Long, Double> e : map.entrySet()) {
+            String table_name = sub_db_helper.getTableName(id);
+            Long e_id = e.getKey();
+            String where_clause = SQL._ID + "=" + e_id;
+            Cursor c = sub_db.query(
+                    table_name,
+                    new String[]{SQL._ID, SQL.COLUMN_NAME_MAP_WEIGHT},
+                    where_clause,
+                    null,
+                    null,
+                    null,
+                    null
+            );
+            c.moveToFirst();
+            if (c.getCount() > 0) {
+                ContentValues values = new ContentValues(1);
+                values.put(SQL.COLUMN_NAME_MAP_WEIGHT, e.getValue() + c.getDouble(c.getColumnIndexOrThrow(SQL.COLUMN_NAME_MAP_WEIGHT)));
+                sub_db.update(
+                        table_name,
+                        values,
+                        where_clause,
+                        null
+                );
+                effected++;
+            } else {
+                ContentValues values = new ContentValues(2);
+                values.put(SQL._ID, e_id);
+                values.put(SQL.COLUMN_NAME_MAP_WEIGHT, e.getValue());
+                sub_db.insert(
+                        table_name,
+                        null,
+                        values
+                );
+                effected++;
+            }
+            c.close();
+
+        }
+        return effected;
+    }
+
+    public SQLiteDatabase get_sub_db() {
+        return sub_db;
+    }
+
+    public String get_sub_db_table_name(long id) {
+        return sub_db_helper.getTableName(id);
+    }
 }

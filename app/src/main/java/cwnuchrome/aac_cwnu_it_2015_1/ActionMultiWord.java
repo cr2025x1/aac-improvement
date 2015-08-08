@@ -533,4 +533,5 @@ public abstract class ActionMultiWord extends ActionItem {
         return super.updateWithIDs(context, values, idArray);
     }
 
+    public void init_sub_db(Context context) {}
 }

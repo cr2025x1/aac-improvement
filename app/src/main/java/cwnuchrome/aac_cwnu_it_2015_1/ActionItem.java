@@ -574,4 +574,6 @@ public abstract class ActionItem implements Serializable {
         read_lock.unlock();
         return word;
     }
+
+    public abstract void init_sub_db(Context context);
 }

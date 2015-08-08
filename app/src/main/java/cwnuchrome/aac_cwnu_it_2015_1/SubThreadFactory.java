@@ -12,7 +12,7 @@ public class SubThreadFactory implements ThreadFactory {
     private final ThreadGroup group;
     private final AtomicInteger threadNumber = new AtomicInteger(1);
     private final String namePrefix;
-    CopyOnWriteArrayList<SubThread> subthreads;
+//    CopyOnWriteArrayList<SubThread> subthreads;
 
     SubThreadFactory() {
         SecurityManager s = System.getSecurityManager();
@@ -21,13 +21,13 @@ public class SubThreadFactory implements ThreadFactory {
         namePrefix = "pool-" +
                 poolNumber.getAndIncrement() +
                 "-thread-";
-        subthreads = null;
+//        subthreads = null;
     }
 
-    SubThreadFactory(CopyOnWriteArrayList<SubThread> subthreads) {
-        this();
-        this.subthreads = subthreads;
-    }
+//    SubThreadFactory(CopyOnWriteArrayList<SubThread> subthreads) {
+//        this();
+//        this.subthreads = subthreads;
+//    }
 
     public SubThread newThread(Runnable r) {
         SubThread t = new SubThread(Thread.currentThread(), group, r,
@@ -38,16 +38,16 @@ public class SubThreadFactory implements ThreadFactory {
         if (t.getPriority() != Thread.NORM_PRIORITY)
             t.setPriority(Thread.NORM_PRIORITY);
 
-        if (subthreads != null) subthreads.add(t);
+//        if (subthreads != null) subthreads.add(t);
 
         return t;
     }
 
-    public void setThreadList(CopyOnWriteArrayList<SubThread> subthreads) {
-        this.subthreads = subthreads;
-    }
+//    public void setThreadList(CopyOnWriteArrayList<SubThread> subthreads) {
+//        this.subthreads = subthreads;
+//    }
 
-    public CopyOnWriteArrayList<SubThread> getThreadList() {
-        return subthreads;
-    }
+//    public CopyOnWriteArrayList<SubThread> getThreadList() {
+//        return subthreads;
+//    }
 }

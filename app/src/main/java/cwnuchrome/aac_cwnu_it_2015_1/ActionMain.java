@@ -70,8 +70,8 @@ public final class ActionMain {
         write_lock = lock_wrapper.write_lock();
 
         for (ActionItem i : itemChain) i.setActionMain(this);
-        subthreads = new CopyOnWriteArrayList<>();
-        subthread_executor = Executors.newFixedThreadPool(ActionMain.item.ITEM_COUNT * 2, new SubThreadFactory(subthreads));
+//        subthreads = new CopyOnWriteArrayList<>();
+        subthread_executor = Executors.newFixedThreadPool(ActionMain.item.ITEM_COUNT * 2, new SubThreadFactory());
     }
 
     Random rand;
@@ -91,7 +91,7 @@ public final class ActionMain {
     byte[] socket_buffer;
     ExecutorService morpheme_analysis_executor;
     ExecutorService subthread_executor;
-    CopyOnWriteArrayList<SubThread> subthreads;
+//    CopyOnWriteArrayList<SubThread> subthreads;
 
     public void setContext(Context context) {
         this.context = context;
@@ -110,6 +110,9 @@ public final class ActionMain {
 
     public void initDBHelper (Context context) {
         write_lock.lock();
+        for (ActionItem i : itemChain) {
+            i.init_sub_db(context);
+        }
         actionDBHelper = new ActionDBHelper(context);
         db = actionDBHelper.getWritableDatabase();
         activate_morpheme_analyzer();
@@ -504,48 +507,57 @@ public final class ActionMain {
                 }
                 else query_id_map_feedbacked.put(key, e_qwi); // 저장된 값이 없었다면 그냥 이번 엔트리 e의 QWI 객체를 그대로 가져와서 넣는다.
 
+
+
+
+
+
+
+
+
+
+
                 // 해당 워드 ID의 피드백 맵을 데이터베이스에서 쿼리한다.
                 ActionWord actionWord = (ActionWord)itemChain[item.ID_Word];
-                Cursor c = db.query(
-                        actionWord.MAP_TABLE_NAME,
-                        new String[] {ActionWord.SQL.COLUMN_NAME_FEEDBACK_MAP},
-                        ActionWord.SQL.COLUMN_NAME_OWNER_ID + "=" + key,
+                SQLiteDatabase word_sub_db = actionWord.get_sub_db();
+                Cursor c = word_sub_db.query(
+                        actionWord.get_sub_db_table_name(key),
+                        new String[]{ActionWord.SQL._ID, ActionWord.SQL.COLUMN_NAME_MAP_WEIGHT},
+                        null,
                         null,
                         null,
                         null,
                         null
                 );
                 c.moveToFirst();
-                byte[] frozen_map = c.getBlob(c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_FEEDBACK_MAP));
-                if (frozen_map != null) {
-                    // 해당 워드 ID에 부속된 피드맥 맵 정보가 있다. 그렇다면 이 맵 정보를 해동해 쿼리에 적용한다.
-                    HashMap<Long, Double> feedback_map = thaw_map(frozen_map);
-                    for (Map.Entry<Long, Double> fb_e : feedback_map.entrySet()) {
-                        long fb_key = fb_e.getKey();
-                        long ref_count = 0;
 
-                        // 먼저 해당 워드 ID에 대한 매핑이 query_id_map_feedbacked에 있는지 확인한다.
-                        if (query_id_map_feedbacked.containsKey(fb_key)) {
-                            // 있다. 그렇다면 피드백 정보만 그 매핑된 QWI 객체에 더해주기만 하면 된다.
-                            QueryWordInfo fb_qwi = query_id_map_feedbacked.get(fb_key);
-                            fb_qwi.feedback_weight += fb_e.getValue();
-                        }
-                        else {
-                            // 해당 매핑이 없다. 그렇다면 해당 워드 ID에 대한 QWI 정보를 만들어서 넣어주어야 한다.
-                            if (!query_id_map.containsKey(fb_key)) {
-                                Cursor key_c = db.query(
-                                        actionWord.TABLE_NAME,
-                                        new String[] {ActionWord.SQL.COLUMN_NAME_REFERENCE_COUNT},
-                                        ActionWord.SQL._ID + "=" + fb_key,
-                                        null,
-                                        null,
-                                        null,
-                                        null
-                                );
-                                key_c.moveToFirst();
-                                ref_count = key_c.getLong(key_c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_REFERENCE_COUNT));
-                                key_c.close();
-                            }
+                int id_col = c.getColumnIndexOrThrow(ActionWord.SQL._ID);
+                int weight_col = c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_MAP_WEIGHT);
+                if (c.getCount() > 0) for (int i = 0; i < c.getCount(); i++) {
+                    long fb_key = c.getLong(id_col);
+                    long ref_count = 0;
+
+                    // 먼저 해당 워드 ID에 대한 매핑이 query_id_map_feedbacked에 있는지 확인한다.
+                    if (query_id_map_feedbacked.containsKey(fb_key)) {
+                        // 있다. 그렇다면 피드백 정보만 그 매핑된 QWI 객체에 더해주기만 하면 된다.
+                        QueryWordInfo fb_qwi = query_id_map_feedbacked.get(fb_key);
+                        fb_qwi.feedback_weight += c.getDouble(weight_col);
+                    }
+                    else {
+                        // 해당 매핑이 없다. 그렇다면 해당 워드 ID에 대한 QWI 정보를 만들어서 넣어주어야 한다.
+                        if (!query_id_map.containsKey(fb_key)) {
+                            Cursor key_c = db.query(
+                                    actionWord.TABLE_NAME,
+                                    new String[] {ActionWord.SQL.COLUMN_NAME_REFERENCE_COUNT},
+                                    ActionWord.SQL._ID + "=" + fb_key,
+                                    null,
+                                    null,
+                                    null,
+                                    null
+                            );
+                            key_c.moveToFirst();
+                            ref_count = key_c.getLong(key_c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_REFERENCE_COUNT));
+                            key_c.close();
 
                             /*
                                 QueryWordInfo 내에는 쿼리 내 해당 ID의 개수, 참조 횟수, 쿼리 내 가중치, 그리고 마지막으로 피드백 내 가중치를 가진다.
@@ -558,14 +570,94 @@ public final class ActionMain {
                                     1l,
                                     ref_count,
                                     1.0d,
-                                    fb_e.getValue()
+                                    c.getDouble(weight_col)
                             );
                             query_id_map_feedbacked.put(fb_key, fb_qwi);
                         }
                     }
+
+                    c.moveToNext();
                 }
 
                 c.close();
+
+
+//                // 해당 워드 ID의 피드백 맵을 데이터베이스에서 쿼리한다.
+//                ActionWord actionWord = (ActionWord)itemChain[item.ID_Word];
+//                Cursor c = db.query(
+//                        actionWord.MAP_TABLE_NAME,
+//                        new String[] {ActionWord.SQL.COLUMN_NAME_FEEDBACK_MAP},
+//                        ActionWord.SQL.COLUMN_NAME_OWNER_ID + "=" + key,
+//                        null,
+//                        null,
+//                        null,
+//                        null
+//                );
+//                c.moveToFirst();
+//                byte[] frozen_map = c.getBlob(c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_FEEDBACK_MAP));
+//                if (frozen_map != null) {
+//                    // 해당 워드 ID에 부속된 피드맥 맵 정보가 있다. 그렇다면 이 맵 정보를 해동해 쿼리에 적용한다.
+//                    HashMap<Long, Double> feedback_map = thaw_map(frozen_map);
+//                    for (Map.Entry<Long, Double> fb_e : feedback_map.entrySet()) {
+//                        long fb_key = fb_e.getKey();
+//                        long ref_count = 0;
+//
+//                        // 먼저 해당 워드 ID에 대한 매핑이 query_id_map_feedbacked에 있는지 확인한다.
+//                        if (query_id_map_feedbacked.containsKey(fb_key)) {
+//                            // 있다. 그렇다면 피드백 정보만 그 매핑된 QWI 객체에 더해주기만 하면 된다.
+//                            QueryWordInfo fb_qwi = query_id_map_feedbacked.get(fb_key);
+//                            fb_qwi.feedback_weight += fb_e.getValue();
+//                        }
+//                        else {
+//                            // 해당 매핑이 없다. 그렇다면 해당 워드 ID에 대한 QWI 정보를 만들어서 넣어주어야 한다.
+//                            if (!query_id_map.containsKey(fb_key)) {
+//                                Cursor key_c = db.query(
+//                                        actionWord.TABLE_NAME,
+//                                        new String[] {ActionWord.SQL.COLUMN_NAME_REFERENCE_COUNT},
+//                                        ActionWord.SQL._ID + "=" + fb_key,
+//                                        null,
+//                                        null,
+//                                        null,
+//                                        null
+//                                );
+//                                key_c.moveToFirst();
+//                                ref_count = key_c.getLong(key_c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_REFERENCE_COUNT));
+//                                key_c.close();
+//                            }
+//
+//                            /*
+//                                QueryWordInfo 내에는 쿼리 내 해당 ID의 개수, 참조 횟수, 쿼리 내 가중치, 그리고 마지막으로 피드백 내 가중치를 가진다.
+//                                그런데 여기서 **쿼리 내에 원래 존재하지 않는** ID 정보를 쿼리에 추가할 때는, 두 가지 정보가 없다는 상황에 처한다.
+//                                쿼리 내 해당 ID의 개수, 쿼리 내의 가중치이다.
+//                                쿼리 내에 해당 ID가 없는데 이 값들을 구할 수 있을 리가 없다.
+//                                따라서 이 때에는 Ranking Function 내에서 해당 값들이 관계되는 연산의 **항등원**으로 대체 입력해서, 이 문제를 해결한다.
+//                             */
+//                            QueryWordInfo fb_qwi = new QueryWordInfo(
+//                                    1l,
+//                                    ref_count,
+//                                    1.0d,
+//                                    fb_e.getValue()
+//                            );
+//                            query_id_map_feedbacked.put(fb_key, fb_qwi);
+//                        }
+//                    }
+//                }
+//
+//                c.close();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
             }
 
             // 모든 문서에 대한 평가값 해시맵을 생성하고, 그 해쉬맵들을 묶을 벡터를 생성한다.
@@ -802,42 +894,75 @@ public final class ActionMain {
 
         ActionWord actionWord = (ActionWord)itemChain[item.ID_Word];
         for (Map.Entry<Long, ? extends QueryWordInfoRaw> e : query_id_map.entrySet()) {
+
+
+
+
+
+
+
+
+
             long query_word_key = e.getKey();
             QueryWordInfoRaw qwi = e.getValue();
-            Cursor c = db.query(
-                    actionWord.MAP_TABLE_NAME,
-                    new String[]{ActionWord.SQL.COLUMN_NAME_FEEDBACK_MAP},
-                    ActionWord.SQL.COLUMN_NAME_OWNER_ID + "=" + query_word_key,
-                    null,
-                    null,
-                    null,
-                    null
-            );
-            c.moveToFirst();
-
-            byte[] frozen_map = null;
-            HashMap<Long, Double> map;
-            if (c.getCount() > 0) {
-                frozen_map = c.getBlob(c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_FEEDBACK_MAP));
-            }
-            c.close();
-            if (frozen_map == null) map = new HashMap<>();
-            else map = thaw_map(frozen_map);
-
             for (Map.Entry<Long, Double> fb_e : feedback_combined.entrySet()) {
-                Long key = fb_e.getKey();
-                Double mod = fb_e.getValue() * qwi.count / query_size * qwi.weight;
-                if (map.containsKey(key)) map.put(key, map.get(key) + mod);
-                else map.put(key, mod);
+                actionWord.accumulate_sub_db(query_word_key, fb_e.getKey(), fb_e.getValue() * qwi.count / query_size * qwi.weight);
             }
+            actionWord.update_feedback_tag(query_word_key);
 
-            actionWord.update_feedback(query_word_key, map);
+//            long query_word_key = e.getKey();
+//            QueryWordInfoRaw qwi = e.getValue();
+//            Cursor c = db.query(
+//                    actionWord.MAP_TABLE_NAME,
+//                    new String[]{ActionWord.SQL.COLUMN_NAME_FEEDBACK_MAP},
+//                    ActionWord.SQL.COLUMN_NAME_OWNER_ID + "=" + query_word_key,
+//                    null,
+//                    null,
+//                    null,
+//                    null
+//            );
+//            c.moveToFirst();
+//
+//            byte[] frozen_map = null;
+//            HashMap<Long, Double> map;
+//            if (c.getCount() > 0) {
+//                frozen_map = c.getBlob(c.getColumnIndexOrThrow(ActionWord.SQL.COLUMN_NAME_FEEDBACK_MAP));
+//            }
+//            c.close();
+//            if (frozen_map == null) map = new HashMap<>();
+//            else map = thaw_map(frozen_map);
+//
+//            for (Map.Entry<Long, Double> fb_e : feedback_combined.entrySet()) {
+//                Long key = fb_e.getKey();
+//                Double mod = fb_e.getValue() * qwi.count / query_size * qwi.weight;
+//                if (map.containsKey(key)) map.put(key, map.get(key) + mod);
+//                else map.put(key, mod);
+//            }
+//
+//            actionWord.update_feedback(query_word_key, map);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         }
 
         write_lock.unlock();
     }
 
     // Kryo 라이브러리를 이용, 피드백 정보가 담긴 해쉬맵을 직렬화한다. *냉동 보관을 위해 꽁꽁 얼린다*
+    // TODO: deprecated 판정 검토 중.
     @NonNull public byte[] freeze_map(@NonNull HashMap<Long, Double> feedbackMap) {
         Output output = new Output(buffer);
         synchronized (kryo) {
@@ -848,6 +973,7 @@ public final class ActionMain {
     }
 
     // Kryo 라이브러리를 이용, 피드백 정보가 담긴 해쉬맵을 바이트 배열 상태에서 살아있는 객체로 병렬화한다. *얼렸던 것을 꺼내 쓰기 위해 해동한다*
+    // TODO: deprecated 판정 검토 중.
     @SuppressWarnings("unchecked")
     @NonNull public HashMap<Long, Double> thaw_map(@NonNull byte[] frozen_map) {
         Input input = new Input(frozen_map);
