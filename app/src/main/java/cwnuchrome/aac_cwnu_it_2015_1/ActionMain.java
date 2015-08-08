@@ -28,6 +28,7 @@ import java.util.ListIterator;
 import java.util.Map;
 import java.util.Random;
 import java.util.Vector;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -69,7 +70,8 @@ public final class ActionMain {
         write_lock = lock_wrapper.write_lock();
 
         for (ActionItem i : itemChain) i.setActionMain(this);
-        subthread_executor = Executors.newFixedThreadPool(ActionMain.item.ITEM_COUNT * 2);
+        subthreads = new CopyOnWriteArrayList<>();
+        subthread_executor = Executors.newFixedThreadPool(ActionMain.item.ITEM_COUNT * 2, new SubThreadFactory(subthreads));
     }
 
     Random rand;
@@ -89,6 +91,7 @@ public final class ActionMain {
     byte[] socket_buffer;
     ExecutorService morpheme_analysis_executor;
     ExecutorService subthread_executor;
+    CopyOnWriteArrayList<SubThread> subthreads;
 
     public void setContext(Context context) {
         this.context = context;
@@ -459,7 +462,7 @@ public final class ActionMain {
         }
 
         @SuppressLint("UseSparseArrays")
-        @NonNull public Vector<HashMap<Long, Double>> evaluate_by_query_map(
+        @Nullable public Vector<HashMap<Long, Double>> evaluate_by_query_map(
                 @NonNull HashMap<Long, QueryWordInfo> query_id_map,
                 @Nullable String selection,
                 @Nullable String[] selectionArgs
@@ -592,7 +595,10 @@ public final class ActionMain {
                 latch.await();
             } catch (InterruptedException e) {
                 e.printStackTrace();
-                throw new IllegalStateException();
+//                throw new IllegalStateException();
+                read_lock.unlock();
+                read_lock.unlock(); // 이 언락은 생성자의 lock()과 쌍을 이룸!
+                return null;
             }
 
             read_lock.unlock();
@@ -637,17 +643,21 @@ public final class ActionMain {
 
         @Override
         public void run() {
-            return_vector.set(
-                    pos,
-                    item.evaluate_by_query_map(
-                            db,
-                            queryMap,
-                            eval_map,
-                            entire_collection_count,
-                            average_document_length
-                    )
-            );
-            latch.countDown();
+            try {
+                return_vector.set(
+                        pos,
+                        item.evaluate_by_query_map(
+                                db,
+                                queryMap,
+                                eval_map,
+                                entire_collection_count,
+                                average_document_length
+                        )
+                );
+                latch.countDown();
+            } catch (IllegalStateException e) {
+                // 인터럽트가 중간에 난 것. 발생할 수 있는 것이 정상이다.
+            }
         }
     }
 

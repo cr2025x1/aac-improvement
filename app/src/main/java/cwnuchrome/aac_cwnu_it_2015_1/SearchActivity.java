@@ -35,6 +35,8 @@ public class SearchActivity extends AppCompatActivity {
     protected ActionMain actionMain;
     protected SearchImplicitFeedback feedbackHelper;
 
+    boolean back_button_pressed;
+
 
     public SearchActivity() {
         super();
@@ -54,6 +56,8 @@ public class SearchActivity extends AppCompatActivity {
                     }
                 }
         );
+
+        back_button_pressed = false;
     }
 
     protected class SearchList {
@@ -152,6 +156,8 @@ public class SearchActivity extends AppCompatActivity {
                             }
                         }
                 );
+            } else {
+                check_mutual_exclusive_interrupt();
             }
         }
 
@@ -178,7 +184,7 @@ public class SearchActivity extends AppCompatActivity {
             }
 
             feedbackHelper.send_feedback();
-            actionMain.getReadLock().lock();
+            actionMain.read_lock.lock();
             actionMain.write_lock.unlock_without_read_lock_check();
 
             search_list.occs.clear();
@@ -194,8 +200,13 @@ public class SearchActivity extends AppCompatActivity {
             queryMap = new_query_map;
             query_id_map = new_query_id_map;
             feedbackHelper.set_query_id_map(query_id_map);
+            Vector<HashMap<Long, Double>> rank_vector_raw = actionMain.allocEvaluation().evaluate_by_query_map(query_id_map, null, null);
+            if (rank_vector_raw == null) {
+                actionMain.read_lock.unlock();
+                return false;
+            }
             Vector<ArrayList<Map.Entry<Long, Double>>> rank_vector = actionMain.filter_rank_vector(
-                    actionMain.allocEvaluation().evaluate_by_query_map(query_id_map, null, null),
+                    rank_vector_raw,
                     ActionMain.FILTER_BY_THRESHOLD
             );
 
@@ -224,7 +235,10 @@ public class SearchActivity extends AppCompatActivity {
     // 뒤로 가기 버튼을 눌렀을 때의 동작 메소드
     @Override
     public void onBackPressed() {
+        if (back_button_pressed) return;
+
         // 피드백을 보내고 액티비티 종료 결과를 알린다.
+        back_button_pressed = true;
         ConcurrentLibrary.run_off_ui_thread(
                 this,
                 new Runnable() {
@@ -244,6 +258,7 @@ public class SearchActivity extends AppCompatActivity {
                                     public void run() {
                                         SearchActivity.this.setResult(RESULT_CANCELED);
                                         SearchActivity.super.onBackPressed();
+                                        back_button_pressed = false;
                                     }
                                 }
                         );

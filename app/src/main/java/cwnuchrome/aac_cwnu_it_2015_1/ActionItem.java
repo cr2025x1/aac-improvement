@@ -479,7 +479,12 @@ public abstract class ActionItem implements Serializable {
 
         // 각 카테고리별로 달리 구현해야 할 부분은 인터페이스에 맞긴다.
         for (Map.Entry<Long, QueryWordInfo> entry : queryMap.entrySet()) {
-            queryProcessor.process_query_id(entry.getKey(), entry.getValue(), eval_map_id_where_clause, eval_map);
+            try {
+                queryProcessor.process_query_id(entry.getKey(), entry.getValue(), eval_map_id_where_clause, eval_map);
+            } catch (IllegalStateException e) {
+                read_lock.unlock();
+                throw e;
+            }
         }
 
         read_lock.unlock();

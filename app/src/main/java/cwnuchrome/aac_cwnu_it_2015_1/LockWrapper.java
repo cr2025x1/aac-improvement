@@ -22,7 +22,7 @@ public class LockWrapper {
     ReadLockWrapper read_lock_wrapper;
     WriteLockWrapper write_lock_wrapper;
     final HashMap<Thread, Integer> thread_read_lock_map;
-    final ArrayList<Thread> thread_write_lock_list;
+//    final ArrayList<Thread> thread_write_lock_list;
 
     public LockWrapper(ActionMain actionMain) {
         this.actionMain = actionMain;
@@ -32,7 +32,7 @@ public class LockWrapper {
         read_lock_wrapper = new ReadLockWrapper();
         write_lock_wrapper = new WriteLockWrapper();
         thread_read_lock_map = new HashMap<>(20);
-        thread_write_lock_list = new ArrayList<>(20);
+//        thread_write_lock_list = new ArrayList<>(20);
     }
 
     public ReentrantReadWriteLock getLock() {
@@ -41,7 +41,7 @@ public class LockWrapper {
 
     public class WriteLockWrapper {
         public void lock() {
-            log(null, "Trying to get write lock...");
+            log(null, "Trying to get write lock... " + Thread.currentThread().toString());
             write_lock.lock();
             log_with_lock_stat(null, "Write lock acquired.", Thread.currentThread(), lock.getWriteHoldCount(), get_read_hold_count(), lock.getReadLockCount());
         }
@@ -71,7 +71,14 @@ public class LockWrapper {
 
     public class ReadLockWrapper {
         public void lock() {
-            log(null, "Trying to get read lock...");
+            log(null, "Trying to get read lock... " + Thread.currentThread().toString());
+            if (SubThread.class.isAssignableFrom(Thread.currentThread().getClass())) {
+                SubThread sub_thread = (SubThread)Thread.currentThread();
+                if (lock.getReadLockCount() == 0) throw new IllegalStateException("Sub-thread is calling the method, but no read lock is done yet. This only can see ");
+                log(null, "Sub-thread read lock request denied. It will protected by its parent " + sub_thread.parent_thread.toString() + "'s lock.");
+                return;
+            }
+
             if (lock.getReadHoldCount() <= 0) read_lock.lock();
             int hold_count = increase_read_lock_map();
             log_with_lock_stat(null, "Read lock acquired.", Thread.currentThread(), lock.getWriteHoldCount(), hold_count, lock.getReadLockCount());
@@ -79,12 +86,14 @@ public class LockWrapper {
 
         public void unlock() {
             int hold_count = decrease_read_lock_map();
+            if (hold_count == -1) return;
             if (hold_count == 0) read_lock.unlock();
             log_with_lock_stat(null, "Read lock released.", Thread.currentThread(), lock.getWriteHoldCount(), hold_count, lock.getReadLockCount());
         }
 
         public void unlock_without_write_lock_check() {
             int hold_count = decrease_read_lock_map();
+            if (hold_count == -1) return;
             if (hold_count == 0) read_lock.unlock();
             log_with_lock_stat(null, "Read lock released.", Thread.currentThread(), lock.getWriteHoldCount(), hold_count, lock.getReadLockCount());
         }
