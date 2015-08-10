@@ -29,11 +29,14 @@ import java.util.Vector;
  */
 
 public class SearchImplicitFeedback {
-    protected Vector<HashMap<Long, SearchFeedbackInfo>> fb_info_v;
-    protected HashMap<Long, ? extends QueryWordInfoRaw> query_id_map;
-    protected int pos_max;
+    /*
+     * 벡터의 각 인덱스 값 - 각 카테고리 ID값에 정확하게 1:1 대응
+     */
+    protected Vector<HashMap<Long, SearchFeedbackInfo>> fb_info_v; // 피드백 정보가 담긴 벡터
+    protected HashMap<Long, ? extends QueryWordInfoRaw> query_id_map; // 이 피드백에 대응하는 입력(쿼리)의 해시맵
+    protected int pos_max; // 유저가 클릭한 아이템 중 최저 순위
     protected DocumentProcessor doc_proc;
-    protected int rel_doc_count;
+    protected int rel_doc_count; // 관련 있는 것으로 판명난(=유저가 클릭한) 문서의 숫자
 
     @SuppressLint("UseSparseArrays")
     public SearchImplicitFeedback(DocumentProcessor doc_proc) {
@@ -47,11 +50,17 @@ public class SearchImplicitFeedback {
         query_id_map = null;
     }
 
+    /*
+     * 이 피드백에 대응하는 입력 쿼리의 해시맵을 지정하는 메소드
+     */
     public void set_query_id_map(HashMap<Long, ? extends QueryWordInfoRaw> query_id_map) {
         clear();
         this.query_id_map = query_id_map;
     }
 
+    /*
+     * 유저가 클릭한, 즉 관련이 있는 아이템을 이 피드백 객체에 추가하는 메소드
+     */
     public void add_rel(ItemIDInfo idInfo, int pos) {
         int category_id = idInfo.category_id;
         long id = idInfo.id;
@@ -69,18 +78,23 @@ public class SearchImplicitFeedback {
         }
 
         if ((sfi = map.get(id)) == null) {
+            // 이 피드백에 이 아이템에 대한 정보가 없다. 즉, 처음 클릭한 아이템이다.
             sfi = new SearchFeedbackInfo(true);
             sfi.call_count = 1l;
             map.put(id, sfi);
         }
         else {
+            // 정보가 있다. 즉, 중복 클릭되는 아이템이다.
             sfi.call_count++;
         }
 
-        pos_max = Math.max(pos, pos_max);
+        pos_max = Math.max(pos, pos_max); // 최저 순위를 갱신한다.
         rel_doc_count++;
     }
 
+    /*
+     * 최하 순위의 클릭된 문서 위로 있는 모든 클릭되지 않은 문서는 비관련 문서로 간주하고, 그 아이템들을 일괄적으로 등록한다.
+     */
     protected void add_irrel() {
         for (int i = 0; i <= pos_max; i++) {
             ItemIDInfo idInfo = doc_proc.get_doc_id(i);
@@ -96,6 +110,9 @@ public class SearchImplicitFeedback {
         }
     }
 
+    /*
+     * 이 객체를 재활용하기 위해 초기화 상태로 되돌린다.
+     */
     public void clear() {
         for (int i = 0; i < ActionMain.item.ITEM_COUNT; i++) {
             fb_info_v.get(i).clear();
@@ -105,10 +122,14 @@ public class SearchImplicitFeedback {
         query_id_map = null;
     }
 
+    /*
+     * 피드백 정보를 보내 데이터베이스에 반영한다.
+     */
     public void send_feedback() {
         ActionMain actionMain = ActionMain.getInstance();
         actionMain.write_lock.lock();
         if (pos_max == -1) {
+            // -1이란 뜻은 피드백할 정보가 아무 것도 없다는 뜻이다. 아무 작업도 할 필요가 없으므로 메소드를 종료한다.
             actionMain.write_lock.unlock();
             return;
         }
@@ -119,10 +140,16 @@ public class SearchImplicitFeedback {
         actionMain.write_lock.unlock();
     }
 
+    /*
+     * 어떻게 이 피드백 객체가 주어진 위치로부터 아이템의 ItemIDInfo 정보를 받아낼 것인지를 정의하는 인터페이스
+     */
     public interface DocumentProcessor {
         ItemIDInfo get_doc_id(int pos);
     }
 
+    /*
+     * 아이템의 카테고리 ID, 카테고리 내 아이템 ID를 저장하는 단순한 클래스
+     */
     public static class ItemIDInfo {
         protected int category_id;
         protected long id;
