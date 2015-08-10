@@ -64,9 +64,12 @@ public class AACGroupContainerPreferences {
     public static final int MORPHEME_SERVER_PORT = 59002; // 서버의 포트
 
     // 락 Wrapper
-    public static final int LOCK_WRAPPER_STACK_INIT_SIZE = 10;
+    public static final int LOCK_WRAPPER_STACK_INIT_SIZE = 20;
+//    public static final boolean LOCK_WRAPPER_LOG_ACTIVE = false;
+    public static final int LOCK_WRAPPER_LOG_VERBOSE_LEVEL = 0;
 
     // 아이템 추가 액티비티
     public static final int ADD_ITEM_FETCH_SUGGESTION_TIMEOUT = 2000; // 단위: millisecond
     public static final int ADD_ITEM_KEY_EVENT_THREAD_POOL_SIZE = 20;
+
 }
