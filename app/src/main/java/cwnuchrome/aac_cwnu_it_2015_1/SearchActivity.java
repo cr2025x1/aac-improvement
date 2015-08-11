@@ -20,6 +20,10 @@ import java.util.ListIterator;
 import java.util.Map;
 import java.util.Vector;
 
+/*
+ *  아이템을 검색하는 액티비티
+ *  매 키 입력이 발생할 때마다 그 쿼리로 데이터베이스를 검색한 후, 실시간으로 결과를 제공한다.
+ */
 public class SearchActivity extends AppCompatActivity {
     ListView listView;
     EditText textInput;
@@ -120,18 +124,32 @@ public class SearchActivity extends AppCompatActivity {
     }
 
 
-
+    /*
+     *  키 입력 이벤트에 따라 검색, 결과를 화면에 업데이트하는 클래스
+     *  이 클래스의 코드들은 절대 UI 스레드에서 돌아가면 안 된다.
+     *
+     *  기반에 깔린 핵심 설계는 상위 클래스인 KeyEventHandler 참조.
+     */
     protected class KEHSearch extends KeyEventHandler {
+
+        // 스레드에서 실행되는 코드 블럭
         @Override
         public void run() {
+            // 먼저 주어진 쿼리로 검색.
             if (search_by_query()) {
-                if (!check_mutual_exclusive_interrupt()) {
+                // 검색 결과에 변화가 있었다면...
+                if (!check_mutual_exclusive_interrupt()) { // 먼저 검색 스레드간 상호배제 확인.
+                    // 다른 스레드가 이 스레드를 인터럽트시켰다.
+                    // 즉, 이미 새 쿼리가 주어져 진행 중이다. 따라서 작업을 중단한다.
                     return;
                 }
 
+                // 쿼리에 따라 출력되는 아이템 목록을 업데이트할 준비를 한다.
+                // 먼저 search_list는 thread-safe하지 않으므로 보호 블럭을 씌운다.
                 synchronized (search_list) {
                     search_list.views.clear();
                     for (ActionItem.onClickClass occ : search_list.occs) {
+                        // 먼저 각 아이템들을 위한 OCC 객체를 형성한다.
                         int catID = occ.getItemCategoryID();
                         StringBuilder sb = new StringBuilder();
                         String className = actionMain.itemChain[catID].CLASS_NAME;
@@ -141,13 +159,17 @@ public class SearchActivity extends AppCompatActivity {
                         }
                         sb.append(occ.phonetic);
 
+                        // 그리고 텍스트뷰들을 위한 String도 준비해둔다.
                         search_list.views.add(sb.toString());
                     }
                 }
 
+                // 동기화 블록이 끝난 이후 다시 한 번 상호배제를 점검.
                 if (!check_mutual_exclusive_interrupt()) {
                     return;
                 }
+
+                // 인터럽트가 없었다면 아까 작업했던 것대로 리스트뷰가 갱신되게 리스트뷰에 알린다.
                 runOnUiThread(
                         new Runnable() {
                             @Override
@@ -161,10 +183,18 @@ public class SearchActivity extends AppCompatActivity {
             }
         }
 
+        /*
+         *  EditText 뷰에서 쿼리를 받고, 가공한 후 그 쿼리로 검색을 하는 메소드.
+         */
         protected boolean search_by_query() {
+            // 먼저 원 텍스트를 EditText 뷰에서 가져온 후, 해시맵으로 가공한다.
             HashMap<String, Long> new_query_map = ActionMain.reduce_to_map(textInput.getText().toString());
             if ((new_query_map.size() == 0 && queryMap == null)||
                     (queryMap != null && new_query_map.equals(queryMap))) {
+                // 참고: 쿼리맵이 null인 경우는 입력이 단 한 번도 없는 초기 상태인 경우에만 그렇다.
+                // 1. 기존의 쿼리맵이 null인데, 새 쿼리맵 또한 빈 해시맵이다. --> 둘 다 빈 해시맵. 따라서 쿼리값의 변화는 없음으로 간주.
+                // 2. 기존 쿼리맵이 있긴 한데, 새로 만들어진 해시맵과 내용이 동일 --> 쿼리맵이 같으면 쿼리값의 변화는 없음으로 간주.
+                // 결론: 쿼리의 변화가 없는데 쿼리 결과의 변동이 있을 수가 없다. false 반환.
                 return false;
             }
             if (new_query_map.size() == 0 && queryMap != null) {
@@ -379,7 +409,10 @@ public class SearchActivity extends AppCompatActivity {
         actionMain.read_lock.unlock();
     }
 
-    // 그룹 아이템 클릭시에는 기존 그룹의 onClick()의 동작 외에 추가 동작이 필요하므로 서브클래스를 하나 정의한다.
+    /*
+     * 그룹 아이템 클릭 시에는 기존 그룹의 onClick() 동작 외에 추가 동작이 하나 더 필요하다.
+     * 그러나 다른 카테고리 아이템과의 동일하게 취급될 수 있어야 하므로, ActionGroup.onClickClass의 하위 클래스를 정의한다.
+     */
     protected class GroupOCCWrapper extends ActionGroup.onClickClass {
         public GroupOCCWrapper(Context context, AACGroupContainer container) {
             super(context, container);
@@ -396,8 +429,9 @@ public class SearchActivity extends AppCompatActivity {
                     new Runnable() {
                         @Override
                         public void run() {
+                            // 기존의 그룹 버튼 동작에 이은 추가 동작 부분: 액티비티를 종료하게 되므로 쿼리결과 조회는 자동으로 종료된다. 따라서 피드백을 보낸다.
                             actionMain.write_lock.lock();
-                            feedbackHelper.send_feedback(); // 액티비티를 종료하게 되므로 쿼리결과 조회는 자동으로 종료된다. 따라서 피드백을 보낸다.
+                            feedbackHelper.send_feedback();
                             actionMain.write_lock.unlock();
                         }
                     },
