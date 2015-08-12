@@ -51,12 +51,14 @@ public class ActionMacro extends ActionMultiWord {
 
         String word = values.getAsString(ActionWord.SQL.COLUMN_NAME_WORD);
         long result = exists(word);
-        if (result != -1) return result;
+        if (result != -1) {
+            write_lock.unlock();
+            return result;
+        }
 
         result = super.raw_add(values);
 
         write_lock.unlock();
-
         return result;
     }
 
