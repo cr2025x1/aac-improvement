@@ -15,7 +15,6 @@ import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
 
 import java.io.DataInputStream;
-import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.Socket;
@@ -29,6 +28,7 @@ import java.util.ListIterator;
 import java.util.Map;
 import java.util.Random;
 import java.util.Vector;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -72,8 +72,6 @@ public final class ActionMain {
         for (ActionItem i : itemChain) i.setActionMain(this);
 //        subthreads = new CopyOnWriteArrayList<>();
         subthread_executor = Executors.newFixedThreadPool(ActionMain.item.ITEM_COUNT * 2, new SubThreadFactory());
-
-        image_directory_path = context.getFilesDir() + "/" + AACGroupContainerPreferences.USER_IMAGE_DIRECTORY_NAME;
     }
 
     Random rand;
@@ -94,7 +92,6 @@ public final class ActionMain {
     ExecutorService morpheme_analysis_executor;
     ExecutorService subthread_executor;
 //    CopyOnWriteArrayList<SubThread> subthreads;
-    private String image_directory_path;
 
     public void setContext(Context context) {
         this.context = context;
@@ -1213,18 +1210,5 @@ public final class ActionMain {
 //    }
     public LockWrapper.WriteLockWrapper getWriteLock() {
         return write_lock;
-    }
-
-    public String get_picture_directory_path() {
-        File dir = new File(image_directory_path);
-        if (dir.isFile()) {
-            throw new IllegalStateException("A unknown file is exists at absolute filepath of image directory.");
-        } else if (!dir.isDirectory()) {
-            if (!dir.mkdirs()) {
-                throw new IllegalStateException("Failed to create image directory.");
-            }
-        }
-
-        return image_directory_path;
     }
 }

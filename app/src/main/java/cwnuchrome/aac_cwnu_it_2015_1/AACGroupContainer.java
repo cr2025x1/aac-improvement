@@ -93,7 +93,7 @@ public class AACGroupContainer {
 
         removalListBundle = new RemovalListBundle();
 
-        userImageDirectoryPathPrefix = actionMain.get_picture_directory_path();
+        userImageDirectoryPathPrefix = context.getFilesDir() + "/" + AACGroupContainerPreferences.USER_IMAGE_DIRECTORY_NAME + "/";
 
         // 그룹 제목 TextView 설정
         titleView = (TextView)(mainLayout.findViewById(R.id.groupTitle));

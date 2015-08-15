@@ -134,13 +134,9 @@ public class ExternalImageProcessor {
     public static int remove_all_images (Context context) {
         System.out.println("*** Method: remove_all_images ***");
         int fail_count = 0;
-        File dir = new File(context.getFilesDir() + "/" + AACGroupContainerPreferences.USER_IMAGE_DIRECTORY_NAME); // TODO: 버그 있음.
+        File dir = new File(context.getFilesDir() + "/" + AACGroupContainerPreferences.USER_IMAGE_DIRECTORY_NAME);
 
         String[] children = dir.list();
-        if (children == null) {
-            System.out.println("The directory is not exists. No need to proceed.");
-            return 0;
-        }
         if (children.length == 0) {
             System.out.println("The directory is empty.");
             return 0;
