@@ -254,7 +254,7 @@ public abstract class ActionItem implements Serializable {
             }
             System.out.println("*** End of the list ***");
 
-            String path = context.getFilesDir() + "/" + AACGroupContainerPreferences.USER_IMAGE_DIRECTORY_NAME + "/";
+            String path = actionMain.get_picture_directory_path();
             for (int i = 0; i < count; i++) {
 
                 String fileName = c.getString(d_col_i);
@@ -347,13 +347,14 @@ public abstract class ActionItem implements Serializable {
             // TODO: Make this use XMLs.
 
 //            priority = values.getAsLong(SQL.COLUMN_NAME_PRIORITY);
+            ActionMain actionMain = ActionMain.getInstance();
 
             Drawable d;
             if (values.getAsInteger(SQL.COLUMN_NAME_PICTURE_IS_PRESET) == 1)
                 d = context.getResources().getDrawable(values.getAsInteger(SQL.COLUMN_NAME_PICTURE));
 //                d = context.getResources().getDrawable(values.getAsInteger(SQL.COLUMN_NAME_PICTURE), context.getTheme()); // API 21 이상 필요
             else {
-                d = Drawable.createFromPath(context.getFilesDir() + "/" + AACGroupContainerPreferences.USER_IMAGE_DIRECTORY_NAME + "/" +
+                d = Drawable.createFromPath(actionMain.get_picture_directory_path() + "/" +
                         values.getAsString(SQL.COLUMN_NAME_PICTURE));
             }
 
