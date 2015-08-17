@@ -55,6 +55,7 @@ public class SearchActivity extends AppCompatActivity {
                 new SearchImplicitFeedback.DocumentProcessor() {
                     @Override
                     public SearchImplicitFeedback.ItemIDInfo get_doc_id(int pos) {
+                        // 피드백 객체에게 아이템의 위치 정보로부터 아이템의 카테고리 ID, 자신의 ID 값을 받아가는 방법을 설정.
                         ActionItem.onClickClass occ = search_list.occs.get(pos);
                         return new SearchImplicitFeedback.ItemIDInfo(occ.getItemCategoryID(), occ.getItemID());
                     }
@@ -96,6 +97,7 @@ public class SearchActivity extends AppCompatActivity {
                     public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
 //                String itemValue = (String) listView.getItemAtPosition(position);
                         ActionItem.onClickClass occ = search_list.occs.get(position);
+                        // 클릭된 아이템의 ID를 피드백 객체에 전달
                         feedbackHelper.add_rel(
                                 new SearchImplicitFeedback.ItemIDInfo(occ.getItemCategoryID(), occ.getItemID()),
                                 position
@@ -111,6 +113,7 @@ public class SearchActivity extends AppCompatActivity {
             public void afterTextChanged(Editable s) {}
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             public void onTextChanged(CharSequence s, int start, int before, int count) {
+                // EditText 객체의 텍스트 내용이 바뀔 때마다 검색이 되도록 지정.
                 search_key_event_handler.execute();
             }
         });
@@ -187,64 +190,98 @@ public class SearchActivity extends AppCompatActivity {
          *  EditText 뷰에서 쿼리를 받고, 가공한 후 그 쿼리로 검색을 하는 메소드.
          */
         protected boolean search_by_query() {
+            /*
+             *  쿼리 가공 및 필터링 단계
+             */
             // 먼저 원 텍스트를 EditText 뷰에서 가져온 후, 해시맵으로 가공한다.
             HashMap<String, Long> new_query_map = ActionMain.reduce_to_map(textInput.getText().toString());
             if ((new_query_map.size() == 0 && queryMap == null)||
                     (queryMap != null && new_query_map.equals(queryMap))) {
-                // 참고: 쿼리맵이 null인 경우는 입력이 단 한 번도 없는 초기 상태인 경우에만 그렇다.
-                // 1. 기존의 쿼리맵이 null인데, 새 쿼리맵 또한 빈 해시맵이다. --> 둘 다 빈 해시맵. 따라서 쿼리값의 변화는 없음으로 간주.
-                // 2. 기존 쿼리맵이 있긴 한데, 새로 만들어진 해시맵과 내용이 동일 --> 쿼리맵이 같으면 쿼리값의 변화는 없음으로 간주.
-                // 결론: 쿼리의 변화가 없는데 쿼리 결과의 변동이 있을 수가 없다. false 반환.
+                /*
+                 *  1. 기존의 쿼리맵이 null인데, 새 쿼리맵 또한 빈 해시맵이다. --> 둘 다 빈 해시맵. 따라서 쿼리값의 변화는 없음으로 간주.
+                 *  2. 기존 쿼리맵이 있긴 한데, 새로 만들어진 해시맵과 내용이 동일 --> 쿼리맵이 같으면 쿼리값의 변화는 없음으로 간주.
+                 *  결론: 쿼리의 변화가 없는데 쿼리 결과의 변동이 있을 수가 없다. false 반환.
+                 */
                 return false;
             }
             if (new_query_map.size() == 0 && queryMap != null) {
+                /*
+                 *  기존 쿼리맵이 존재했는데, 새 쿼리맵의 크기가 0이다.
+                 *  --> 기존의 입력은 있었으나, 사용자가 쿼리를 지웠다. 즉, 현재 쿼리는 공백이다.
+                 *  --> 기존의 검색 결과가 있었을 수 있다.
+                 *  1. 쿼리맵의 결과를 피드백해야 한다.
+                 *  2. 그러나 검색 작업을 진행할 필요는 없다.
+                 */
+                actionMain.write_lock.lock();
                 feedbackHelper.send_feedback();
+                actionMain.write_lock.unlock();
                 search_list.occs.clear();
                 queryMap = null;
                 return true;
             }
 
+            // 쿼리 확장 & 피드백 적용 파트
             actionMain.write_lock.lock();
+            /*
+             *  쿼리에 포함된 문자열들에 대응되는 데이터베이스 내 Word의 ID를 찾고, 그 ID에 대응되는 QWI 맵을 불러온다.
+             *  여기서 쿼리의 복원 및 유추가 진행된다.
+             */
             HashMap<Long, QueryWordInfo> new_query_id_map =
                     ((ActionWord)actionMain.itemChain[ActionMain.item.ID_Word]).convert_query_map_to_qwi_map(new_query_map);
             if ((new_query_id_map.size() == 0 && query_id_map == null) ||
                     (query_id_map != null && new_query_id_map.equals(query_id_map))) {
+                /*
+                 *  기존의 입력값이 존재했는데, 기존의 입력값에 대응되는 QWI 맵과 이번 입력값(쿼리)의 대응 QWI 맵이 같다.
+                 *  --> QWI 맵을 기반으로 검색이 진행되는데, QWI 맵이 같다.
+                 *  --> 입력값이 같으니 결과값이 다를 수 없다.
+                 *  또는, 기존의 입력이 없었는데 새 입력값에 대응되는 QWI 맵이 빈 맵이다.
+                 *  --> 입력이 비었으니 출력도 빌 것이다.
+                 *  --> 원래 입력이 없었으니 원래 결과도 비었을 것이다.
+                 *  --> 기존의 결과도 비었고, 현재 입력값의 결과도 비었으니, 결과가 같다.
+                 *  최종: 검색 결과가 바뀌지 않는다. 따라서 검색작업을 추가 진행할 필요가 없다.
+                 */
                 actionMain.write_lock.unlock();
                 return false;
             }
 
+            // 기존의 결과가 있었던 상황에서 QWI 맵이 변경되므로, 피드백을 보낸다.
             feedbackHelper.send_feedback();
+            // 이제 쓰기 락이 필요없어 졌으므로 읽기 락으로 하강한다.
             actionMain.read_lock.lock();
             actionMain.write_lock.unlock();
-//            actionMain.write_lock.unlock_without_read_lock_check();
 
+            // 리스트뷰의 각 항목에 연결되어 있는 OCC 목록 소거
             search_list.occs.clear();
 
             if (new_query_id_map.size() == 0 && query_id_map != null) {
+                // 만일 새 QWI 맵이 빈 맵이면 랭킹 평가를 진행할 필요가 없다.
+                // 기존의 변수들을 업데이트한 후, 메소드를 끝낸다.
                 queryMap = new_query_map;
                 query_id_map = null;
                 actionMain.read_lock.unlock();
                 return true;
             }
 
-            ActionMain actionMain = ActionMain.getInstance();
+            // 기존 변수 업데이트.
             queryMap = new_query_map;
             query_id_map = new_query_id_map;
             feedbackHelper.set_query_id_map(query_id_map);
+            // 쿼리에 따른 각 아이템들의 중요도 평가.
             Vector<HashMap<Long, Double>> rank_vector_raw = actionMain.allocEvaluation().evaluate_by_query_map(query_id_map, null, null);
             if (rank_vector_raw == null) {
                 actionMain.read_lock.unlock();
                 return false;
             }
+            // 주어진 평가값들을 필터링
             Vector<ArrayList<Map.Entry<Long, Double>>> rank_vector = actionMain.filter_rank_vector(
                     rank_vector_raw,
                     ActionMain.FILTER_BY_THRESHOLD
             );
 
+            // 평가값에 따라 OCC 목록을 업데이트한다.
             update_occ_list(rank_vector);
 
             actionMain.read_lock.unlock();
-//            actionMain.read_lock.unlock_without_write_lock_check();
             return true;
         }
     }
@@ -267,7 +304,7 @@ public class SearchActivity extends AppCompatActivity {
     // 뒤로 가기 버튼을 눌렀을 때의 동작 메소드
     @Override
     public void onBackPressed() {
-        if (back_button_pressed) return;
+        if (back_button_pressed) return; // 뒤로 가기 버튼의 동작이 중첩되어 호출되는 경우를 방지한다.
 
         // 피드백을 보내고 액티비티 종료 결과를 알린다.
         back_button_pressed = true;

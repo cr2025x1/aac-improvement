@@ -168,9 +168,8 @@ public class AACGroupContainerPreferences {
     public static final int MORPHEME_SERVER_PORT = 59002; // 서버의 포트
 
     // 락 Wrapper
-    public static final int LOCK_WRAPPER_STACK_INIT_SIZE = 20;
-//    public static final boolean LOCK_WRAPPER_LOG_ACTIVE = false;
-    public static final int LOCK_WRAPPER_LOG_VERBOSE_LEVEL = 1;
+    public static final int LOCK_WRAPPER_STACK_INIT_SIZE = 20; // 락의 내부에서 사용되는 읽기 락 홀드 카운트 해시맵의 초기 크기를 결정한다.
+    public static final int LOCK_WRAPPER_LOG_VERBOSE_LEVEL = 0; // 락의 로그 출력 정도를 결정한다. 0 = 없음. 1 = 락의 획득/해제. 2 = 1의 로그 + 하위 스레드의 락 획득 시도.
 
     // 아이템 추가 액티비티
     public static final int ADD_ITEM_FETCH_SUGGESTION_TIMEOUT = 2000; // 단위: millisecond

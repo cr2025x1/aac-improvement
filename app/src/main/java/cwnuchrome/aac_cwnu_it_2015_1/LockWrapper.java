@@ -200,7 +200,6 @@ public class LockWrapper {
     @SuppressWarnings("PointlessBooleanExpression")
     public void log(int verbose_level, @Nullable String prefix, @NonNull String text) {
         if (log_verbose_level < verbose_level) return;
-//        if (!AACGroupContainerPreferences.LOCK_WRAPPER_LOG_ACTIVE) return;
         StackTraceElement[] stacktrace = Thread.currentThread().getStackTrace();
         StackTraceElement e = stacktrace[4]; // 4번째 스택이 바로 lock/unlock을 호출한 스택이다.
         String className = e.getClassName();
@@ -222,7 +221,6 @@ public class LockWrapper {
     @SuppressWarnings("PointlessBooleanExpression")
     public void log_with_lock_stat(int verbose_level, @Nullable String prefix, @NonNull String text, Thread thread, int write_hold_count, int read_hold_count, int read_lock_count) {
         if (log_verbose_level < verbose_level) return;
-//        if (!AACGroupContainerPreferences.LOCK_WRAPPER_LOG_ACTIVE) return;
         StackTraceElement[] stacktrace = Thread.currentThread().getStackTrace();
         StackTraceElement e = stacktrace[4]; // 4번째 스택이 바로 lock/unlock을 호출한 스택이다.
         String className = e.getClassName();

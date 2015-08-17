@@ -6,6 +6,7 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
  * Created by Chrome on 7/14/15.
  *
  * 쿼리를 구성하는 각 단어들의 정보 구조체
+ *
  */
 public class QueryWordInfoRaw {
     long count;
