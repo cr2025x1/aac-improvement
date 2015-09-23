@@ -45,13 +45,13 @@ public class ExternalImageProcessor {
             /*
             // 아파치 커먼즈 라이브러리 이용 Base32 코딩
             Base32 base32 = new Base32();
-            hashedFilename = base32.encodeToString(MD5Checksum.createChecksumWithStream(inStream));
+            hashedFilename = base32.encodeToString(MD5Checksum.createChecksum(inStream));
             */
 
             // 안드로이드 자체 라이브러리 이용 Base64 코딩
             StringBuilder sb = new StringBuilder(
                     Base64.encodeToString(
-                            MD5Checksum.createChecksumWithStream(inStream),
+                            MD5Checksum.createChecksum(inStream),
                             Base64.URL_SAFE) // 파일 이름에 사용되는 Base64 코딩이므로 일부 특수문자 대체 (RFC 3548 section 4)
             );
                     sb.setLength(sb.lastIndexOf("\n"));

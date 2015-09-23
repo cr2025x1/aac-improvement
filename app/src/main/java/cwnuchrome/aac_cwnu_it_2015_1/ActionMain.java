@@ -6,13 +6,24 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.graphics.Bitmap;
 import android.provider.BaseColumns;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.view.View;
+import android.widget.ImageView;
 
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
+import com.nostra13.universalimageloader.core.DisplayImageOptions;
+import com.nostra13.universalimageloader.core.ImageLoader;
+import com.nostra13.universalimageloader.core.ImageLoaderConfiguration;
+import com.nostra13.universalimageloader.core.assist.FailReason;
+import com.nostra13.universalimageloader.core.assist.ImageScaleType;
+import com.nostra13.universalimageloader.core.assist.QueueProcessingType;
+import com.nostra13.universalimageloader.core.display.FadeInBitmapDisplayer;
+import com.nostra13.universalimageloader.core.listener.ImageLoadingListener;
 
 import java.io.DataInputStream;
 import java.io.IOException;
@@ -72,6 +83,7 @@ public final class ActionMain {
         for (ActionItem i : itemChain) i.setActionMain(this);
 //        subthreads = new CopyOnWriteArrayList<>();
         subthread_executor = Executors.newFixedThreadPool(ActionMain.item.ITEM_COUNT * 2, new SubThreadFactory());
+
     }
 
     Random rand;
@@ -95,6 +107,17 @@ public final class ActionMain {
 
     public void setContext(Context context) {
         this.context = context;
+
+        ImageLoader imageLoader=ImageLoader.getInstance();
+        ImageLoaderConfiguration config=new ImageLoaderConfiguration.Builder(context)
+                .memoryCacheExtraOptions(1000, 1000) // max width, max height
+                .threadPoolSize(5)
+                .threadPriority(Thread.NORM_PRIORITY + 1)
+                .denyCacheImageMultipleSizesInMemory()
+                .tasksProcessingOrder(QueueProcessingType.FIFO)
+                .defaultDisplayImageOptions(DisplayImageOptions.createSimple())
+                .build();
+        imageLoader.init(config);
     }
     public Context getContext() {
         return context;
@@ -1210,5 +1233,46 @@ public final class ActionMain {
 //    }
     public LockWrapper.WriteLockWrapper getWriteLock() {
         return write_lock;
+    }
+
+
+    // http://stackoverflow.com/questions/19397157/how-to-load-images-effectively-and-efficiently-on-scrolling-in-android
+    public static void imageLoaderMemoryCache(Context context, final ImageView img, final int failImgID, String url)
+    {
+        ImageLoader imageLoader=ImageLoader.getInstance();
+        ImageLoaderConfiguration config=new ImageLoaderConfiguration.Builder(context)
+                .memoryCacheExtraOptions(1000, 1000) // max width, max height
+                .threadPoolSize(5)
+                .threadPriority(Thread.NORM_PRIORITY + 1)
+                .denyCacheImageMultipleSizesInMemory()
+                .tasksProcessingOrder(QueueProcessingType.FIFO)
+                .defaultDisplayImageOptions(DisplayImageOptions.createSimple())
+                .build();
+        imageLoader.init(config);
+
+        DisplayImageOptions options = new DisplayImageOptions.Builder()
+                .showImageForEmptyUri(R.drawable.btn_default)
+                .cacheInMemory(true)
+                .imageScaleType(ImageScaleType.IN_SAMPLE_INT)
+                .bitmapConfig(Bitmap.Config.RGB_565)
+                .delayBeforeLoading(1)
+                .displayer(new FadeInBitmapDisplayer(500))
+                .build();
+
+        imageLoader.displayImage(url, img, options, new ImageLoadingListener()
+        {
+            @Override
+            public void onLoadingStarted(String url, View view)
+            {img.setImageResource(failImgID);}
+            @Override
+            public void onLoadingFailed(String url, View view, FailReason failReason)
+            {img.setImageResource(failImgID);}
+            @Override
+            public void onLoadingComplete(String url, View view, Bitmap loadedImage)
+            {}
+            @Override
+            public void onLoadingCancelled(String url, View view)
+            {}
+        });
     }
 }

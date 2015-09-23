@@ -35,4 +35,5 @@ dependencies {
     compile 'com.esotericsoftware:kryo:3.0.2'
     compile 'org.apache.commons:commons-lang3:3.4'
     compile 'commons-codec:commons-codec:1.10'
+    compile project(':universal-image-loader-1.9.4')
 }

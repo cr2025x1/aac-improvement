@@ -4,6 +4,7 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
 import android.provider.BaseColumns;
 import android.support.annotation.NonNull;
@@ -12,7 +13,15 @@ import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
+
+import com.nostra13.universalimageloader.core.DisplayImageOptions;
+import com.nostra13.universalimageloader.core.ImageLoader;
+import com.nostra13.universalimageloader.core.assist.FailReason;
+import com.nostra13.universalimageloader.core.assist.ImageScaleType;
+import com.nostra13.universalimageloader.core.display.FadeInBitmapDisplayer;
+import com.nostra13.universalimageloader.core.listener.ImageLoadingListener;
 
 import java.io.File;
 import java.io.Serializable;
@@ -348,6 +357,15 @@ public abstract class ActionItem implements Serializable {
 
 //            priority = values.getAsLong(SQL.COLUMN_NAME_PRIORITY);
 
+//            ImageView imageView = new ImageView(context);
+//            if (values.getAsInteger(SQL.COLUMN_NAME_PICTURE_IS_PRESET) == 1)
+//                imageLoaderMemoryCache(imageView, R.drawable.btn_default, "drawable://" + values.getAsInteger(SQL.COLUMN_NAME_PICTURE));
+//            else {
+//                imageLoaderMemoryCache(imageView, R.drawable.btn_default, "file://" + context.getFilesDir() + "/" + AACGroupContainerPreferences.USER_IMAGE_DIRECTORY_NAME + "/" +
+//                        values.getAsString(SQL.COLUMN_NAME_PICTURE));
+//            }
+//            Drawable d = imageView.getDrawable();
+
             Drawable d;
             if (values.getAsInteger(SQL.COLUMN_NAME_PICTURE_IS_PRESET) == 1)
                 d = context.getResources().getDrawable(values.getAsInteger(SQL.COLUMN_NAME_PICTURE));
@@ -393,6 +411,39 @@ public abstract class ActionItem implements Serializable {
 //        public void setContainer(AACGroupContainer container) {
 //            this.container = container;
 //        }
+
+        private void imageLoaderMemoryCache(final ImageView img, final int failImgID, String url)
+        {
+            ImageLoader imageLoader = ImageLoader.getInstance();
+            DisplayImageOptions options = new DisplayImageOptions.Builder()
+                    .showImageForEmptyUri(R.drawable.btn_default)
+                    .cacheInMemory(true)
+                    .imageScaleType(ImageScaleType.IN_SAMPLE_INT)
+                    .bitmapConfig(Bitmap.Config.RGB_565)
+                    .delayBeforeLoading(1)
+                    .displayer(new FadeInBitmapDisplayer(500))
+                    .build();
+
+            imageLoader.displayImage(url, img, options, new ImageLoadingListener() {
+                @Override
+                public void onLoadingStarted(String url, View view) {
+                    img.setImageResource(failImgID);
+                }
+
+                @Override
+                public void onLoadingFailed(String url, View view, FailReason failReason) {
+                    img.setImageResource(failImgID);
+                }
+
+                @Override
+                public void onLoadingComplete(String url, View view, Bitmap loadedImage) {
+                }
+
+                @Override
+                public void onLoadingCancelled(String url, View view) {
+                }
+            });
+        }
 
     }
 
@@ -576,4 +627,6 @@ public abstract class ActionItem implements Serializable {
     }
 
     public abstract void init_sub_db(Context context);
+
+
 }

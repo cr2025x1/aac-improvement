@@ -6,10 +6,11 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
  * Created by Chrome on 7/14/15.
  *
  * 쿼리를 구성하는 각 단어들의 정보 구조체
+ * QWIR에 비해 조금 더 확장되었다. 추가된 두 맴버 변수는 모두 DB 액세스를 필요로 한다.
  */
 public class QueryWordInfo extends QueryWordInfoRaw {
-    long ref_count;
-    double feedback_weight;
+    long ref_count; // 이 단어를 사용하는 문서들의 총 개수.
+    double feedback_weight; // 피드백으로 조정되는 이 단어에 대한 보정계수.
 
     public QueryWordInfo(long count, long ref_count, double weight, double feedback_weight) {
         super(count, weight);

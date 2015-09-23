@@ -2,6 +2,7 @@ package cwnuchrome.aac_cwnu_it_2015_1;
 
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Bitmap;
 import android.graphics.Point;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
@@ -15,15 +16,27 @@ import android.widget.BaseAdapter;
 import android.widget.GridView;
 import android.widget.ImageView;
 
+import com.nostra13.universalimageloader.core.DisplayImageOptions;
+import com.nostra13.universalimageloader.core.ImageLoader;
+import com.nostra13.universalimageloader.core.ImageLoaderConfiguration;
+import com.nostra13.universalimageloader.core.assist.FailReason;
+import com.nostra13.universalimageloader.core.assist.ImageScaleType;
+import com.nostra13.universalimageloader.core.assist.QueueProcessingType;
+import com.nostra13.universalimageloader.core.display.FadeInBitmapDisplayer;
+import com.nostra13.universalimageloader.core.listener.ImageLoadingListener;
+
 /*
+ * 아이템을 위한 프리셋 이미지를 선택하는 액티비티
+ *
  * 이 클래스의 상당 부분은 아래의 예제에 기초함.
  * 참조: http://developer.android.com/guide/topics/ui/layout/gridview.html
  */
-
-
 public class PresetImageSelectionActivity extends AppCompatActivity {
 
     GridView gridView;
+
+    ImageLoader imageLoader;
+    DisplayImageOptions options;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -32,13 +45,23 @@ public class PresetImageSelectionActivity extends AppCompatActivity {
 
         setTitle(R.string.title_activity_preset_image_selection);
 
+        imageLoader = ImageLoader.getInstance();
+        options = new DisplayImageOptions.Builder()
+                .showImageForEmptyUri(R.drawable.btn_default)
+                .cacheInMemory(true)
+                .imageScaleType(ImageScaleType.IN_SAMPLE_INT)
+                .bitmapConfig(Bitmap.Config.RGB_565)
+                .delayBeforeLoading(1)
+                .displayer(new FadeInBitmapDisplayer(500))
+                .build();
+
+
         gridView = (GridView)findViewById(R.id.gridview_preset_image_selection);
         prepareGridViewRelativeValues();
         initGridView();
 
         gridView.setAdapter(new ImageAdapter(this, AACGroupContainerPreferences.VALID_PRESET_IMAGE_R_ID));
 
-        // 이보시오, 의사 양반!! 람다 표현을 못 쓰다니 이게 무슨 소리요!!
         gridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             public void onItemClick(AdapterView<?> parent, View v,
                                     int position, long id) {
@@ -119,7 +142,11 @@ public class PresetImageSelectionActivity extends AppCompatActivity {
                     imageView = (ImageView) convertView;
                 }
 
-                imageView.setImageResource(mThumbIds[position]);
+                // imageView.setImageResource(mThumbIds[position]); // OOM의 원천?
+//                imageLoader.displayImage("drawable://" + mThumbIds[position], imageView);
+                imageLoaderMemoryCache(imageView, R.drawable.btn_default, "drawable://" + mThumbIds[position]);
+
+
                 return imageView;
             }
     }
@@ -144,6 +171,26 @@ public class PresetImageSelectionActivity extends AppCompatActivity {
         gridView.setNumColumns(AACGroupContainerPreferences.PRESET_IMAGE_SELECTION_GRIDVIEW_COLUMNS); // 열 개수값을 받아오는 getNumColumns가 이상하게 동작함. 그리하여 이 방식으로 전환함.
     }
 
+    public void imageLoaderMemoryCache(final ImageView img, final int failImgID, String url)
+    {
+        imageLoader.displayImage(url, img, options, new ImageLoadingListener() {
+            @Override
+            public void onLoadingStarted(String url, View view) {
+                img.setImageResource(failImgID);
+            }
 
+            @Override
+            public void onLoadingFailed(String url, View view, FailReason failReason) {
+                img.setImageResource(failImgID);
+            }
 
+            @Override
+            public void onLoadingComplete(String url, View view, Bitmap loadedImage) {
+            }
+
+            @Override
+            public void onLoadingCancelled(String url, View view) {
+            }
+        });
+    }
 }
