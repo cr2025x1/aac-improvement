@@ -1,20 +1,27 @@
 package cwnuchrome.aac_cwnu_it_2015_1;
 
+import android.app.Activity;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Bitmap;
+import android.graphics.Color;
+import android.graphics.Point;
 import android.graphics.drawable.Drawable;
 import android.provider.BaseColumns;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.util.TypedValue;
+import android.view.Display;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
+import android.widget.TextView;
 
 import com.nostra13.universalimageloader.core.DisplayImageOptions;
 import com.nostra13.universalimageloader.core.ImageLoader;
@@ -322,12 +329,15 @@ public abstract class ActionItem implements Serializable {
 
 
 
-    public abstract static class Button extends android.widget.Button {
+//    public abstract static class Button extends android.widget.Button {
+    public abstract static class Button extends RelativeLayout {
         protected onClickClass onClickObj;
 //        protected long priority;
-        int image_half_height;
+//        int image_half_height;
 //        AACGroupContainer container;
         Context context;
+        ImageView imageView;
+        TextView textView;
 
         public Button(Context context, onClickClass onClickObj, AACGroupContainer container) {
             super(context);
@@ -352,48 +362,71 @@ public abstract class ActionItem implements Serializable {
             }
         }
 
+        public void setText(String text) {
+            textView.setText(text);
+        }
+
         public void init(ContentValues values) {
             // TODO: Make this use XMLs.
 
 //            priority = values.getAsLong(SQL.COLUMN_NAME_PRIORITY);
 
-//            ImageView imageView = new ImageView(context);
-//            if (values.getAsInteger(SQL.COLUMN_NAME_PICTURE_IS_PRESET) == 1)
-//                imageLoaderMemoryCache(imageView, R.drawable.btn_default, "drawable://" + values.getAsInteger(SQL.COLUMN_NAME_PICTURE));
-//            else {
-//                imageLoaderMemoryCache(imageView, R.drawable.btn_default, "file://" + context.getFilesDir() + "/" + AACGroupContainerPreferences.USER_IMAGE_DIRECTORY_NAME + "/" +
-//                        values.getAsString(SQL.COLUMN_NAME_PICTURE));
-//            }
-//            Drawable d = imageView.getDrawable();
-
-            Drawable d;
-            if (values.getAsInteger(SQL.COLUMN_NAME_PICTURE_IS_PRESET) == 1)
-                d = context.getResources().getDrawable(values.getAsInteger(SQL.COLUMN_NAME_PICTURE));
-//                d = context.getResources().getDrawable(values.getAsInteger(SQL.COLUMN_NAME_PICTURE), context.getTheme()); // API 21 이상 필요
-            else {
-                d = Drawable.createFromPath(context.getFilesDir() + "/" + AACGroupContainerPreferences.USER_IMAGE_DIRECTORY_NAME + "/" +
-                        values.getAsString(SQL.COLUMN_NAME_PICTURE));
+            // Introducing Universal Image Loader to prevent OOM failures caused by images.
+            // Disintegrated previous Button to a RelativeLayout with an ImageView and a TextView in it.
+            imageView = new ImageView(context);
+            final String picture_str = values.getAsString(SQL.COLUMN_NAME_PICTURE);
+            if (values.getAsInteger(SQL.COLUMN_NAME_PICTURE_IS_PRESET) == 1) {
+                ((Activity)context).runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        imageLoaderMemoryCache(imageView, R.drawable.btn_default, "drawable://" + picture_str);
+                    }
+                });
             }
+            else {
+                ((Activity)context).runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        imageLoaderMemoryCache(imageView, R.drawable.btn_default, "file://" + context.getFilesDir() + "/" + AACGroupContainerPreferences.USER_IMAGE_DIRECTORY_NAME + "/" +
+                                picture_str);
+                    }
+                });
+            }
+            int ButtonLayoutWidth = (int)DisplayUnitConverter.convertDpToPixel((float)AACGroupContainerPreferences.IMAGE_WIDTH_DP, context);
+            int ButtonLayoutHeight = (int)DisplayUnitConverter.convertDpToPixel((float)AACGroupContainerPreferences.IMAGE_HEIGHT_DP, context);
+            RelativeLayout.LayoutParams rlp = new RelativeLayout.LayoutParams(
+                    ButtonLayoutWidth,
+                    ButtonLayoutHeight
+            );
+            rlp.addRule(RelativeLayout.CENTER_HORIZONTAL);
+            imageView.setPadding(0, 0, 0, 0);
+            int imageViewID = View.generateViewId();
+            imageView.setId(imageViewID);
 
-            // 그림 리사이징
-            d = DrawableResizer.fitToAreaByDP(
-                    d,
-                    context,
-                    AACGroupContainerPreferences.IMAGE_WIDTH_DP,
-                    AACGroupContainerPreferences.IMAGE_HEIGHT_DP
+            this.addView(
+                    imageView,
+                    rlp);
+
+            textView = new TextView(context);
+            RelativeLayout.LayoutParams text_rlp = new RelativeLayout.LayoutParams(
+                    ButtonLayoutWidth,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+            );
+            text_rlp.addRule(RelativeLayout.BELOW, imageViewID);
+            text_rlp.addRule(RelativeLayout.CENTER_HORIZONTAL);
+            textView.setTextColor(Color.BLACK);
+            textView.setGravity(Gravity.CENTER_HORIZONTAL);
+
+            this.addView(
+                    textView,
+                    text_rlp
             );
 
-            this.setCompoundDrawablesWithIntrinsicBounds(null, d, null, null);
-            int padding = (int)TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 15, getResources().getDisplayMetrics());
-            this.setMaxWidth((int)DisplayUnitConverter.convertDpToPixel((float)AACGroupContainerPreferences.IMAGE_WIDTH_DP, context) + padding * 2);
-
-            image_half_height = d.getIntrinsicHeight() / 2;
             this.setLayoutParams(makeLayoutParam());
 
             // 패딩 설정
-            // TODO: 여기 상수가 왜 남아 있지?!?!?!?!?!?!?!?!?!?!?
-            int paddingX = (369 - d.getIntrinsicWidth()) / 2 + padding;
-            int paddingY = (369 - d.getIntrinsicHeight()) / 2;
+            int paddingX = 0;
+            int paddingY = 0;
             this.setPadding(paddingX, paddingY, paddingX, paddingY);
 
             this.setBackgroundColor(0x00000000);
